@@ -1,10 +1,12 @@
 ---
 title: "Coding Agents"
-description: "Run persistent coding agent VMs on ZWRM."
+description: "Run persistent coding agent VMs with full platform access."
 icon: "robot"
 ---
 
-ZWRM Agents let you spin up persistent coding agent VMs — ephemeral development environments backed by a home directory volume that survives across sessions. Connect your preferred AI coding tool (Claude, Codex, etc.) to a full VM with your repo ready to go.
+ZWRM Agents are persistent coding agent VMs running on isolated Firecracker microVMs. Connect your preferred AI coding tool (Claude, Codex, etc.) to a full VM with your repo ready to go and a home directory volume that survives across sessions.
+
+Agents have full access to the ZWRM platform — the `zwrm` CLI is pre-installed and authenticated. Your agent can build, deploy, scale, and manage applications directly from within its VM. Ship code from ideation to production without leaving the agent session.
 
 ## Quick start
 
@@ -19,7 +21,19 @@ This creates (or reconnects to) a Claude coding agent VM, clones the git repo fr
 1. **VM creation** — A Firecracker VM is provisioned with your chosen agent type.
 2. **Repo cloning** — ZWRM auto-detects the git remote from your current directory and clones it into the VM.
 3. **Persistent home** — A volume is attached to the VM's home directory, so your files, config, and history persist across sessions.
-4. **SSH session** — You're connected via SSH with the agent's default command running.
+4. **Platform access** — The `zwrm` CLI is available inside the VM with your credentials, so the agent can deploy apps, manage secrets, create databases, and more.
+5. **SSH session** — You're connected via SSH with the agent's default command running.
+
+## What agents can do
+
+From inside a coding agent VM, you (or the agent) can:
+
+- **Deploy apps** — `zwrm deploy` to build and ship directly from the agent
+- **Manage secrets** — `zwrm secrets set` to configure environment variables
+- **Create databases** — `zwrm postgres create` to spin up Postgres instances
+- **Scale services** — `zwrm scale` to adjust replicas
+- **View logs** — `zwrm logs -f` to stream application output
+- **SSH into apps** — `zwrm ssh` to debug running VMs
 
 ## Supported agent types
 

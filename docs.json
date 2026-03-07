@@ -17,8 +17,7 @@
             "group": "Getting Started",
             "pages": [
               "index",
-              "quickstart",
-              "configuration"
+              "quickstart"
             ]
           },
           {
@@ -30,6 +29,7 @@
           {
             "group": "Apps",
             "pages": [
+              "apps/configuration",
               "apps/deploy",
               "apps/status",
               "apps/scaling",
