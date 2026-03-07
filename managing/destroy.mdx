@@ -1,0 +1,55 @@
+---
+title: "Destroy"
+description: "Destroy machines or an entire application."
+icon: "trash"
+---
+
+## Usage
+
+```bash
+zwrm destroy
+```
+
+Destroy machines belonging to your application, or the application itself.
+
+## Flags
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--app` | string | from `zwrm.toml` | Application name |
+| `--app-id` | string | — | Application UUID |
+| `--machine` | string | — | Destroy a specific machine by ID prefix |
+| `--all` | bool | `false` | Destroy machines and the app itself |
+| `--force`, `-f` | bool | `false` | Skip confirmation prompt |
+
+## Behavior
+
+| Command | What it destroys |
+|---------|-----------------|
+| `zwrm destroy` | All machines for the app |
+| `zwrm destroy --machine abc123` | A single machine |
+| `zwrm destroy --all` | All machines **and** the app |
+
+A confirmation prompt is shown before any destructive action. Pass `--force` to skip it.
+
+<Warning>Destroying an app with `--all` is permanent and cannot be undone. All machines, deployments, and associated resources are deleted.</Warning>
+
+## Examples
+
+Destroy all machines (keeps the app):
+
+```bash
+zwrm destroy --app my-app
+```
+
+Destroy a single machine:
+
+```bash
+zwrm destroy --machine abc123
+```
+
+Destroy everything without confirmation:
+
+```bash
+zwrm destroy --all --force
+```

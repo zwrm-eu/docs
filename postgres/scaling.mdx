@@ -1,0 +1,57 @@
+---
+title: "Scaling & Replicas"
+description: "Scale PostgreSQL with read replicas."
+icon: "clone"
+---
+
+## Scale replicas
+
+```bash
+zwrm postgres scale <name> <count>
+```
+
+| Argument | Type | Description |
+|----------|------|-------------|
+| `name` | string | Database name |
+| `count` | int | Total instance count (primary + replicas) |
+
+A count of `1` means the primary only. A count of `3` means the primary plus 2 read replicas.
+
+### Examples
+
+Add 2 read replicas:
+
+```bash
+zwrm postgres scale my-db 3
+```
+
+Scale back to primary only:
+
+```bash
+zwrm postgres scale my-db 1
+```
+
+## Size presets
+
+View the available size presets:
+
+```bash
+zwrm postgres presets
+```
+
+Each preset defines the vCPU count, memory, and storage for the database VM. Choose a size when creating the database with `--size`:
+
+```bash
+zwrm postgres create my-db --size large
+```
+
+## Stopping and starting
+
+You can stop a database to free resources while keeping your data:
+
+```bash
+zwrm postgres stop my-db
+zwrm postgres start my-db
+```
+
+The data volume is preserved across stop/start cycles.

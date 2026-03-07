@@ -1,0 +1,55 @@
+---
+title: "Logs"
+description: "View and stream VM console output."
+icon: "scroll"
+---
+
+## Usage
+
+```bash
+zwrm logs
+```
+
+View console output from your application's VMs.
+
+## Flags
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--app` | string | from `zwrm.toml` | Application name |
+| `--app-id` | string | — | Application UUID |
+| `--machine` | string | — | Show logs from a specific machine |
+| `--follow`, `-f` | bool | `false` | Stream logs in real-time |
+| `--lines`, `-n` | int | `100` | Number of lines to show |
+
+## Examples
+
+View the last 100 lines:
+
+```bash
+zwrm logs
+```
+
+Stream logs in real-time:
+
+```bash
+zwrm logs -f
+```
+
+View logs from a specific machine:
+
+```bash
+zwrm logs --machine abc123
+```
+
+Show the last 500 lines:
+
+```bash
+zwrm logs -n 500
+```
+
+## Behavior
+
+- Without `--machine`, logs are shown from all machines.
+- With `--follow`, logs are streamed over a WebSocket connection. Press `Ctrl+C` to stop — the connection is closed gracefully.
+- Machine IDs support prefix matching. If the prefix is ambiguous, the command will fail with an error.

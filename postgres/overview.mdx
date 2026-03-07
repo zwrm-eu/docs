@@ -1,0 +1,80 @@
+---
+title: "PostgreSQL"
+description: "Create and manage PostgreSQL databases on ZWRM."
+icon: "database"
+---
+
+ZWRM provides managed PostgreSQL databases running in dedicated Firecracker VMs. Each database gets its own isolated environment with persistent storage.
+
+## Create a database
+
+```bash
+zwrm postgres create <name>
+```
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--size` | string | `small` | Size preset: `small`, `medium`, or `large` |
+| `--database` | string | `postgres` | Initial database name |
+
+After creation, you'll see the connection credentials, connection strings (internal and external), and host information.
+
+<Tip>Run `zwrm postgres presets` to see what each size includes.</Tip>
+
+### Example
+
+```bash
+zwrm postgres create my-db --size medium
+```
+
+## Connect to a database
+
+```bash
+zwrm postgres connect <name>
+```
+
+Shows connection details and ready-to-use `psql` commands. The database must be running.
+
+## List databases
+
+```bash
+zwrm postgres list
+```
+
+Shows all databases with their ID, name, status, host, size, replica count, and creation time.
+
+## Stop and start
+
+Stop a database (data is preserved):
+
+```bash
+zwrm postgres stop <name>
+```
+
+Start it again:
+
+```bash
+zwrm postgres start <name>
+```
+
+## Destroy a database
+
+```bash
+zwrm postgres destroy <name>
+```
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--force`, `-f` | bool | `false` | Skip confirmation prompt |
+
+<Warning>Destroying a database permanently deletes all data. This cannot be undone.</Warning>
+
+## Size presets
+
+View available presets and their resources:
+
+```bash
+zwrm postgres presets
+```
+
+Each preset defines vCPUs, memory, and storage allocation.

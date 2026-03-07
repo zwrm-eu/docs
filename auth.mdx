@@ -1,0 +1,72 @@
+---
+title: "Authentication"
+description: "Log in, manage tokens, and check your identity."
+icon: "lock"
+---
+
+## Log in
+
+```bash
+zwrm auth login
+```
+
+Opens your browser to complete the authentication flow. Your token is saved to `~/.zwrm/credentials.json`.
+
+For headless environments (SSH sessions, CI pipelines), pass a token directly:
+
+```bash
+zwrm auth login --token <your-api-token>
+```
+
+## Log out
+
+```bash
+zwrm auth logout
+```
+
+Removes `~/.zwrm/credentials.json`.
+
+## Check your identity
+
+```bash
+zwrm auth whoami
+```
+
+Shows your user ID, email, and name.
+
+## View your token
+
+```bash
+zwrm auth token
+```
+
+Displays your current token in masked format and shows where it was loaded from (environment variable or credentials file).
+
+## Token resolution
+
+ZWRM looks for your API token in this order:
+
+1. `ZWRM_API_TOKEN` environment variable
+2. `~/.zwrm/credentials.json` file
+
+Setting `ZWRM_API_TOKEN` is useful for CI/CD pipelines and automation:
+
+```bash
+export ZWRM_API_TOKEN="your-token-here"
+zwrm deploy
+```
+
+## Credentials file
+
+The credentials file is stored at `~/.zwrm/credentials.json` with restricted permissions (mode `0600`):
+
+```json
+{
+  "token": "...",
+  "user": {
+    "id": "...",
+    "email": "user@example.com",
+    "name": "User Name"
+  }
+}
+```

@@ -1,0 +1,54 @@
+---
+title: "Routes"
+description: "Manage custom hostname routes for your application."
+icon: "route"
+---
+
+Routes connect custom hostnames to your application through ZWRM's reverse proxy.
+
+## List routes
+
+```bash
+zwrm routes list
+```
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--app` | string | from `zwrm.toml` | Application name |
+
+## Create a route
+
+```bash
+zwrm routes create --hostname example.com
+```
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--app` | string | from `zwrm.toml` | Application name |
+| `--hostname` | string | **required** | Target hostname |
+| `--port` | int | from app config or `8080` | Target port |
+
+### Example
+
+```bash
+zwrm routes create --hostname api.example.com --port 3000 --app my-api
+```
+
+## Delete a route
+
+```bash
+zwrm routes delete <route-id>
+```
+
+Route IDs support prefix matching — you only need to type enough characters to uniquely identify the route.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--force`, `-f` | bool | `false` | Skip confirmation prompt |
+| `--app` | string | from `zwrm.toml` | Application name |
+
+### Example
+
+```bash
+zwrm routes delete abc123 --force
+```
