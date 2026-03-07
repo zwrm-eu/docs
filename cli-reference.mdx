@@ -34,7 +34,7 @@ zwrm init [--name <name>] [--dockerfile <path>] [--no-prompt]
 
 ## `zwrm deploy`
 
-Build and deploy the application. [Guide →](/deploying/deploy)
+Build and deploy the application. [Guide →](/apps/deploy)
 
 ```bash
 zwrm deploy [--app <name>] [--context <dir>] [--force-build] [--replicas <n>]
@@ -51,7 +51,7 @@ zwrm deploy [--app <name>] [--context <dir>] [--force-build] [--replicas <n>]
 
 ## `zwrm status`
 
-Show application and machine status. [Guide →](/managing/status)
+Show application and machine status. [Guide →](/apps/status)
 
 ```bash
 zwrm status [--app <name>] [--app-id <uuid>]
@@ -61,7 +61,7 @@ zwrm status [--app <name>] [--app-id <uuid>]
 
 ## `zwrm scale`
 
-Scale to a target number of machines. [Guide →](/deploying/scaling)
+Scale to a target number of machines. [Guide →](/apps/scaling)
 
 ```bash
 zwrm scale <count> [--app <name>] [--app-id <uuid>]
@@ -71,7 +71,7 @@ zwrm scale <count> [--app <name>] [--app-id <uuid>]
 
 ## `zwrm destroy`
 
-Destroy machines or the entire application. [Guide →](/managing/destroy)
+Destroy machines or the entire application. [Guide →](/apps/destroy)
 
 ```bash
 zwrm destroy [--app <name>] [--machine <id>] [--all] [--force]
@@ -89,7 +89,7 @@ zwrm destroy [--app <name>] [--machine <id>] [--all] [--force]
 
 ## `zwrm logs`
 
-View or stream VM console output. [Guide →](/managing/logs)
+View or stream VM console output. [Guide →](/apps/logs)
 
 ```bash
 zwrm logs [--app <name>] [--machine <id>] [--follow] [--lines <n>]
@@ -107,7 +107,7 @@ zwrm logs [--app <name>] [--machine <id>] [--follow] [--lines <n>]
 
 ## `zwrm ssh`
 
-SSH into a running VM. [Guide →](/managing/ssh)
+SSH into a running VM. [Guide →](/apps/ssh)
 
 ```bash
 zwrm ssh [machine-id] [--app <name>] [--direct] [--user <user>]
@@ -125,7 +125,7 @@ zwrm ssh [machine-id] [--app <name>] [--direct] [--user <user>]
 
 ## `zwrm secrets`
 
-Manage encrypted application secrets. [Guide →](/deploying/secrets)
+Manage encrypted application secrets. [Guide →](/apps/secrets)
 
 ### `zwrm secrets set`
 
@@ -158,7 +158,7 @@ All subcommands accept `--app` and `--app-id`.
 
 ## `zwrm volumes`
 
-Manage persistent volumes. [Guide →](/deploying/volumes)
+Manage persistent volumes. [Guide →](/apps/volumes)
 
 ### `zwrm volumes create`
 
@@ -196,7 +196,7 @@ All subcommands accept `--app` and `--app-id`.
 
 ## `zwrm routes`
 
-Manage custom hostname routes. [Guide →](/deploying/routes)
+Manage custom hostname routes. [Guide →](/apps/routes)
 
 ### `zwrm routes list`
 
@@ -351,7 +351,7 @@ zwrm agent destroy <instance>
 
 ## `zwrm dashboard`
 
-Show monitoring dashboard URLs. [Guide →](/managing/dashboard)
+Show monitoring dashboard URLs. [Guide →](/apps/dashboard)
 
 ```bash
 zwrm dashboard [--open]
