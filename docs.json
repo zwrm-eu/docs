@@ -22,23 +22,24 @@
             ]
           },
           {
-            "group": "Deploying",
+            "group": "Authentication",
             "pages": [
-              "deploying/deploy",
-              "deploying/scaling",
-              "deploying/secrets",
-              "deploying/volumes",
-              "deploying/routes"
+              "auth"
             ]
           },
           {
-            "group": "Managing Apps",
+            "group": "Apps",
             "pages": [
-              "managing/status",
-              "managing/logs",
-              "managing/ssh",
-              "managing/destroy",
-              "managing/dashboard"
+              "apps/deploy",
+              "apps/status",
+              "apps/scaling",
+              "apps/logs",
+              "apps/ssh",
+              "apps/secrets",
+              "apps/volumes",
+              "apps/routes",
+              "apps/destroy",
+              "apps/dashboard"
             ]
           },
           {
@@ -57,9 +58,15 @@
             ]
           },
           {
-            "group": "Authentication",
+            "group": "Global Secrets",
             "pages": [
-              "auth"
+              "secrets"
+            ]
+          },
+          {
+            "group": "Sandboxes",
+            "pages": [
+              "sandbox"
             ]
           }
         ]

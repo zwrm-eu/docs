@@ -1,0 +1,80 @@
+---
+title: "Sandboxes"
+description: "Ephemeral, API-driven code execution environments."
+icon: "box"
+---
+
+<Note>Sandboxes are coming soon and not yet available.</Note>
+
+Sandboxes are lightweight, ephemeral Firecracker VMs that AI agents can spin up programmatically to safely execute code, manipulate files, and run tools. They boot in under a second from pre-built templates and auto-destroy after a configurable timeout.
+
+## How sandboxes compare
+
+| | **Apps** | **Agents** | **Sandboxes** |
+|---|---|---|---|
+| **Purpose** | Deployed services | AI agent workspaces | Ephemeral code execution |
+| **Lifetime** | Permanent | Hours to days | Seconds to minutes |
+| **Created by** | Developer via CLI | Developer via CLI/API | AI agent via SDK |
+| **Interface** | HTTP routes, proxy | SSH, terminal, git | Execute API, file API |
+| **Boot speed** | Rolling deploy (minutes) | Template launch (seconds) | Instant from cache (< 1s) |
+
+## Templates
+
+Sandboxes boot from pre-built VM images called templates. ZWRM will ship with several built-in templates:
+
+| Template | Description |
+|----------|-------------|
+| `base` | Ubuntu with common dev utilities |
+| `python` | Python 3.12 + pip + venv |
+| `python-data-science` | Python + numpy, pandas, matplotlib, scikit-learn |
+| `node` | Node.js 22 + npm + yarn + pnpm |
+| `go` | Go 1.22 + standard toolchain |
+| `web-browser` | Chromium + Playwright for browser automation |
+
+You'll also be able to create custom templates from your own Dockerfiles.
+
+## Core capabilities
+
+### Instant launch
+
+Sandboxes skip the Docker build step entirely — they boot from cached template images in under a second.
+
+### Code execution
+
+Run commands inside a sandbox and get structured output (stdout, stderr, exit code) or stream output in real-time for long-running processes.
+
+### Filesystem access
+
+Upload files into a sandbox before execution and download results after. Supports both individual files and bulk tar archives.
+
+### Auto-cleanup
+
+Every sandbox has a timeout (default: 5 minutes, max: 24 hours). When the timeout expires, the VM is automatically destroyed. A keep-alive API lets you extend the timeout as needed.
+
+### Port exposure
+
+Optionally expose sandbox ports to the internet through ZWRM's reverse proxy, useful for previewing web apps or running dev servers.
+
+## Planned SDK support
+
+Python and TypeScript SDKs will wrap the sandbox API for programmatic use:
+
+```python
+from zwrmd import Sandbox
+
+with Sandbox.create(template="python", timeout="10m") as sbx:
+    sbx.upload("./data.csv", "/home/user/data.csv")
+    result = sbx.execute("python3 analyze.py")
+    print(result.stdout)
+    sbx.download("/home/user/report.pdf", "./report.pdf")
+```
+
+```typescript
+import { Sandbox } from '@zwrmd/sdk';
+
+const sbx = await Sandbox.create({ template: 'node', timeout: '10m' });
+await sbx.upload('./data.json', '/home/user/data.json');
+const result = await sbx.execute('node process.js');
+console.log(result.stdout);
+await sbx.destroy();
+```

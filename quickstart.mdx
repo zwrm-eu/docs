@@ -6,13 +6,13 @@ icon: "rocket"
 
 <Steps>
   <Step title="Install the CLI">
-    Download the latest `zwrm` binary for your platform:
+    Install the `zwrm` CLI binary:
 
     ```bash
-    curl -fsSL https://zwrm.eu/install.sh | sh
+    curl -fsSL https://releases.zwrm.eu/zwrmd/install.sh | bash -s -- --cli
     ```
 
-    Verify the installation:
+    On Linux, this installs to `/usr/local/bin/zwrm` (as root) or `~/.local/bin/zwrm` (as non-root). Verify the installation:
 
     ```bash
     zwrm --help
@@ -70,10 +70,10 @@ icon: "rocket"
   <Card title="Configuration" icon="gear" href="/configuration">
     Customize VM size, services, health checks, and more.
   </Card>
-  <Card title="Secrets" icon="key" href="/deploying/secrets">
+  <Card title="Secrets" icon="key" href="/apps/secrets">
     Set environment variables and encrypted secrets.
   </Card>
-  <Card title="Volumes" icon="hard-drive" href="/deploying/volumes">
+  <Card title="Volumes" icon="hard-drive" href="/apps/volumes">
     Attach persistent storage to your VMs.
   </Card>
   <Card title="PostgreSQL" icon="database" href="/postgres/overview">

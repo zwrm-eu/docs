@@ -32,7 +32,7 @@ internal_port = 8080
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
 | `name` | string | **required** | Application name |
-| `primary_region` | string | `"local"` | Preferred deployment region |
+| `primary_region` | string | `"local"` | Preferred deployment region (not yet implemented) |
 
 #### `[build]`
 
@@ -68,7 +68,7 @@ PORT = "8080"
 NODE_ENV = "production"
 ```
 
-<Tip>For sensitive values, use [`zwrm secrets`](/deploying/secrets) instead.</Tip>
+<Tip>For sensitive values, use [`zwrm secrets`](/apps/secrets) instead.</Tip>
 
 #### `[[services]]`
 
@@ -139,7 +139,7 @@ size_mb = 10240
 mount_point = "/data"
 ```
 
-See [Volumes](/deploying/volumes) for more details.
+See [Volumes](/apps/volumes) for more details.
 
 #### `[network]`
 
