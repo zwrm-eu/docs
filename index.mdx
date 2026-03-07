@@ -1,10 +1,12 @@
 ---
 title: "ZWRM Documentation"
-description: "Deploy and manage applications on ZWRM's microVM platform."
+description: "Agent-native deployment platform. Run coding agents and deploy apps on Firecracker microVMs."
 icon: "book"
 ---
 
-ZWRM runs your Docker containers as lightweight Firecracker microVMs. You get fast deploys, persistent volumes, private networking, managed Postgres, and SSH access — all from a single CLI.
+ZWRM is an agent-native deployment platform. Run coding agents on isolated Firecracker microVMs and deploy apps in seconds — from a single CLI.
+
+Agents have full access to the ZWRM platform: they can build, deploy, scale, and manage applications directly from within their VM. No context switching, no extra tooling — your AI coding agent is a first-class citizen on the platform.
 
 <CardGroup cols={2}>
   <Card title="Quickstart" icon="rocket" href="/quickstart">
@@ -14,7 +16,7 @@ ZWRM runs your Docker containers as lightweight Firecracker microVMs. You get fa
     Build, deploy, and manage your applications.
   </Card>
   <Card title="Agents" icon="robot" href="/agents/overview">
-    Spin up persistent coding agent VMs.
+    Run coding agents with full platform access.
   </Card>
   <Card title="Databases" icon="database" href="/postgres/overview">
     Create and manage PostgreSQL databases.
