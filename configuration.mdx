@@ -1,0 +1,189 @@
+---
+title: "Configuration"
+description: "Configure your application with zwrm.toml and global CLI settings."
+icon: "gear"
+---
+
+## Application config: zwrm.toml
+
+Every ZWRM application has a `zwrm.toml` file in its root directory. This file is created by `zwrm init` and defines how your app is built, deployed, and run.
+
+### Minimal example
+
+```toml
+[app]
+name = "my-app"
+
+[build]
+dockerfile = "Dockerfile"
+
+[[services]]
+internal_port = 8080
+
+  [[services.ports]]
+  port = 443
+  handlers = ["http", "tls"]
+```
+
+### Full reference
+
+#### `[app]`
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `name` | string | **required** | Application name |
+| `primary_region` | string | `"local"` | Preferred deployment region |
+
+#### `[build]`
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `dockerfile` | string | `"Dockerfile"` | Path to Dockerfile |
+| `context` | string | `"."` | Build context directory |
+| `image` | string | — | Pre-built image (alternative to Dockerfile) |
+
+You can also set build arguments:
+
+```toml
+[build.args]
+NODE_ENV = "production"
+```
+
+#### `[deploy]`
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `max_surge` | int | `1` | Max extra machines during rolling deploy |
+| `health_check_timeout` | string | `"60s"` | Time to wait for health check to pass |
+| `auto_rollback` | bool | `true` | Roll back on failed deploy |
+| `stabilization_period` | string | `"10s"` | Wait time after health check before proceeding |
+
+#### `[env]`
+
+Set non-secret environment variables:
+
+```toml
+[env]
+PORT = "8080"
+NODE_ENV = "production"
+```
+
+<Tip>For sensitive values, use [`zwrm secrets`](/deploying/secrets) instead.</Tip>
+
+#### `[[services]]`
+
+Define how traffic reaches your app:
+
+```toml
+[[services]]
+internal_port = 8080
+protocol = "tcp"
+
+  [[services.ports]]
+  port = 80
+  handlers = ["http"]
+
+  [[services.ports]]
+  port = 443
+  handlers = ["http", "tls"]
+
+  [services.concurrency]
+  type = "requests"
+  hard_limit = 25
+  soft_limit = 20
+```
+
+#### `[services.health_check]`
+
+```toml
+[services.health_check]
+type = "http"
+interval = "10s"
+timeout = "2s"
+grace_period = "30s"
+method = "GET"
+path = "/health"
+port = 8080
+failure_threshold = 3
+```
+
+#### `[vm]`
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `size` | string | `"shared-cpu-1x"` | VM size preset |
+| `cpus` | int | — | Override preset CPU count |
+| `memory` | int | — | Override preset memory (MB) |
+| `kernel` | string | — | Custom kernel path |
+| `restart_policy` | string | `"on-failure"` | Restart policy |
+| `max_restarts` | int | `-1` | Max restart attempts (-1 = unlimited) |
+
+**Available VM size presets:**
+
+| Preset | CPUs | Memory |
+|--------|------|--------|
+| `shared-cpu-1x` | 1 | 256 MB |
+| `shared-cpu-2x` | 1 | 512 MB |
+| `shared-cpu-4x` | 2 | 1024 MB |
+| `performance-1x` | 1 | 2048 MB |
+| `performance-2x` | 2 | 4096 MB |
+| `performance-4x` | 4 | 8192 MB |
+| `performance-8x` | 8 | 16384 MB |
+
+#### `[[volumes]]`
+
+```toml
+[[volumes]]
+name = "data"
+size_mb = 10240
+mount_point = "/data"
+```
+
+See [Volumes](/deploying/volumes) for more details.
+
+#### `[network]`
+
+```toml
+[network]
+private = true
+
+  [[network.rules]]
+  source = "same_app"
+  port = 8080
+  protocol = "tcp"
+  action = "allow"
+```
+
+Setting `private = true` enables communication between your app's VMs over a private network.
+
+---
+
+## CLI config: ~/.zwrm/config.toml
+
+Global CLI settings are stored at `~/.zwrm/config.toml`. This file is created automatically on first use.
+
+```toml
+control_plane_url = "https://zwrm.io"
+dashboard_url = "https://dashboard.zwrm.eu"
+default_app = ""
+default_region = "local"
+```
+
+| Field | Description |
+|-------|-------------|
+| `control_plane_url` | API endpoint for the ZWRM control plane |
+| `dashboard_url` | URL for the web dashboard |
+| `default_app` | Default application name if none is specified |
+| `default_region` | Default deployment region |
+
+You can override `control_plane_url` on any command with the `--api-url` flag.
+
+## Global flags
+
+Every `zwrm` command accepts these flags:
+
+| Flag | Description |
+|------|-------------|
+| `--config <path>` | Path to CLI config file (default: `~/.zwrm/config.toml`) |
+| `--api-url <url>` | Override the control plane URL |
+| `--verbose`, `-v` | Enable verbose output |

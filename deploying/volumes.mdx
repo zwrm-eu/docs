@@ -1,0 +1,72 @@
+---
+title: "Volumes"
+description: "Attach persistent storage to your VMs."
+icon: "hard-drive"
+---
+
+Volumes provide persistent block storage that survives VM restarts and redeployments. Use them for databases, file uploads, caches, or any data that needs to persist.
+
+## Create a volume
+
+```bash
+zwrm volumes create <name>
+```
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--size` | int | `1024` | Volume size in MB |
+| `--mount` | string | `/data` | Mount point inside the VM |
+| `--app` | string | from `zwrm.toml` | Application name |
+| `--no-sync` | bool | `false` | Don't update zwrm.toml |
+
+By default, creating a volume also adds it to your `zwrm.toml` file.
+
+### Example
+
+```bash
+zwrm volumes create uploads --size 5120 --mount /app/uploads
+```
+
+This creates a 5 GB volume mounted at `/app/uploads` in your VM.
+
+## List volumes
+
+```bash
+zwrm volumes list
+```
+
+Shows volume ID, name, total size, used space, free space, and mount point.
+
+## Destroy a volume
+
+```bash
+zwrm volumes destroy <name>
+```
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--force`, `-f` | bool | `false` | Skip confirmation prompt |
+| `--no-sync` | bool | `false` | Don't update zwrm.toml |
+
+<Warning>Destroying a volume permanently deletes all data on it. This cannot be undone.</Warning>
+
+## Check volume limits
+
+```bash
+zwrm volumes limits
+```
+
+Shows maximum volume size, per-app volume limits, minimum free disk, and available disk space.
+
+## Defining volumes in zwrm.toml
+
+You can also define volumes directly in your configuration file:
+
+```toml
+[[volumes]]
+name = "data"
+size_mb = 10240
+mount_point = "/data"
+```
+
+Volumes defined in `zwrm.toml` are created automatically on deploy if they don't already exist.

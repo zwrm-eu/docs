@@ -1,0 +1,372 @@
+---
+title: "CLI Reference"
+description: "Complete command reference for the zwrm CLI."
+icon: "terminal"
+---
+
+## Global flags
+
+These flags are available on every command:
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--config` | string | `~/.zwrm/config.toml` | CLI configuration file path |
+| `--api-url` | string | `https://zwrm.io` | Control plane API URL |
+| `--verbose`, `-v` | bool | `false` | Enable verbose output |
+
+---
+
+## `zwrm init`
+
+Initialize a new `zwrm.toml` configuration file.
+
+```bash
+zwrm init [--name <name>] [--dockerfile <path>] [--no-prompt]
+```
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--name` | string | current directory name | Application name |
+| `--dockerfile` | string | auto-detected | Dockerfile path |
+| `--no-prompt` | bool | `false` | Use defaults without prompting |
+
+---
+
+## `zwrm deploy`
+
+Build and deploy the application. [Guide →](/deploying/deploy)
+
+```bash
+zwrm deploy [--app <name>] [--context <dir>] [--force-build] [--replicas <n>]
+```
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--app` | string | from `zwrm.toml` | Application name |
+| `--context` | string | `.` | Build context directory |
+| `--force-build` | bool | `false` | Bypass build cache |
+| `--replicas` | int | `1` | Number of VM instances |
+
+---
+
+## `zwrm status`
+
+Show application and machine status. [Guide →](/managing/status)
+
+```bash
+zwrm status [--app <name>] [--app-id <uuid>]
+```
+
+---
+
+## `zwrm scale`
+
+Scale to a target number of machines. [Guide →](/deploying/scaling)
+
+```bash
+zwrm scale <count> [--app <name>] [--app-id <uuid>]
+```
+
+---
+
+## `zwrm destroy`
+
+Destroy machines or the entire application. [Guide →](/managing/destroy)
+
+```bash
+zwrm destroy [--app <name>] [--machine <id>] [--all] [--force]
+```
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--app` | string | from `zwrm.toml` | Application name |
+| `--app-id` | string | — | Application UUID |
+| `--machine` | string | — | Destroy a specific machine (prefix match) |
+| `--all` | bool | `false` | Also destroy the app |
+| `--force`, `-f` | bool | `false` | Skip confirmation |
+
+---
+
+## `zwrm logs`
+
+View or stream VM console output. [Guide →](/managing/logs)
+
+```bash
+zwrm logs [--app <name>] [--machine <id>] [--follow] [--lines <n>]
+```
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--app` | string | from `zwrm.toml` | Application name |
+| `--app-id` | string | — | Application UUID |
+| `--machine` | string | — | Specific machine ID |
+| `--follow`, `-f` | bool | `false` | Stream in real-time |
+| `--lines`, `-n` | int | `100` | Number of lines |
+
+---
+
+## `zwrm ssh`
+
+SSH into a running VM. [Guide →](/managing/ssh)
+
+```bash
+zwrm ssh [machine-id] [--app <name>] [--direct] [--user <user>]
+```
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--app` | string | from `zwrm.toml` | Application name |
+| `--app-id` | string | — | Application UUID |
+| `--machine` | string | — | Machine ID (alternative to positional) |
+| `--direct` | bool | `false` | Direct connection (host access only) |
+| `--user` | string | — | SSH user override |
+
+---
+
+## `zwrm secrets`
+
+Manage encrypted application secrets. [Guide →](/deploying/secrets)
+
+### `zwrm secrets set`
+
+```bash
+zwrm secrets set <NAME> <VALUE>
+zwrm secrets set <NAME>=<VALUE>
+```
+
+### `zwrm secrets list`
+
+```bash
+zwrm secrets list [--app <name>]
+```
+
+### `zwrm secrets unset`
+
+```bash
+zwrm secrets unset <NAME> [--app <name>]
+```
+
+### `zwrm secrets add`
+
+```bash
+zwrm secrets add --from-file <path> [--app <name>]
+```
+
+All subcommands accept `--app` and `--app-id`.
+
+---
+
+## `zwrm volumes`
+
+Manage persistent volumes. [Guide →](/deploying/volumes)
+
+### `zwrm volumes create`
+
+```bash
+zwrm volumes create <name> [--size <mb>] [--mount <path>] [--app <name>]
+```
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--size` | int | `1024` | Volume size in MB |
+| `--mount` | string | `/data` | Mount point in the VM |
+| `--no-sync` | bool | `false` | Don't update zwrm.toml |
+
+### `zwrm volumes list`
+
+```bash
+zwrm volumes list [--app <name>]
+```
+
+### `zwrm volumes destroy`
+
+```bash
+zwrm volumes destroy <name> [--force] [--no-sync]
+```
+
+### `zwrm volumes limits`
+
+```bash
+zwrm volumes limits
+```
+
+All subcommands accept `--app` and `--app-id`.
+
+---
+
+## `zwrm routes`
+
+Manage custom hostname routes. [Guide →](/deploying/routes)
+
+### `zwrm routes list`
+
+```bash
+zwrm routes list [--app <name>]
+```
+
+### `zwrm routes create`
+
+```bash
+zwrm routes create --hostname <host> [--port <n>] [--app <name>]
+```
+
+### `zwrm routes delete`
+
+```bash
+zwrm routes delete <route-id> [--force] [--app <name>]
+```
+
+---
+
+## `zwrm postgres`
+
+Manage PostgreSQL databases. [Guide →](/postgres/overview)
+
+### `zwrm postgres create`
+
+```bash
+zwrm postgres create <name> [--size <preset>] [--database <dbname>]
+```
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--size` | string | `small` | Preset: `small`, `medium`, `large` |
+| `--database` | string | `postgres` | Initial database name |
+
+### `zwrm postgres list`
+
+```bash
+zwrm postgres list
+```
+
+### `zwrm postgres connect`
+
+```bash
+zwrm postgres connect <name>
+```
+
+### `zwrm postgres destroy`
+
+```bash
+zwrm postgres destroy <name> [--force]
+```
+
+### `zwrm postgres stop` / `start`
+
+```bash
+zwrm postgres stop <name>
+zwrm postgres start <name>
+```
+
+### `zwrm postgres presets`
+
+```bash
+zwrm postgres presets
+```
+
+### `zwrm postgres scale`
+
+```bash
+zwrm postgres scale <name> <count>
+```
+
+### `zwrm postgres link` / `unlink`
+
+```bash
+zwrm postgres link <database-name> [--app <name>]
+zwrm postgres unlink <database-name> [--app <name>]
+```
+
+### `zwrm postgres links`
+
+```bash
+zwrm postgres links [--app <name>] [--database <name>]
+```
+
+---
+
+## `zwrm auth`
+
+Manage authentication. [Guide →](/auth)
+
+### `zwrm auth login`
+
+```bash
+zwrm auth login [--token <token>]
+```
+
+### `zwrm auth logout`
+
+```bash
+zwrm auth logout
+```
+
+### `zwrm auth whoami`
+
+```bash
+zwrm auth whoami
+```
+
+### `zwrm auth token`
+
+```bash
+zwrm auth token
+```
+
+---
+
+## `zwrm agent`
+
+Manage coding agent VMs. [Guide →](/agents/overview)
+
+```bash
+zwrm agent <type> [instance]
+zwrm a <type> [instance]
+```
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--repo` | string | auto-detected | Git repo URL |
+| `--branch` | string | — | Git branch |
+| `--no-repo` | bool | `false` | Skip repo detection |
+| `--template` | string | — | Template from registry |
+| `--size` | string | — | VM size preset |
+| `--shell` | bool | `false` | Start plain bash |
+| `--cmd` | string | — | Override startup command |
+| `--instance` | string | — | Named instance |
+
+### `zwrm agent list`
+
+```bash
+zwrm agent list
+```
+
+### `zwrm agent destroy`
+
+```bash
+zwrm agent destroy <instance>
+```
+
+---
+
+## `zwrm dashboard`
+
+Show monitoring dashboard URLs. [Guide →](/managing/dashboard)
+
+```bash
+zwrm dashboard [--open]
+```
+
+---
+
+## ID prefix matching
+
+Many commands accept machine, route, or database IDs. You don't need to type the full UUID — just enough characters to uniquely identify the resource:
+
+```bash
+zwrm ssh abc1          # matches machine with ID starting with "abc1"
+zwrm destroy --machine ab12
+zwrm routes delete 7f3
+```
+
+If the prefix matches multiple resources, the command fails with an error listing the ambiguous matches.

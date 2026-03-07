@@ -1,0 +1,59 @@
+---
+title: "Linking"
+description: "Connect PostgreSQL databases to your applications over private networking."
+icon: "link"
+---
+
+Linking a database to an application enables private network access between them — your app can connect to the database without going over the public internet.
+
+## Link a database
+
+```bash
+zwrm postgres link <database-name>
+```
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--app` | string | from `zwrm.toml` | Application to link to |
+
+### Example
+
+```bash
+zwrm postgres link my-db --app my-app
+```
+
+## Unlink a database
+
+```bash
+zwrm postgres unlink <database-name>
+```
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--app` | string | from `zwrm.toml` | Application to unlink from |
+
+## View links
+
+```bash
+zwrm postgres links
+```
+
+| Flag | Type | Description |
+|------|------|-------------|
+| `--app` | string | Show databases linked to this app |
+| `--database` | string | Show apps linked to this database |
+
+These flags are mutually exclusive. If neither is specified, the app name is read from `zwrm.toml`.
+
+### Examples
+
+```bash
+# Show databases linked to the current app
+zwrm postgres links
+
+# Show databases linked to a specific app
+zwrm postgres links --app my-app
+
+# Show apps linked to a specific database
+zwrm postgres links --database my-db
+```

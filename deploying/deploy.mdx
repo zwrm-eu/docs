@@ -1,0 +1,85 @@
+---
+title: "Deploying"
+description: "Build and deploy your application to ZWRM."
+icon: "cloud-arrow-up"
+---
+
+## Usage
+
+```bash
+zwrm deploy
+```
+
+The `deploy` command builds your Docker image, converts it to a Firecracker microVM, and starts it on the platform.
+
+## What happens during a deploy
+
+1. **Build context upload** — Your project directory is packaged as a gzipped tarball and uploaded.
+2. **Image build** — The Docker image is built on ZWRM's build servers. Build logs are streamed to your terminal in real-time.
+3. **VM creation** — The image is converted to a Firecracker VM and started.
+4. **Health check** — If your app has a public URL, ZWRM checks that it returns a healthy response.
+5. **Done** — You'll see the machine IPs and SSH access information.
+
+## Flags
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--app` | string | from `zwrm.toml` | Application name |
+| `--context` | string | `.` | Build context directory |
+| `--force-build` | bool | `false` | Force rebuild, bypass cache |
+| `--replicas` | int | `1` | Number of VM instances to deploy |
+
+## Examples
+
+Deploy the current directory:
+
+```bash
+zwrm deploy
+```
+
+Deploy with multiple replicas:
+
+```bash
+zwrm deploy --replicas 3
+```
+
+Force a fresh build (ignore cache):
+
+```bash
+zwrm deploy --force-build
+```
+
+Deploy a different app:
+
+```bash
+zwrm deploy --app my-other-app --context ./other-app
+```
+
+## Build caching
+
+ZWRM uses content-addressed caching based on your Dockerfile, build context, and build args. If nothing has changed, the build is skipped entirely. Use `--force-build` to bypass the cache when needed.
+
+## Health checks
+
+After deploying, ZWRM automatically health-checks your app's public URL:
+
+- Deployment succeeds after receiving a 2xx or 3xx response.
+- 502 (Bad Gateway) responses are retried for up to 30 seconds — this is normal while the VM boots.
+- If the health check fails, you'll see hints about common issues.
+
+<Tip>Configure health check behavior in the `[services.health_check]` section of your [zwrm.toml](/configuration#serviceshealthcheck).</Tip>
+
+## Creating an app without deploying
+
+When you run `zwrm deploy` for the first time, the app is created automatically if it doesn't already exist. If you just want to create the `zwrm.toml` without deploying, use `zwrm init`:
+
+```bash
+zwrm init --name my-app
+zwrm init --name my-app --no-prompt
+```
+
+| Flag | Description |
+|------|-------------|
+| `--name` | Application name (defaults to current directory name) |
+| `--dockerfile` | Path to Dockerfile (auto-detected) |
+| `--no-prompt` | Use defaults without prompting |

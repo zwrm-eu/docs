@@ -1,0 +1,36 @@
+---
+title: "Status"
+description: "View the current state of your application and machines."
+icon: "circle-info"
+---
+
+## Usage
+
+```bash
+zwrm status
+```
+
+Shows an overview of your application including metadata, running machines, and recent deployments.
+
+## Flags
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--app` | string | from `zwrm.toml` | Application name |
+| `--app-id` | string | — | Application UUID |
+
+## Output
+
+The status command displays three sections:
+
+**App metadata** — Application ID, creation and update timestamps, VM size, CPU count, and memory allocation.
+
+**Machines** — A table of all machines showing ID, instance ID, current status, IP address, and creation time.
+
+**Recent deployments** — The last 5 deployments with their status and timestamps.
+
+## Example
+
+```bash
+$ zwrm status --app my-app
+```

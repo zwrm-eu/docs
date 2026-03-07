@@ -1,0 +1,40 @@
+---
+title: "Dashboard"
+description: "Access monitoring dashboards for your applications."
+icon: "chart-line"
+---
+
+## Usage
+
+```bash
+zwrm dashboard
+```
+
+Display URLs for ZWRM's monitoring dashboards.
+
+## Flags
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--open` | bool | `false` | Open the system overview dashboard in your browser |
+
+## Available dashboards
+
+The command shows URLs for:
+
+- **System Overview** — Platform-wide metrics and health
+- **App Overview** — Per-application metrics
+- **VM Resources** — CPU, memory, and disk usage per VM
+- **Deployments** — Deployment history and status
+- **Prometheus** — Raw metrics endpoint
+- **Loki** — Log aggregation endpoint
+
+## Example
+
+```bash
+# Show all dashboard URLs
+zwrm dashboard
+
+# Open the system overview in your browser
+zwrm dashboard --open
+```

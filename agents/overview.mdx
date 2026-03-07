@@ -1,0 +1,40 @@
+---
+title: "Coding Agents"
+description: "Run persistent coding agent VMs on ZWRM."
+icon: "robot"
+---
+
+ZWRM Agents let you spin up persistent coding agent VMs — ephemeral development environments backed by a home directory volume that survives across sessions. Connect your preferred AI coding tool (Claude, Codex, etc.) to a full VM with your repo ready to go.
+
+## Quick start
+
+```bash
+zwrm agent claude
+```
+
+This creates (or reconnects to) a Claude coding agent VM, clones the git repo from your current directory, and drops you into an SSH session.
+
+## How it works
+
+1. **VM creation** — A Firecracker VM is provisioned with your chosen agent type.
+2. **Repo cloning** — ZWRM auto-detects the git remote from your current directory and clones it into the VM.
+3. **Persistent home** — A volume is attached to the VM's home directory, so your files, config, and history persist across sessions.
+4. **SSH session** — You're connected via SSH with the agent's default command running.
+
+## Supported agent types
+
+| Type | Description |
+|------|-------------|
+| `claude` | Claude Code agent |
+| `codex` | Codex agent |
+
+## Named instances
+
+By default, each agent type gets one instance. Use named instances to run multiple environments:
+
+```bash
+zwrm agent claude my-project
+zwrm agent claude another-project
+```
+
+Each named instance has its own VM and persistent volume.

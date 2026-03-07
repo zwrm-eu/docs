@@ -1,0 +1,73 @@
+---
+title: "SSH"
+description: "Connect to a running VM via SSH."
+icon: "terminal"
+---
+
+## Usage
+
+```bash
+zwrm ssh [machine-id]
+```
+
+Open an SSH session to a running VM.
+
+## Arguments
+
+| Argument | Type | Description |
+|----------|------|-------------|
+| `machine-id` | string (optional) | Machine to connect to (prefix matching supported) |
+
+## Flags
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--app` | string | from `zwrm.toml` | Application name |
+| `--app-id` | string | — | Application UUID |
+| `--machine` | string | — | Machine ID (alternative to positional argument) |
+| `--direct` | bool | `false` | Connect directly to the VM IP |
+| `--user` | string | — | SSH user override |
+
+## Connection modes
+
+### Proxy mode (default)
+
+The default mode connects through ZWRM's SSH proxy using short-lived certificates. This works from anywhere — no direct network access to the VM is required.
+
+```bash
+zwrm ssh
+zwrm ssh abc123
+```
+
+ZWRM automatically:
+1. Creates a dedicated SSH key at `~/.ssh/zwrm_ed25519` (if it doesn't exist).
+2. Requests a short-lived certificate from the server.
+3. Connects through the proxy.
+
+### Direct mode
+
+Direct mode connects straight to the VM's IP address. This is only available when you have host-level network access.
+
+```bash
+zwrm ssh --direct
+```
+
+## Examples
+
+SSH into the first available machine:
+
+```bash
+zwrm ssh
+```
+
+SSH into a specific machine by ID prefix:
+
+```bash
+zwrm ssh abc123
+```
+
+Connect directly (host access required):
+
+```bash
+zwrm ssh --direct --machine abc123
+```

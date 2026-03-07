@@ -1,0 +1,52 @@
+---
+title: "Scaling"
+description: "Scale your application up or down."
+icon: "arrows-up-down"
+---
+
+## Usage
+
+```bash
+zwrm scale <count>
+```
+
+The `scale` command adjusts the number of running machines for your application.
+
+## Arguments
+
+| Argument | Type | Description |
+|----------|------|-------------|
+| `count` | int (required) | Target number of machines (0 or more) |
+
+## Flags
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--app` | string | from `zwrm.toml` | Application name |
+| `--app-id` | string | — | Application UUID |
+
+## Examples
+
+Scale to 3 machines:
+
+```bash
+zwrm scale 3
+```
+
+Scale down to 1 machine:
+
+```bash
+zwrm scale 1
+```
+
+Scale to zero (stops all machines):
+
+```bash
+zwrm scale 0
+```
+
+## How scaling works
+
+**Scaling up** creates new machines using the image from your latest deployment.
+
+**Scaling down** destroys the most recently created machines first. Machines in a `stopped` or `failed` state are skipped during scale-down.
