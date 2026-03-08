@@ -27,9 +27,6 @@ zwrm a claude
 
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
-| `--repo` | string | auto-detected | Explicit git repo URL |
-| `--branch` | string | — | Git branch to check out |
-| `--no-repo` | bool | `false` | Skip git repo auto-detection |
 | `--template` | string | — | Use a template from the registry |
 | `--size` | string | — | VM size preset |
 | `--shell` | bool | `false` | Start plain bash instead of the agent command |
@@ -41,7 +38,7 @@ zwrm a claude
 ### Basic usage
 
 ```bash
-# Start a Claude agent with auto-detected repo
+# Start a Claude agent
 zwrm agent claude
 
 # Start a Codex agent
@@ -49,19 +46,6 @@ zwrm agent codex
 
 # Connect with plain bash (no agent auto-start)
 zwrm agent claude --shell
-```
-
-### Working with repos
-
-```bash
-# Specify a repo explicitly
-zwrm a claude --repo git@github.com:user/repo.git
-
-# Check out a specific branch
-zwrm a claude --repo git@github.com:user/repo.git --branch feature-x
-
-# Skip repo cloning entirely
-zwrm a claude --no-repo
 ```
 
 ### Named instances
