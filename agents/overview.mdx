@@ -4,7 +4,7 @@ description: "Run persistent coding agent VMs with full platform access."
 icon: "robot"
 ---
 
-ZWRM Agents are persistent coding agent VMs running on isolated Firecracker microVMs. Connect your preferred AI coding tool (Claude, Codex, etc.) to a full VM with your repo ready to go and a home directory volume that survives across sessions.
+ZWRM Agents are persistent coding agent VMs running on isolated Firecracker microVMs. Connect your preferred AI coding tool (Claude, Codex, etc.) to a full VM with a home directory volume that survives across sessions.
 
 Agents have full access to the ZWRM platform — the `zwrm` CLI is pre-installed and authenticated. Your agent can build, deploy, scale, and manage applications directly from within its VM. Ship code from ideation to production without leaving the agent session.
 
@@ -14,15 +14,14 @@ Agents have full access to the ZWRM platform — the `zwrm` CLI is pre-installed
 zwrm agent claude
 ```
 
-This creates (or reconnects to) a Claude coding agent VM, clones the git repo from your current directory, and drops you into an SSH session.
+This creates (or reconnects to) a Claude coding agent VM and drops you into an SSH session.
 
 ## How it works
 
 1. **VM creation** — A Firecracker VM is provisioned with your chosen agent type.
-2. **Repo cloning** — ZWRM auto-detects the git remote from your current directory and clones it into the VM.
-3. **Persistent home** — A volume is attached to the VM's home directory, so your files, config, and history persist across sessions.
-4. **Platform access** — The `zwrm` CLI is available inside the VM with your credentials, so the agent can deploy apps, manage secrets, create databases, and more.
-5. **SSH session** — You're connected via SSH with the agent's default command running.
+2. **Persistent home** — A volume is attached to the VM's home directory, so your files, config, and history persist across sessions.
+3. **Platform access** — The `zwrm` CLI is available inside the VM with your credentials, so the agent can deploy apps, manage secrets, create databases, and more.
+4. **SSH session** — You're connected via SSH with the agent's default command running.
 
 ## What agents can do
 
