@@ -37,6 +37,7 @@
               "apps/ssh",
               "apps/secrets",
               "apps/volumes",
+              "apps/snapshots",
               "apps/routes",
               "apps/destroy",
               "apps/dashboard"
@@ -46,6 +47,7 @@
             "group": "PostgreSQL",
             "pages": [
               "postgres/overview",
+              "postgres/backups",
               "postgres/scaling",
               "postgres/linking"
             ]
@@ -54,7 +56,8 @@
             "group": "Coding Agents",
             "pages": [
               "agents/overview",
-              "agents/usage"
+              "agents/usage",
+              "agents/secrets"
             ]
           },
           {

@@ -1,0 +1,89 @@
+---
+title: "Volume snapshots"
+description: "Create and restore point-in-time snapshots of persistent volumes."
+icon: "camera"
+---
+
+Volume snapshots capture the state of a volume at a specific point in time. Snapshots are stored in S3 and can be used to restore a volume to a previous state.
+
+## Create a snapshot
+
+```bash
+zwrm volumes snapshot create <volume-name>
+```
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--app` | string | from `zwrm.toml` | Application name |
+| `--app-id` | string | — | Application ID |
+
+### Example
+
+```bash
+zwrm volumes snapshot create data --app my-app
+```
+
+## List snapshots
+
+```bash
+zwrm volumes snapshot list <volume-name>
+```
+
+Shows all snapshots for a volume with their ID, status, size, and creation time.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--app` | string | from `zwrm.toml` | Application name |
+| `--app-id` | string | — | Application ID |
+
+## Delete a snapshot
+
+```bash
+zwrm volumes snapshot delete <snapshot-id>
+```
+
+<Warning>Deleting a snapshot is permanent and cannot be undone.</Warning>
+
+## Automatic snapshots
+
+Enable scheduled snapshots for a volume:
+
+```bash
+zwrm volumes snapshot enable <volume-name>
+```
+
+Disable automatic snapshots:
+
+```bash
+zwrm volumes snapshot disable <volume-name>
+```
+
+Both commands accept `--app` and `--app-id` flags.
+
+## Restore a volume from a snapshot
+
+```bash
+zwrm volumes restore <volume-name>
+```
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--app` | string | from `zwrm.toml` | Application name |
+| `--app-id` | string | — | Application ID |
+| `--snapshot` | string | latest | Specific snapshot ID to restore from |
+
+<Warning>The VM must be stopped before restoring a volume. Stop it with `zwrm destroy` first, then restore and redeploy.</Warning>
+
+### Examples
+
+Restore from the latest snapshot:
+
+```bash
+zwrm volumes restore data --app my-app
+```
+
+Restore from a specific snapshot:
+
+```bash
+zwrm volumes restore data --app my-app --snapshot abc12345
+```

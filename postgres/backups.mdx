@@ -1,0 +1,106 @@
+---
+title: "Backups"
+description: "Back up and restore PostgreSQL databases with WAL archiving and point-in-time recovery."
+icon: "clock-rotate-left"
+---
+
+ZWRM supports full backups and point-in-time recovery (PITR) for PostgreSQL databases. Backups are stored externally and can be used to restore into a new database instance.
+
+## Enable WAL archiving
+
+Before creating backups, enable WAL (Write-Ahead Log) archiving on the database:
+
+```bash
+zwrm postgres backup enable <name>
+```
+
+Restart the database after enabling for changes to take effect.
+
+To disable WAL archiving:
+
+```bash
+zwrm postgres backup disable <name>
+```
+
+## Create a backup
+
+```bash
+zwrm postgres backup create <name>
+```
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--type` | string | `base` | Backup type: `base` or `logical` |
+
+### Example
+
+```bash
+zwrm postgres backup create my-db --type base
+```
+
+## List backups
+
+```bash
+zwrm postgres backup list <name>
+```
+
+Shows all backups for a database with their ID, type, status, size, and creation time.
+
+### Example
+
+```bash
+zwrm postgres backup list my-db
+```
+
+## Delete a backup
+
+```bash
+zwrm postgres backup delete <backup-id>
+```
+
+<Warning>Deleting a backup is permanent. You won't be able to restore from it afterward.</Warning>
+
+## Restore a database
+
+Restore creates a new database from a backup. The original database is not modified.
+
+```bash
+zwrm postgres restore <name> --name <new-name>
+```
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--name` | string | — | Name for the restored database (required) |
+| `--backup` | string | latest | Specific backup ID to restore from |
+| `--pitr` | string | — | Point-in-time recovery target (RFC 3339 timestamp) |
+| `--size` | string | same as source | Size preset override: `small`, `medium`, `large` |
+
+### Examples
+
+Restore from the latest backup:
+
+```bash
+zwrm postgres restore my-db --name my-db-restored
+```
+
+Restore from a specific backup:
+
+```bash
+zwrm postgres restore my-db --name my-db-restored --backup abc12345
+```
+
+Point-in-time recovery to a specific moment:
+
+```bash
+zwrm postgres restore my-db --name my-db-restored --pitr "2026-03-10T14:30:00Z"
+```
+
+<Tip>PITR requires WAL archiving to be enabled. The target time must fall within the range covered by available WAL segments.</Tip>
+
+## Check restore status
+
+```bash
+zwrm postgres restore status <restore-id>
+```
+
+Shows the restore type, status, target database ID, and any error details.
