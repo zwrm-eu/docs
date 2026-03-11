@@ -190,6 +190,41 @@ zwrm volumes destroy <name> [--force] [--no-sync]
 zwrm volumes limits
 ```
 
+### `zwrm volumes snapshot`
+
+Manage volume snapshots. [Guide →](/apps/snapshots)
+
+### `zwrm volumes snapshot create`
+
+```bash
+zwrm volumes snapshot create <name> [--app <name>]
+```
+
+### `zwrm volumes snapshot list`
+
+```bash
+zwrm volumes snapshot list <name> [--app <name>]
+```
+
+### `zwrm volumes snapshot delete`
+
+```bash
+zwrm volumes snapshot delete <snapshot-id>
+```
+
+### `zwrm volumes snapshot enable` / `disable`
+
+```bash
+zwrm volumes snapshot enable <name> [--app <name>]
+zwrm volumes snapshot disable <name> [--app <name>]
+```
+
+### `zwrm volumes restore`
+
+```bash
+zwrm volumes restore <name> [--app <name>] [--snapshot <id>]
+```
+
 All subcommands accept `--app` and `--app-id`.
 
 ---
@@ -262,6 +297,54 @@ zwrm postgres start <name>
 
 ```bash
 zwrm postgres presets
+```
+
+### `zwrm postgres backup`
+
+Manage PostgreSQL backups. [Guide →](/postgres/backups)
+
+### `zwrm postgres backup enable` / `disable`
+
+```bash
+zwrm postgres backup enable <name>
+zwrm postgres backup disable <name>
+```
+
+### `zwrm postgres backup create`
+
+```bash
+zwrm postgres backup create <name> [--type <base|logical>]
+```
+
+### `zwrm postgres backup list`
+
+```bash
+zwrm postgres backup list <name>
+```
+
+### `zwrm postgres backup delete`
+
+```bash
+zwrm postgres backup delete <backup-id>
+```
+
+### `zwrm postgres restore`
+
+```bash
+zwrm postgres restore <name> --name <new-name> [--backup <id>] [--pitr <timestamp>] [--size <preset>]
+```
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--name` | string | — | Name for the restored database (required) |
+| `--backup` | string | latest | Specific backup ID |
+| `--pitr` | string | — | Point-in-time recovery target (RFC 3339) |
+| `--size` | string | same as source | Size preset override |
+
+### `zwrm postgres restore status`
+
+```bash
+zwrm postgres restore status <restore-id>
 ```
 
 ### `zwrm postgres scale`
@@ -342,6 +425,35 @@ zwrm agent list
 
 ```bash
 zwrm agent destroy <instance>
+```
+
+### `zwrm agent secrets`
+
+Manage agent instance secrets. [Guide →](/agents/secrets)
+
+### `zwrm agent secrets set`
+
+```bash
+zwrm agent secrets set <NAME>=<VALUE> [--instance <name>]
+zwrm agent secrets set <NAME> <VALUE> [--instance <name>]
+```
+
+### `zwrm agent secrets list`
+
+```bash
+zwrm agent secrets list [--instance <name>]
+```
+
+### `zwrm agent secrets unset`
+
+```bash
+zwrm agent secrets unset <NAME> [--instance <name>]
+```
+
+### `zwrm agent secrets add`
+
+```bash
+zwrm agent secrets add --from-file <path> [--instance <name>]
 ```
 
 ---
