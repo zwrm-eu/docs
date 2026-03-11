@@ -8,11 +8,23 @@ icon: "rocket"
   <Step title="Install the CLI">
     Install the `zwrm` CLI binary:
 
-    ```bash
-    curl -fsSL https://releases.zwrm.eu/zwrmd/install.sh | bash -s -- --cli
-    ```
+    <Tabs>
+      <Tab title="Linux">
+        ```bash
+        curl -fsSL https://releases.zwrm.eu/zwrm/install.sh | bash
+        ```
 
-    On Linux, this installs to `/usr/local/bin/zwrm` (as root) or `~/.local/bin/zwrm` (as non-root). Verify the installation:
+        This installs to `/usr/local/bin/zwrm` (as root) or `~/.local/bin/zwrm` (as non-root).
+      </Tab>
+      <Tab title="macOS">
+        ```bash
+        brew tap zwrm-eu/tap
+        brew install zwrm
+        ```
+      </Tab>
+    </Tabs>
+
+    Verify the installation:
 
     ```bash
     zwrm --help
