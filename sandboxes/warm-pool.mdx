@@ -1,6 +1,7 @@
 ---
 title: "Warm pool"
 description: "Pre-booted VMs for instant sandbox creation"
+icon: "bolt"
 ---
 
 The warm pool maintains a set of pre-booted VMs per template, ready for immediate claim. When a sandbox is created, ZWRM first checks the warm pool — if a matching VM is available, it's claimed atomically and the sandbox is ready in under 200ms instead of the 2-3 second cold boot time.
