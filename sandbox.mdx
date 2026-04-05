@@ -4,6 +4,10 @@ description: "Isolated microVM environments for code execution, development, and
 icon: "box"
 ---
 
+<Warning>
+Sandboxes are currently in **beta**. Do not run production workloads on sandboxes — data loss may occur during this phase.
+</Warning>
+
 Sandboxes are lightweight, isolated virtual machines built on [Firecracker](https://firecracker-microvm.github.io/) that spin up in milliseconds. Each sandbox runs a full Linux environment from a pre-built template, with SSH access, filesystem operations, and command execution via API.
 
 ## Key concepts
