@@ -76,6 +76,16 @@ icon: "rocket"
   </Step>
 </Steps>
 
+## Claude Code skills
+
+If you use [Claude Code](https://docs.anthropic.com/en/docs/claude-code), install the ZWRM skills to manage your infrastructure directly from the AI assistant:
+
+```bash
+npx -y skills add zwrm-eu/skills --full-depth --global --all --yes
+```
+
+This installs skills for deploying apps, managing sandboxes, Postgres databases, secrets, logs, and coding agents. Once installed, Claude Code can run `zwrm` commands on your behalf — just ask it to deploy, scale, create a database, or spin up a sandbox.
+
 ## Next steps
 
 <CardGroup cols={2}>
