@@ -8,34 +8,6 @@ The warm pool maintains a set of pre-booted VMs per template, ready for immediat
 
 ## How it works
 
-```
-┌─────────────────────────────────────────────────────┐
-│                   Warm Pool                         │
-│                                                     │
-│  ┌─────────┐  ┌─────────┐  ┌─────────┐            │
-│  │ python  │  │ python  │  │ python  │  target: 3  │
-│  │ (ready) │  │ (ready) │  │ (ready) │            │
-│  └─────────┘  └─────────┘  └─────────┘            │
-│                                                     │
-│  ┌─────────┐  ┌─────────┐                          │
-│  │  node   │  │  node   │              target: 2  │
-│  │ (ready) │  │ (ready) │                          │
-│  └─────────┘  └─────────┘                          │
-└─────────────────────────────────────────────────────┘
-         │
-         │  sandbox create --template python
-         ▼
-   ┌─────────┐     ┌─────────────────┐
-   │  claim  │ ──▶ │ sandbox running │  (< 200ms)
-   └─────────┘     └─────────────────┘
-         │
-         │  replenisher detects pool below target
-         ▼
-   ┌─────────┐
-   │  boot   │  background replenishment
-   └─────────┘
-```
-
 1. **Boot** — VMs are pre-booted from template images with CoW overlays, with a system app placeholder (`warmpool-{uuid}`)
 2. **Ready** — The VM has completed kernel boot and is waiting in the pool
 3. **Claim** — When a sandbox is created, a matching VM is atomically claimed using `FOR UPDATE SKIP LOCKED`

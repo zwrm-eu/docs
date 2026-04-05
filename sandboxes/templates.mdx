@@ -18,12 +18,6 @@ These templates are automatically registered and built when the control plane st
 
 ## Template lifecycle
 
-```
-pending ──▶ building ──▶ ready
-                │
-                └──▶ failed
-```
-
 1. **Pending** — Template record created in database
 2. **Building** — Docker image is being built and converted to ext4
 3. **Ready** — Image is built and available for sandbox creation
