@@ -1,0 +1,165 @@
+---
+title: "Quickstart"
+description: "Create and interact with your first sandbox in under a minute"
+---
+
+## Prerequisites
+
+- A running ZWRM control plane (`zwrmd`)
+- The `zwrm` CLI installed and configured
+- At least one built template (built-in templates are registered on startup)
+
+## Create an ephemeral sandbox
+
+Create a sandbox from the `python` template with a 10-minute timeout:
+
+```bash
+zwrm sandbox create --template python --timeout 10m
+```
+
+```
+Sandbox created:
+  ID:       sbx_abc123
+  Mode:     ephemeral
+  Status:   running
+  Template: python
+  IP:       172.16.0.2
+  Expires:  2026-04-05T15:10:00Z
+```
+
+## Execute a command
+
+Run Python code inside the sandbox:
+
+```bash
+zwrm sandbox exec sbx_abc123 -- python3 -c "print('Hello from ZWRM!')"
+```
+
+```
+Hello from ZWRM!
+```
+
+Commands run via SSH inside the VM. You can set a custom timeout and working directory:
+
+```bash
+zwrm sandbox exec sbx_abc123 --timeout 60s --workdir /home/user -- bash -c "ls -la"
+```
+
+## Upload and download files
+
+Upload a local file to the sandbox:
+
+```bash
+zwrm sandbox upload sbx_abc123 ./script.py /home/user/script.py
+```
+
+Download a file from the sandbox:
+
+```bash
+zwrm sandbox download sbx_abc123 /home/user/output.json ./output.json
+```
+
+## Extend the timeout
+
+If you need more time, extend the sandbox's TTL:
+
+```bash
+zwrm sandbox keepalive sbx_abc123 --timeout 30m
+```
+
+## Check status
+
+View the sandbox details:
+
+```bash
+zwrm sandbox status sbx_abc123
+```
+
+## Create a persistent sandbox
+
+Persistent sandboxes auto-suspend after inactivity and wake on demand:
+
+```bash
+zwrm sandbox create --template python --persistent --idle-timeout 10m
+```
+
+```
+Sandbox created:
+  ID:       sbx_def456
+  Mode:     persistent
+  Status:   running
+  Template: python
+  IP:       172.16.0.6
+  Idle:     10m (suspends after inactivity)
+```
+
+When the sandbox goes idle, it's automatically suspended. Wake it with:
+
+```bash
+zwrm sandbox wake sbx_def456
+```
+
+Or simply execute a command — any API call to a suspended sandbox triggers an automatic wake:
+
+```bash
+zwrm sandbox exec sbx_def456 -- echo "I'm back!"
+```
+
+## Destroy a sandbox
+
+```bash
+zwrm sandbox destroy sbx_abc123
+```
+
+Add `--force` to skip the confirmation prompt.
+
+## Using the REST API
+
+All CLI commands map to REST API endpoints. Here's the equivalent of the above using `curl`:
+
+<CodeGroup>
+
+```bash Create
+curl -X POST http://localhost:8080/v1/sandboxes \
+  -H "Content-Type: application/json" \
+  -d '{
+    "template": "python",
+    "timeout": "10m",
+    "mode": "ephemeral"
+  }'
+```
+
+```bash Execute
+curl -X POST http://localhost:8080/v1/sandboxes/sbx_abc123/execute \
+  -H "Content-Type: application/json" \
+  -d '{
+    "command": "python3 -c \"print(42)\"",
+    "timeout": "30s"
+  }'
+```
+
+```bash Upload file
+curl -X PUT http://localhost:8080/v1/sandboxes/sbx_abc123/files/home/user/script.py \
+  --data-binary @./script.py
+```
+
+```bash Download file
+curl http://localhost:8080/v1/sandboxes/sbx_abc123/files/home/user/output.json \
+  -o output.json
+```
+
+</CodeGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Ephemeral sandboxes" icon="clock" href="/sandboxes/ephemeral">
+    Deep dive into disposable sandbox environments.
+  </Card>
+  <Card title="Persistent sandboxes" icon="hard-drive" href="/sandboxes/persistent">
+    Learn about auto-suspend, snapshots, and wake-on-demand.
+  </Card>
+  <Card title="Templates" icon="layer-group" href="/sandboxes/templates">
+    Create custom templates for your sandboxes.
+  </Card>
+</CardGroup>

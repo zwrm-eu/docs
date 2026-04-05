@@ -1,0 +1,382 @@
+---
+title: "API reference"
+description: "REST API endpoints for sandbox management"
+---
+
+All sandbox endpoints are under `/v1/sandboxes`. Requests require authentication and are scoped to the caller's organization.
+
+## Create sandbox
+
+<ParamField body="template" type="string" required>
+  Template name or ID to boot from.
+</ParamField>
+
+<ParamField body="mode" type="string" default="ephemeral">
+  `ephemeral` or `persistent`.
+</ParamField>
+
+<ParamField body="size" type="string" default="shared-cpu-1x">
+  VM preset. See [VM sizes](/sandboxes/overview#vm-sizes).
+</ParamField>
+
+<ParamField body="timeout" type="string" default="5m">
+  Duration until auto-destroy (ephemeral only). Examples: `5m`, `1h`, `30s`. Max: `24h`.
+</ParamField>
+
+<ParamField body="idle_timeout" type="string" default="10m">
+  Duration of inactivity before auto-suspend (persistent only).
+</ParamField>
+
+<ParamField body="env" type="object">
+  Environment variables as key-value pairs.
+</ParamField>
+
+<ParamField body="metadata" type="object">
+  Arbitrary metadata as key-value pairs.
+</ParamField>
+
+```bash
+POST /v1/sandboxes
+```
+
+<CodeGroup>
+
+```bash Request
+curl -X POST http://localhost:8080/v1/sandboxes \
+  -H "Content-Type: application/json" \
+  -d '{
+    "template": "python",
+    "mode": "ephemeral",
+    "timeout": "10m",
+    "size": "shared-cpu-2x",
+    "env": {"API_KEY": "sk-..."}
+  }'
+```
+
+```json Response (201)
+{
+  "id": "sbx_abc123",
+  "template_id": "tmpl_xyz",
+  "mode": "ephemeral",
+  "status": "running",
+  "size": "shared-cpu-2x",
+  "ip": "172.16.0.2",
+  "env": {"API_KEY": "sk-..."},
+  "timeout_seconds": 600,
+  "expires_at": "2026-04-05T15:10:00Z",
+  "created_at": "2026-04-05T15:00:00Z",
+  "updated_at": "2026-04-05T15:00:00Z"
+}
+```
+
+</CodeGroup>
+
+| Status | Condition |
+|--------|-----------|
+| `201` | Sandbox created |
+| `400` | Invalid mode, size, or timeout |
+| `404` | Template not found |
+
+---
+
+## List sandboxes
+
+Returns all non-destroyed sandboxes for the caller's organization.
+
+<ParamField query="status" type="string">
+  Filter by status: `creating`, `running`, `suspended`, `destroyed`.
+</ParamField>
+
+```bash
+GET /v1/sandboxes
+```
+
+<CodeGroup>
+
+```bash Request
+curl http://localhost:8080/v1/sandboxes?status=running
+```
+
+```json Response (200)
+{
+  "items": [
+    {
+      "id": "sbx_abc123",
+      "template_id": "tmpl_xyz",
+      "mode": "ephemeral",
+      "status": "running",
+      "size": "shared-cpu-1x",
+      "ip": "172.16.0.2",
+      "expires_at": "2026-04-05T15:10:00Z",
+      "created_at": "2026-04-05T15:00:00Z",
+      "updated_at": "2026-04-05T15:00:00Z"
+    }
+  ],
+  "total": 1
+}
+```
+
+</CodeGroup>
+
+---
+
+## Get sandbox
+
+```bash
+GET /v1/sandboxes/{id}
+```
+
+<CodeGroup>
+
+```bash Request
+curl http://localhost:8080/v1/sandboxes/sbx_abc123
+```
+
+```json Response (200)
+{
+  "id": "sbx_abc123",
+  "template_id": "tmpl_xyz",
+  "mode": "persistent",
+  "status": "suspended",
+  "size": "shared-cpu-1x",
+  "idle_timeout_seconds": 600,
+  "last_activity_at": "2026-04-05T15:05:00Z",
+  "suspended_at": "2026-04-05T15:15:00Z",
+  "created_at": "2026-04-05T15:00:00Z",
+  "updated_at": "2026-04-05T15:15:00Z"
+}
+```
+
+</CodeGroup>
+
+| Status | Condition |
+|--------|-----------|
+| `200` | OK |
+| `403` | Sandbox belongs to different organization |
+| `404` | Sandbox not found |
+
+---
+
+## Destroy sandbox
+
+```bash
+DELETE /v1/sandboxes/{id}
+```
+
+Returns `204 No Content` on success. Idempotent — safe to call multiple times.
+
+---
+
+## Keepalive
+
+Extend the expiry of an ephemeral sandbox.
+
+<ParamField body="timeout" type="string">
+  New timeout duration from now. Max: `24h`.
+</ParamField>
+
+```bash
+POST /v1/sandboxes/{id}/keepalive
+```
+
+<CodeGroup>
+
+```bash Request
+curl -X POST http://localhost:8080/v1/sandboxes/sbx_abc123/keepalive \
+  -H "Content-Type: application/json" \
+  -d '{"timeout": "30m"}'
+```
+
+```json Response (200)
+{
+  "id": "sbx_abc123",
+  "status": "running",
+  "expires_at": "2026-04-05T15:30:00Z"
+}
+```
+
+</CodeGroup>
+
+| Status | Condition |
+|--------|-----------|
+| `200` | Timeout extended |
+| `409` | Not ephemeral, or not running |
+
+---
+
+## Wake sandbox
+
+Wake a suspended persistent sandbox.
+
+```bash
+POST /v1/sandboxes/{id}/wake
+```
+
+<CodeGroup>
+
+```bash Request
+curl -X POST http://localhost:8080/v1/sandboxes/sbx_def456/wake
+```
+
+```json Response (200)
+{
+  "id": "sbx_def456",
+  "status": "running",
+  "ip": "172.16.0.6"
+}
+```
+
+</CodeGroup>
+
+| Status | Condition |
+|--------|-----------|
+| `200` | Sandbox woken (or was already running) |
+| `409` | Sandbox is in a state that cannot be woken |
+
+---
+
+## Execute command
+
+Run a command inside a running sandbox.
+
+<ParamField body="command" type="string" required>
+  The shell command to execute.
+</ParamField>
+
+<ParamField body="timeout" type="string" default="30s">
+  Execution timeout. Max: `5m`.
+</ParamField>
+
+<ParamField body="workdir" type="string">
+  Working directory for the command.
+</ParamField>
+
+<ParamField body="env" type="object">
+  Additional environment variables for this execution.
+</ParamField>
+
+```bash
+POST /v1/sandboxes/{id}/execute
+```
+
+<CodeGroup>
+
+```bash Request
+curl -X POST http://localhost:8080/v1/sandboxes/sbx_abc123/execute \
+  -H "Content-Type: application/json" \
+  -d '{
+    "command": "python3 -c \"import os; print(os.cpu_count())\"",
+    "timeout": "10s"
+  }'
+```
+
+```json Response (200)
+{
+  "exit_code": 0,
+  "stdout": "1\n",
+  "stderr": "",
+  "duration_ms": 87
+}
+```
+
+</CodeGroup>
+
+| Status | Condition |
+|--------|-----------|
+| `200` | Command completed (check `exit_code` for success/failure) |
+| `400` | Missing command or invalid timeout |
+| `409` | Sandbox not running |
+| `503` | SSH key not configured on server |
+
+---
+
+## Upload file
+
+Write a file to the sandbox filesystem.
+
+```bash
+PUT /v1/sandboxes/{id}/files/{path}
+```
+
+Send the file contents as the request body. Parent directories are created automatically.
+
+```bash
+curl -X PUT http://localhost:8080/v1/sandboxes/sbx_abc123/files/home/user/main.py \
+  --data-binary @./main.py
+```
+
+| Status | Condition |
+|--------|-----------|
+| `204` | File uploaded |
+| `400` | Invalid path (root, contains `..`) or exceeds 100 MB |
+| `409` | Sandbox not running |
+
+---
+
+## Download file
+
+Read a file from the sandbox filesystem.
+
+```bash
+GET /v1/sandboxes/{id}/files/{path}
+```
+
+Returns the raw file contents with `Content-Type: application/octet-stream`.
+
+```bash
+curl http://localhost:8080/v1/sandboxes/sbx_abc123/files/home/user/output.json -o output.json
+```
+
+| Status | Condition |
+|--------|-----------|
+| `200` | File contents |
+| `404` | File not found |
+| `409` | Sandbox not running |
+
+---
+
+## List directory
+
+List the contents of a directory in the sandbox.
+
+```bash
+GET /v1/sandboxes/{id}/files/{path}?list=true
+```
+
+<CodeGroup>
+
+```bash Request
+curl "http://localhost:8080/v1/sandboxes/sbx_abc123/files/home/user?list=true"
+```
+
+```json Response (200)
+{
+  "entries": [
+    {"name": "main.py", "size": 1024, "type": "file", "modified": "2026-04-05T14:30:00Z"},
+    {"name": "venv", "size": 4096, "type": "directory", "modified": "2026-04-05T14:25:00Z"},
+    {"name": "requirements.txt", "size": 48, "type": "file", "modified": "2026-04-05T14:20:00Z"}
+  ]
+}
+```
+
+</CodeGroup>
+
+---
+
+## Warm pool status
+
+Admin-only endpoint showing the current warm pool state.
+
+```bash
+GET /v1/sandboxes/pool
+```
+
+```json
+{
+  "enabled": true,
+  "templates": [
+    {"template_name": "python", "ready_count": 3, "claimed_count": 0, "target": 3},
+    {"template_name": "node", "ready_count": 2, "claimed_count": 0, "target": 2}
+  ]
+}
+```

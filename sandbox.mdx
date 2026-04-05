@@ -1,63 +1,106 @@
 ---
 title: "Sandboxes"
-description: "Ephemeral, API-driven code execution environments."
+description: "Isolated microVM environments for code execution, development, and AI agents"
 icon: "box"
 ---
 
-<Note>Sandboxes are coming soon and not yet available.</Note>
+Sandboxes are lightweight, isolated virtual machines built on [Firecracker](https://firecracker-microvm.github.io/) that spin up in milliseconds. Each sandbox runs a full Linux environment from a pre-built template, with SSH access, filesystem operations, and command execution via API.
 
-Sandboxes are lightweight, ephemeral Firecracker VMs that AI agents can spin up programmatically to safely execute code, manipulate files, and run tools. They boot in under a second from pre-built templates and auto-destroy after a configurable timeout.
+## Key concepts
+
+<CardGroup cols={2}>
+  <Card title="Ephemeral sandboxes" icon="clock" href="/sandboxes/ephemeral">
+    Disposable environments with a time-to-live. Automatically destroyed when the timeout expires. Ideal for one-off code execution, CI jobs, and short-lived tasks.
+  </Card>
+  <Card title="Persistent sandboxes" icon="hard-drive" href="/sandboxes/persistent">
+    Long-lived environments that auto-suspend after idle periods using Firecracker snapshots, and wake on demand in under 500ms. Ideal for development environments and AI coding agents.
+  </Card>
+  <Card title="Templates" icon="layer-group" href="/sandboxes/templates">
+    Pre-built VM images (Python, Node.js, Go, or custom) that define the base environment for sandboxes. Templates use Docker-to-ext4 conversion for maximum compatibility.
+  </Card>
+  <Card title="Warm pool" icon="bolt" href="/sandboxes/warm-pool">
+    A configurable pool of pre-booted VMs per template for sub-200ms sandbox creation. Eliminates cold boot latency for latency-sensitive workloads.
+  </Card>
+</CardGroup>
 
 ## How sandboxes compare
 
 | | **Apps** | **Agents** | **Sandboxes** |
 |---|---|---|---|
 | **Purpose** | Deployed services | AI agent workspaces | Ephemeral code execution |
-| **Lifetime** | Permanent | Hours to days | Seconds to minutes |
-| **Created by** | Developer via CLI | Developer via CLI/API | AI agent via SDK |
+| **Lifetime** | Permanent | Hours to days | Seconds to hours |
+| **Created by** | Developer via CLI | Developer via CLI/API | AI agent via SDK/API |
 | **Interface** | HTTP routes, proxy | SSH, terminal, git | Execute API, file API |
-| **Boot speed** | Rolling deploy (minutes) | Template launch (seconds) | Instant from cache (< 1s) |
+| **Boot speed** | Rolling deploy (minutes) | Template launch (seconds) | Instant from warm pool (< 200ms) |
 
-## Templates
+## Lifecycle
 
-Sandboxes boot from pre-built VM images called templates. ZWRM will ship with several built-in templates:
+Every sandbox is a Firecracker microVM running on a Linux host with KVM support:
 
-| Template | Description |
-|----------|-------------|
-| `base` | Ubuntu with common dev utilities |
-| `python` | Python 3.12 + pip + venv |
-| `python-data-science` | Python + numpy, pandas, matplotlib, scikit-learn |
-| `node` | Node.js 22 + npm + yarn + pnpm |
-| `go` | Go 1.22 + standard toolchain |
-| `web-browser` | Chromium + Playwright for browser automation |
+```
+┌──────────┐     ┌─────────┐     ┌───────────┐     ┌───────────┐
+│ creating │ ──▶ │ running │ ──▶ │ suspended │ ──▶ │ destroyed │
+└──────────┘     └─────────┘     └───────────┘     └───────────┘
+                      │               │
+                      │               │  wake
+                      │◀──────────────┘
+                      │
+                      └──────────────────────▶ destroyed
+```
 
-You'll also be able to create custom templates from your own Dockerfiles.
+1. **Create** — A sandbox is created from a template. If a warm pool VM is available, it's claimed instantly. Otherwise, a new VM cold-boots (~2-3 seconds).
 
-## Core capabilities
+2. **Run** — The sandbox is a fully functional Linux VM with SSH access. Execute commands, upload/download files, and interact via the REST API or CLI.
 
-### Instant launch
+3. **Suspend** (persistent only) — After the idle timeout expires, the VM's full memory and CPU state are snapshotted to disk. The Firecracker process is killed, freeing all host resources.
 
-Sandboxes skip the Docker build step entirely — they boot from cached template images in under a second.
+4. **Wake** (persistent only) — Any API call to a suspended sandbox triggers automatic restoration from the snapshot. The VM resumes exactly where it left off in under 500ms.
 
-### Code execution
+5. **Destroy** — The VM is stopped, all resources (TAP devices, IP allocations, overlay files, snapshots) are cleaned up.
 
-Run commands inside a sandbox and get structured output (stdout, stderr, exit code) or stream output in real-time for long-running processes.
+## Architecture
 
-### Filesystem access
+Each sandbox uses three key technologies for performance and isolation:
 
-Upload files into a sandbox before execution and download results after. Supports both individual files and bulk tar archives.
+### Copy-on-Write overlays
 
-### Auto-cleanup
+Instead of copying the full template image for each sandbox, ZWRM uses a read-only base image with a sparse writable overlay per VM. Inside the VM, overlayfs merges the two layers via `pivot_root`. This reduces image preparation from ~1.4 seconds to ~9 milliseconds.
 
-Every sandbox has a timeout (default: 5 minutes, max: 24 hours). When the timeout expires, the VM is automatically destroyed. A keep-alive API lets you extend the timeout as needed.
+```
+┌─────────────────────────────────┐
+│   Writable overlay (ext4)       │  ← Per-sandbox, sparse 2GB
+├─────────────────────────────────┤
+│   Base template image (ro)      │  ← Shared across all sandboxes
+└─────────────────────────────────┘
+```
 
-### Port exposure
+### Firecracker snapshots
 
-Optionally expose sandbox ports to the internet through ZWRM's reverse proxy, useful for previewing web apps or running dev servers.
+Persistent sandboxes use Firecracker's snapshot/restore capability to freeze and thaw VM state. A full snapshot includes the VM's memory contents and CPU register state, enabling sub-500ms restore times. Snapshot files are stored with restricted permissions (0600) since they contain memory contents.
 
-## Planned SDK support
+### Warm pool
 
-Python and TypeScript SDKs will wrap the sandbox API for programmatic use:
+Pre-booted VMs sit ready in a pool, already past the kernel boot sequence. When a sandbox is created, ZWRM atomically claims a warm VM (using `FOR UPDATE SKIP LOCKED` for safe concurrency) and transfers ownership. A background replenisher keeps the pool at target sizes.
+
+## VM sizes
+
+Sandboxes can be created with any of these VM presets:
+
+| Preset | vCPUs | Memory |
+|--------|-------|--------|
+| `shared-cpu-1x` | 1 | 256 MB |
+| `shared-cpu-2x` | 1 | 512 MB |
+| `shared-cpu-4x` | 2 | 1024 MB |
+| `performance-1x` | 1 | 2048 MB |
+| `performance-2x` | 2 | 4096 MB |
+| `performance-4x` | 4 | 8192 MB |
+| `performance-8x` | 8 | 16384 MB |
+
+The default size is `shared-cpu-1x`.
+
+## SDK support
+
+Python and TypeScript SDKs wrap the sandbox API for programmatic use:
 
 ```python
 from zwrmd import Sandbox
@@ -78,3 +121,14 @@ const result = await sbx.execute('node process.js');
 console.log(result.stdout);
 await sbx.destroy();
 ```
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/sandboxes/quickstart">
+    Create your first sandbox in under a minute.
+  </Card>
+  <Card title="API reference" icon="code" href="/sandboxes/api-reference">
+    Full REST API documentation for sandbox endpoints.
+  </Card>
+</CardGroup>
