@@ -45,6 +45,7 @@
           },
           {
             "group": "PostgreSQL",
+            "tag": "Beta",
             "pages": [
               "postgres/overview",
               "postgres/backups",
@@ -68,6 +69,7 @@
           },
           {
             "group": "Sandboxes",
+            "tag": "Beta",
             "pages": [
               "sandbox",
               "sandboxes/quickstart",
