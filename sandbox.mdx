@@ -41,17 +41,6 @@ Sandboxes are lightweight, isolated virtual machines built on [Firecracker](http
 
 Every sandbox is a Firecracker microVM running on a Linux host with KVM support:
 
-```
-┌──────────┐     ┌─────────┐     ┌───────────┐     ┌───────────┐
-│ creating │ ──▶ │ running │ ──▶ │ suspended │ ──▶ │ destroyed │
-└──────────┘     └─────────┘     └───────────┘     └───────────┘
-                      │               │
-                      │               │  wake
-                      │◀──────────────┘
-                      │
-                      └──────────────────────▶ destroyed
-```
-
 1. **Create** — A sandbox is created from a template. If a warm pool VM is available, it's claimed instantly. Otherwise, a new VM cold-boots (~2-3 seconds).
 
 2. **Run** — The sandbox is a fully functional Linux VM with SSH access. Execute commands, upload/download files, and interact via the REST API or CLI.
@@ -70,13 +59,7 @@ Each sandbox uses three key technologies for performance and isolation:
 
 Instead of copying the full template image for each sandbox, ZWRM uses a read-only base image with a sparse writable overlay per VM. Inside the VM, overlayfs merges the two layers via `pivot_root`. This reduces image preparation from ~1.4 seconds to ~9 milliseconds.
 
-```
-┌─────────────────────────────────┐
-│   Writable overlay (ext4)       │  ← Per-sandbox, sparse 2GB
-├─────────────────────────────────┤
-│   Base template image (ro)      │  ← Shared across all sandboxes
-└─────────────────────────────────┘
-```
+Each sandbox gets a sparse 2GB writable ext4 overlay on top of the shared, read-only base template image. This reduces image preparation from ~1.4 seconds to ~9 milliseconds.
 
 ### Firecracker snapshots
 

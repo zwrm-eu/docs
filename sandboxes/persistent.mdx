@@ -8,12 +8,6 @@ Persistent sandboxes are long-lived environments designed for development worklo
 
 ## Lifecycle
 
-```
-create ──▶ running ◀──▶ suspended ──▶ destroyed
-               │                           ▲
-               └───────────────────────────┘
-```
-
 1. **Create** with an idle timeout (e.g., 10 minutes)
 2. **Use** — every API interaction (execute, upload, download, wake) resets the idle timer
 3. **Auto-suspend** — after the idle timeout, the VM's full state is snapshotted to disk

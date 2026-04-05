@@ -8,10 +8,6 @@ Ephemeral sandboxes are short-lived, disposable environments that are automatica
 
 ## Lifecycle
 
-```
-create ──▶ running ──▶ destroyed (auto or manual)
-```
-
 1. **Create** with a timeout (default: 5 minutes, max: 24 hours)
 2. **Use** — execute commands, upload/download files
 3. **Extend** — call keepalive to push back the expiry
