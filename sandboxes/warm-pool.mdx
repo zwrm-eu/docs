@@ -1,0 +1,130 @@
+---
+title: "Warm pool"
+description: "Pre-booted VMs for instant sandbox creation"
+---
+
+The warm pool maintains a set of pre-booted VMs per template, ready for immediate claim. When a sandbox is created, ZWRM first checks the warm pool — if a matching VM is available, it's claimed atomically and the sandbox is ready in under 200ms instead of the 2-3 second cold boot time.
+
+## How it works
+
+```
+┌─────────────────────────────────────────────────────┐
+│                   Warm Pool                         │
+│                                                     │
+│  ┌─────────┐  ┌─────────┐  ┌─────────┐            │
+│  │ python  │  │ python  │  │ python  │  target: 3  │
+│  │ (ready) │  │ (ready) │  │ (ready) │            │
+│  └─────────┘  └─────────┘  └─────────┘            │
+│                                                     │
+│  ┌─────────┐  ┌─────────┐                          │
+│  │  node   │  │  node   │              target: 2  │
+│  │ (ready) │  │ (ready) │                          │
+│  └─────────┘  └─────────┘                          │
+└─────────────────────────────────────────────────────┘
+         │
+         │  sandbox create --template python
+         ▼
+   ┌─────────┐     ┌─────────────────┐
+   │  claim  │ ──▶ │ sandbox running │  (< 200ms)
+   └─────────┘     └─────────────────┘
+         │
+         │  replenisher detects pool below target
+         ▼
+   ┌─────────┐
+   │  boot   │  background replenishment
+   └─────────┘
+```
+
+1. **Boot** — VMs are pre-booted from template images with CoW overlays, with a system app placeholder (`warmpool-{uuid}`)
+2. **Ready** — The VM has completed kernel boot and is waiting in the pool
+3. **Claim** — When a sandbox is created, a matching VM is atomically claimed using `FOR UPDATE SKIP LOCKED`
+4. **Transfer** — The claimed VM's app ownership is transferred to the new sandbox
+5. **Replenish** — A background loop detects pools below target and boots replacement VMs (one at a time to avoid burst load)
+
+## Configuration
+
+Enable and configure the warm pool in your server config:
+
+```toml
+[sandboxes.warm_pool]
+enabled = true                    # Master switch (default: false)
+replenish_interval = "5s"         # How often to check and replenish
+default_size = "shared-cpu-1x"    # VM preset for pool VMs
+
+[sandboxes.warm_pool.sizes]       # Per-template target pool sizes
+python = 3                        # Keep 3 python VMs warm
+node = 2                          # Keep 2 node VMs warm
+go = 2                            # Keep 2 go VMs warm
+base = 0                          # Disabled for this template
+```
+
+<Info>
+Setting a template's pool size to `0` disables warm pooling for that template. Sandboxes for that template will always cold-boot.
+</Info>
+
+## Checking pool status
+
+View the current state of the warm pool:
+
+<Tabs>
+  <Tab title="CLI">
+    ```bash
+    zwrm sandbox pool
+    ```
+
+    ```
+    TEMPLATE   READY  CLAIMED  TARGET
+    python     3      0        3
+    node       1      1        2
+    go         2      0        2
+    ```
+  </Tab>
+  <Tab title="API">
+    ```bash
+    curl http://localhost:8080/v1/sandboxes/pool
+    ```
+
+    ```json
+    {
+      "enabled": true,
+      "templates": [
+        {"template_name": "python", "ready_count": 3, "claimed_count": 0, "target": 3},
+        {"template_name": "node", "ready_count": 1, "claimed_count": 1, "target": 2},
+        {"template_name": "go", "ready_count": 2, "claimed_count": 0, "target": 2}
+      ]
+    }
+    ```
+  </Tab>
+</Tabs>
+
+<Note>
+The pool status endpoint is admin-only.
+</Note>
+
+## Graceful fallback
+
+If the warm pool is empty or disabled, sandbox creation falls back to cold booting a new VM. This is transparent to the caller — the only difference is latency:
+
+| Path | Typical latency |
+|------|----------------|
+| Warm pool claim | < 200ms |
+| Cold boot | 2-3 seconds |
+
+Warm pool errors (e.g., a claimed VM that fails to start) are also handled gracefully — the system falls back to cold boot and logs the error.
+
+## Concurrency safety
+
+The claim operation uses PostgreSQL's `FOR UPDATE SKIP LOCKED` to safely handle concurrent sandbox creation:
+
+- Multiple requests arriving simultaneously each get a different VM
+- If no VMs are available, the query returns no rows (no blocking, no contention)
+- The replenisher only boots one VM per cycle to avoid overloading the host
+
+## Resource considerations
+
+Warm pool VMs consume host resources (CPU, memory, TAP devices, IP allocations) even when idle. Size your pool targets based on:
+
+- **Expected sandbox creation rate** — Higher rates benefit more from warm pooling
+- **Available host resources** — Each warm VM uses its configured preset's CPU and memory
+- **Template popularity** — Allocate more warm VMs to frequently-used templates
+- **Acceptable cold-boot rate** — A smaller pool means more cold boots during traffic spikes

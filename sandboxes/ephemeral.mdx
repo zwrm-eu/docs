@@ -1,0 +1,185 @@
+---
+title: "Ephemeral sandboxes"
+description: "Disposable microVM environments with automatic cleanup"
+---
+
+Ephemeral sandboxes are short-lived, disposable environments that are automatically destroyed when their timeout expires. They're designed for one-off tasks like code execution, CI/CD jobs, testing, and AI agent tool calls.
+
+## Lifecycle
+
+```
+create ──▶ running ──▶ destroyed (auto or manual)
+```
+
+1. **Create** with a timeout (default: 5 minutes, max: 24 hours)
+2. **Use** — execute commands, upload/download files
+3. **Extend** — call keepalive to push back the expiry
+4. **Destroy** — happens automatically at expiry, or manually
+
+A background reaper loop runs every 10 seconds and destroys any ephemeral sandboxes past their `expires_at` timestamp.
+
+## Creating an ephemeral sandbox
+
+<Tabs>
+  <Tab title="CLI">
+    ```bash
+    zwrm sandbox create --template python --timeout 10m
+    ```
+
+    Flags:
+    - `--template` (required) — Template name or ID
+    - `--timeout` — Duration until auto-destroy (default: `5m`, max: `24h`)
+    - `--size` — VM preset (default: `shared-cpu-1x`)
+    - `--env KEY=VALUE` — Environment variables (repeatable)
+  </Tab>
+  <Tab title="API">
+    ```bash
+    curl -X POST http://localhost:8080/v1/sandboxes \
+      -H "Content-Type: application/json" \
+      -d '{
+        "template": "python",
+        "mode": "ephemeral",
+        "timeout": "10m",
+        "size": "shared-cpu-2x",
+        "env": {
+          "OPENAI_API_KEY": "sk-..."
+        }
+      }'
+    ```
+  </Tab>
+</Tabs>
+
+## Extending the timeout
+
+Use keepalive to extend the sandbox's lifetime before it expires:
+
+<Tabs>
+  <Tab title="CLI">
+    ```bash
+    zwrm sandbox keepalive sbx_abc123 --timeout 30m
+    ```
+  </Tab>
+  <Tab title="API">
+    ```bash
+    curl -X POST http://localhost:8080/v1/sandboxes/sbx_abc123/keepalive \
+      -H "Content-Type: application/json" \
+      -d '{"timeout": "30m"}'
+    ```
+  </Tab>
+</Tabs>
+
+<Warning>
+The maximum timeout is 24 hours (`86400s`). Keepalive requests exceeding this are clamped to the maximum.
+</Warning>
+
+## Executing commands
+
+Run a command inside the sandbox. The command executes via SSH and returns stdout, stderr, exit code, and duration.
+
+<Tabs>
+  <Tab title="CLI">
+    ```bash
+    # Simple command
+    zwrm sandbox exec sbx_abc123 -- python3 -c "print('hello')"
+
+    # With timeout and working directory
+    zwrm sandbox exec sbx_abc123 --timeout 60s --workdir /app -- make test
+    ```
+
+    The CLI streams stdout/stderr directly and exits with the command's exit code.
+  </Tab>
+  <Tab title="API">
+    ```bash
+    curl -X POST http://localhost:8080/v1/sandboxes/sbx_abc123/execute \
+      -H "Content-Type: application/json" \
+      -d '{
+        "command": "python3 -c \"import sys; print(sys.version)\"",
+        "timeout": "30s",
+        "workdir": "/home/user",
+        "env": {"DEBUG": "1"}
+      }'
+    ```
+
+    Response:
+    ```json
+    {
+      "exit_code": 0,
+      "stdout": "3.12.0 (main, Oct  2 2024, 00:00:00)\n",
+      "stderr": "",
+      "duration_ms": 142
+    }
+    ```
+  </Tab>
+</Tabs>
+
+<Info>
+Default execution timeout is 30 seconds. Maximum is 5 minutes. Commands that exceed the timeout are killed with SIGKILL.
+</Info>
+
+## File operations
+
+### Upload
+
+Upload files up to 100 MB. Parent directories are created automatically.
+
+<Tabs>
+  <Tab title="CLI">
+    ```bash
+    zwrm sandbox upload sbx_abc123 ./main.py /home/user/main.py
+    ```
+  </Tab>
+  <Tab title="API">
+    ```bash
+    curl -X PUT http://localhost:8080/v1/sandboxes/sbx_abc123/files/home/user/main.py \
+      --data-binary @./main.py
+    ```
+  </Tab>
+</Tabs>
+
+### Download
+
+<Tabs>
+  <Tab title="CLI">
+    ```bash
+    zwrm sandbox download sbx_abc123 /home/user/output.json ./output.json
+    ```
+  </Tab>
+  <Tab title="API">
+    ```bash
+    curl http://localhost:8080/v1/sandboxes/sbx_abc123/files/home/user/output.json \
+      -o output.json
+    ```
+  </Tab>
+</Tabs>
+
+### List directory
+
+<Tabs>
+  <Tab title="API">
+    ```bash
+    curl "http://localhost:8080/v1/sandboxes/sbx_abc123/files/home/user?list=true"
+    ```
+
+    Response:
+    ```json
+    {
+      "entries": [
+        {"name": "main.py", "size": 1024, "type": "file", "modified": "2026-04-05T14:30:00Z"},
+        {"name": "output", "size": 4096, "type": "directory", "modified": "2026-04-05T14:31:00Z"}
+      ]
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Automatic cleanup
+
+The reaper loop runs every 10 seconds and destroys expired sandboxes. Cleanup includes:
+
+- Stopping the Firecracker VM process
+- Removing the TAP network device
+- Releasing the IP allocation
+- Deleting the CoW overlay file
+- Updating the database status to `destroyed`
+
+No manual intervention is required — expired sandboxes are cleaned up automatically.

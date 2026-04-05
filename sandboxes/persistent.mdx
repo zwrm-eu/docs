@@ -1,0 +1,143 @@
+---
+title: "Persistent sandboxes"
+description: "Long-lived environments with auto-suspend and instant wake"
+---
+
+Persistent sandboxes are long-lived environments designed for development workloads and AI coding agents. They automatically suspend after a period of inactivity, saving host resources, and wake on demand in under 500 milliseconds — resuming exactly where they left off.
+
+## Lifecycle
+
+```
+create ──▶ running ◀──▶ suspended ──▶ destroyed
+               │                           ▲
+               └───────────────────────────┘
+```
+
+1. **Create** with an idle timeout (e.g., 10 minutes)
+2. **Use** — every API interaction (execute, upload, download, wake) resets the idle timer
+3. **Auto-suspend** — after the idle timeout, the VM's full state is snapshotted to disk
+4. **Wake** — any API call to a suspended sandbox triggers automatic restoration
+5. **Destroy** — manual teardown cleans up all resources including snapshot files
+
+## Creating a persistent sandbox
+
+<Tabs>
+  <Tab title="CLI">
+    ```bash
+    zwrm sandbox create --template python --persistent --idle-timeout 10m
+    ```
+
+    Flags:
+    - `--template` (required) — Template name or ID
+    - `--persistent` — Enable persistent mode
+    - `--idle-timeout` — Duration of inactivity before auto-suspend (default: `10m`)
+    - `--size` — VM preset (default: `shared-cpu-1x`)
+    - `--env KEY=VALUE` — Environment variables (repeatable)
+  </Tab>
+  <Tab title="API">
+    ```bash
+    curl -X POST http://localhost:8080/v1/sandboxes \
+      -H "Content-Type: application/json" \
+      -d '{
+        "template": "python",
+        "mode": "persistent",
+        "idle_timeout": "10m",
+        "size": "performance-1x",
+        "env": {
+          "PROJECT": "my-app"
+        }
+      }'
+    ```
+  </Tab>
+</Tabs>
+
+## Auto-suspend
+
+A background idle detection loop runs every 10 seconds and checks the `last_activity_at` timestamp against the configured `idle_timeout_seconds`. When a sandbox has been idle for longer than its timeout, it is automatically suspended.
+
+### What counts as activity
+
+The idle timer is reset by any of these operations:
+
+- Executing a command (`execute`)
+- Uploading a file (`upload`)
+- Downloading a file (`download`)
+- Listing a directory
+- Waking the sandbox (`wake`)
+
+<Info>
+Read-only operations like `GET /v1/sandboxes/{id}` (status check) do **not** reset the idle timer. This prevents monitoring from keeping sandboxes alive indefinitely.
+</Info>
+
+### What happens during suspend
+
+1. The Firecracker VM is paused via the Firecracker API
+2. A full snapshot is created — both CPU/register state (`vmstate`) and memory contents (`mem`)
+3. Snapshot files are stored at `/var/lib/zwrm/snapshots/{machine_id}/`
+4. Permissions are restricted to `0600` (snapshot contains memory contents)
+5. The Firecracker process is killed, freeing CPU and memory
+6. The TAP network device is removed
+7. The database record is updated: status → `suspended`, snapshot path saved
+
+The sandbox's `RestoreConfig` is preserved in the database, containing everything needed to reconstruct the VM:
+
+- Kernel path and boot arguments
+- Network configuration (MAC, guest IP, gateway IP, subnet mask)
+- Image and overlay paths
+- vCPU and memory settings
+
+## Waking a suspended sandbox
+
+You can explicitly wake a sandbox:
+
+<Tabs>
+  <Tab title="CLI">
+    ```bash
+    zwrm sandbox wake sbx_def456
+    ```
+  </Tab>
+  <Tab title="API">
+    ```bash
+    curl -X POST http://localhost:8080/v1/sandboxes/sbx_def456/wake
+    ```
+  </Tab>
+</Tabs>
+
+Or simply call any operation — suspended sandboxes are automatically woken:
+
+```bash
+# This will wake the sandbox first, then execute the command
+zwrm sandbox exec sbx_def456 -- echo "I'm back!"
+```
+
+### What happens during wake
+
+1. An atomic status transition (`suspended` → `restoring`) prevents concurrent restore attempts
+2. A new TAP device is created with the original network configuration
+3. The Firecracker VM is restored from the snapshot files
+4. The VM resumes execution from the exact point it was suspended
+5. Snapshot files are cleaned up after successful restore
+6. The database is updated with the new machine ID and IP
+
+<Info>
+Restore typically completes in under 500 milliseconds. The VM resumes with all processes, open files, and in-memory state intact.
+</Info>
+
+## Concurrent access safety
+
+ZWRM uses an atomic compare-and-swap operation for sandbox status transitions. If two requests try to wake the same suspended sandbox simultaneously, only one will succeed — the other receives a conflict error. This prevents duplicate VMs from being created for the same sandbox.
+
+```
+Request A: suspended → restoring ✓ (proceeds with restore)
+Request B: suspended → restoring ✗ (sandbox already restoring, returns 409)
+```
+
+## Destroy
+
+Destroying a persistent sandbox cleans up all resources:
+
+```bash
+zwrm sandbox destroy sbx_def456
+```
+
+For suspended sandboxes, this cleans up snapshot files, releases the IPAM allocation, and removes the database record. For running sandboxes, the VM is stopped first.

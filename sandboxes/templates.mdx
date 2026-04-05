@@ -1,0 +1,165 @@
+---
+title: "Templates"
+description: "Pre-built VM images that define sandbox environments"
+---
+
+Templates are the base images that sandboxes boot from. Each template is a Docker-to-ext4 converted filesystem image containing an operating system, language runtime, tools, and default configuration. ZWRM ships with built-in templates and supports custom templates.
+
+## Built-in templates
+
+These templates are automatically registered and built when the control plane starts:
+
+| Template | Description | Source |
+|----------|-------------|--------|
+| `python` | Python 3.12 with pip and common packages | `github.com/zwrm-eu/templates/python-api` |
+| `node` | Node.js 22 with npm | `github.com/zwrm-eu/templates/web` |
+| `go` | Go toolchain | `github.com/zwrm-eu/templates/go` |
+
+## Template lifecycle
+
+```
+pending ──▶ building ──▶ ready
+                │
+                └──▶ failed
+```
+
+1. **Pending** — Template record created in database
+2. **Building** — Docker image is being built and converted to ext4
+3. **Ready** — Image is built and available for sandbox creation
+4. **Failed** — Build failed (error stored in `build_error` field)
+
+## Listing templates
+
+<Tabs>
+  <Tab title="CLI">
+    ```bash
+    zwrm templates list
+    ```
+
+    Output shows both built-in and custom templates with their status:
+    ```
+    NAME      STATUS   VERSION  BUILT-IN  DESCRIPTION
+    python    ready    1        yes       Python 3.12 environment
+    node      ready    1        yes       Node.js 22 environment
+    go        ready    1        yes       Go development environment
+    my-ml     ready    2        no        Custom ML template
+    ```
+  </Tab>
+  <Tab title="API">
+    ```bash
+    curl http://localhost:8080/v1/templates
+    ```
+  </Tab>
+</Tabs>
+
+## Creating custom templates
+
+Custom templates are built from a Dockerfile. The Dockerfile defines the complete environment — OS packages, language runtimes, tools, and default configuration.
+
+<Tabs>
+  <Tab title="CLI">
+    ```bash
+    zwrm templates create my-ml --dockerfile ./Dockerfile
+    ```
+
+    The build runs asynchronously. Check progress with:
+    ```bash
+    zwrm templates list
+    ```
+  </Tab>
+  <Tab title="API">
+    ```bash
+    curl -X POST http://localhost:8080/v1/templates \
+      -H "Content-Type: application/json" \
+      -d '{
+        "name": "my-ml",
+        "dockerfile_content": "FROM ubuntu:22.04\nRUN apt-get update && apt-get install -y python3 python3-pip\nRUN pip3 install numpy pandas scikit-learn\n",
+        "description": "Machine learning template",
+        "env": {
+          "PYTHONUNBUFFERED": "1"
+        }
+      }'
+    ```
+  </Tab>
+</Tabs>
+
+### Template metadata
+
+Templates can include a `zwrm-template.toml` file in their repository root with metadata:
+
+```toml
+name = "my-ml"
+description = "Machine learning environment"
+author = "your-org"
+icon = "brain"
+tags = ["python", "ml", "data-science"]
+default_size = "performance-2x"
+min_size = "shared-cpu-4x"
+
+[env]
+PYTHONUNBUFFERED = "1"
+OMP_NUM_THREADS = "2"
+```
+
+## Build pipeline
+
+The template build pipeline converts a Dockerfile into a Firecracker-bootable ext4 filesystem:
+
+1. **Docker build** — Standard `docker build` using the provided Dockerfile
+2. **Container export** — Export the built image as a tar archive
+3. **ext4 creation** — Create an ext4 filesystem and extract the tar contents into it
+4. **Init injection** — Inject init scripts for VM boot (networking, overlayfs setup, SSH)
+5. **Agent skeleton** — Copy `/home/agent` to `/etc/skel/agent-skel/` for user provisioning
+6. **Cache** — Store the result with a content-addressed cache key
+
+<Info>
+Build caching is content-addressed. The cache key includes the repository URL and commit hash. Rebuilding with no upstream changes is a no-op.
+</Info>
+
+## Rebuilding templates
+
+When you update a template's Dockerfile, rebuild it to create a new version:
+
+<Tabs>
+  <Tab title="CLI">
+    ```bash
+    zwrm templates rebuild my-ml
+    ```
+  </Tab>
+  <Tab title="API">
+    ```bash
+    curl -X POST http://localhost:8080/v1/templates/my-ml/rebuild
+    ```
+  </Tab>
+</Tabs>
+
+Rebuilding increments the template version and triggers a new build. Existing sandboxes continue using their current image — only new sandboxes use the updated template.
+
+## Deleting custom templates
+
+<Tabs>
+  <Tab title="CLI">
+    ```bash
+    zwrm templates delete my-ml
+    ```
+  </Tab>
+  <Tab title="API">
+    ```bash
+    curl -X DELETE http://localhost:8080/v1/templates/my-ml
+    ```
+  </Tab>
+</Tabs>
+
+<Warning>
+Built-in templates cannot be deleted. Only custom templates can be removed.
+</Warning>
+
+## Template resolution
+
+When creating a sandbox, the `template` field is resolved in this order:
+
+1. **By ID** — Exact match on template ID (e.g., `tmpl_abc123`)
+2. **By name (org-scoped)** — Match on name within the requesting organization's custom templates
+3. **By name (built-in)** — Match on name among built-in templates
+
+This means custom templates with the same name as a built-in template take precedence for that organization.
