@@ -1,0 +1,82 @@
+---
+title: "Self-Hosting"
+description: "Run the ZWRM platform on your own infrastructure."
+icon: "server"
+---
+
+ZWRM can be self-hosted on any Linux server with KVM support. You run the control plane and optionally add host agents to scale across multiple machines.
+
+## Components
+
+| Component | Binary | Role |
+|-----------|--------|------|
+| **Control plane** | `zwrmd` | Central server that manages apps, deployments, VMs, databases, sandboxes, secrets, and the reverse proxy. Runs Firecracker VMs on the local host. |
+| **Host agent** | `zwrm-agent` | Runs on additional worker hosts. Receives gRPC commands from the control plane to start/stop VMs, pulls images, and reports resource usage via heartbeats. |
+| **CLI** | `zwrm` | Client tool for developers. Talks to the control plane REST API. |
+
+## Architecture
+
+### Single-host
+
+The simplest setup: one server runs `zwrmd`, which handles everything — API, reverse proxy, TLS, image builds, and Firecracker VMs.
+
+```
+Developer (zwrm CLI)
+    │
+    ▼
+┌──────────────────────────┐
+│  zwrmd (control plane)   │
+│  ├── REST API            │
+│  ├── Reverse proxy + TLS │
+│  ├── Build pipeline      │
+│  ├── VM manager          │
+│  └── PostgreSQL state DB │
+└──────────────────────────┘
+    │
+    ▼
+  Firecracker VMs
+```
+
+### Multi-host
+
+Add `zwrm-agent` on worker hosts to distribute VMs across machines. The control plane schedules workloads using spread or pack strategies.
+
+```
+Developer (zwrm CLI)
+    │
+    ▼
+┌──────────────────────────┐
+│  zwrmd (control plane)   │
+│  ├── REST API            │
+│  ├── Reverse proxy + TLS │
+│  ├── gRPC server         │
+│  ├── Scheduler           │
+│  └── Image registry      │
+└──────────┬───────────────┘
+           │ gRPC
+     ┌─────┴─────┐
+     ▼           ▼
+┌──────────┐ ┌──────────┐
+│ zwrm-agent│ │ zwrm-agent│
+│ (host 1) │ │ (host 2) │
+└──────────┘ └──────────┘
+     │           │
+     ▼           ▼
+   VMs         VMs
+```
+
+## Prerequisites
+
+- **Linux** (amd64 or arm64) with **KVM** support (`/dev/kvm`)
+- **Docker** daemon (for building app images)
+- **PostgreSQL** database (for control plane state)
+- **Root access** (required for TAP devices, Firecracker, iptables)
+
+<CardGroup cols={2}>
+  <Card title="Installation" icon="download" href="/self-hosting/installation">
+    Install the control plane, agent, or CLI.
+  </Card>
+  <Card title="Quickstart" icon="rocket" href="/self-hosting/quickstart">
+    Go from bare server to running apps in minutes.
+  </Card>
+</CardGroup>

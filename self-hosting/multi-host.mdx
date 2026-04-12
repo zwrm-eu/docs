@@ -1,0 +1,105 @@
+---
+title: "Multi-Host"
+description: "Distribute VMs across multiple hosts with scheduling and drain."
+icon: "diagram-project"
+---
+
+Add worker hosts running `zwrm-agent` to distribute VMs beyond a single server. The control plane schedules workloads across all healthy hosts.
+
+## Adding a host
+
+Install the agent on each worker host:
+
+```bash
+curl -fsSL https://releases.zwrm.eu/zwrmd/install.sh | sudo bash -s -- \
+    --agent \
+    --control-plane-url=https://cp.example.com:8080 \
+    --region=eu-central \
+    --datacenter=dc1
+```
+
+The agent registers automatically and begins sending heartbeats. Verify with:
+
+```bash
+zwrm host list
+```
+
+## Scheduling
+
+The control plane uses a placement scheduler to decide where new VMs run. Two strategies are available:
+
+```toml
+[scheduler]
+  strategy = "spread"    # distribute evenly across hosts
+  # strategy = "pack"    # fill hosts before using new ones
+```
+
+| Strategy | Behavior |
+|----------|----------|
+| **spread** | Distributes VMs evenly across all healthy hosts. Maximizes fault tolerance. |
+| **pack** | Fills hosts to capacity before using the next one. Minimizes host count. |
+
+Both strategies respect region and datacenter constraints when specified in the deployment.
+
+<Info>
+Apps with local volumes are pinned to the host where the volume was created, regardless of scheduler strategy. See [Volumes](/apps/volumes) for details.
+</Info>
+
+## Host health monitoring
+
+The control plane monitors host health:
+
+- **Check interval**: Every 15 seconds
+- **Offline threshold**: 30 seconds without a heartbeat
+- **On offline**: Host is marked `offline`, its executor is deregistered, and all running machines are marked `failed`
+
+When the agent reconnects and resumes heartbeats, the host is automatically re-registered.
+
+## Host management
+
+```bash
+# List all hosts with status and capacity
+zwrm host list
+
+# Get detailed info for a host
+zwrm host status <host-id>
+```
+
+## Host drain
+
+Drain a host to gracefully migrate its workloads before maintenance:
+
+```bash
+# Start draining a host
+zwrm host drain <host-id>
+
+# Check drain progress
+zwrm host drain-status <host-id>
+
+# Cancel a drain
+zwrm host undrain <host-id>
+
+# Return a host from maintenance
+zwrm host activate <host-id>
+```
+
+### Drain process
+
+1. Mark the host as draining (no new VMs scheduled)
+2. For each VM on the host:
+   - Select a target host (excluding the draining host)
+   - If the VM has volumes, transfer the ext4 image to the target via gRPC streaming
+   - Destroy the original VM
+   - Start a replacement VM on the target host
+   - Wait for health check to pass
+3. If any migration fails, rollback: destroy the replacement, restore original volume mounts
+
+<Warning>
+Volume transfers are one-time copies, not replication. After drain, the volume lives on the new host and subsequent deploys pin to that host.
+</Warning>
+
+## Image distribution
+
+When the scheduler places a VM on a remote agent host, the agent pulls the app image from the control plane's built-in image registry. Images are content-addressed (SHA256) and cached locally on each agent with LRU eviction.
+
+See [Host Agent](/self-hosting/host-agent) for cache configuration.
