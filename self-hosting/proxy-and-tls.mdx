@@ -1,0 +1,124 @@
+---
+title: "Proxy & TLS"
+description: "Reverse proxy, TLS termination, SSH proxy, PostgreSQL proxy, and authentication service."
+icon: "lock"
+---
+
+The control plane includes several optional proxy and service components that can be enabled in `config.toml`.
+
+## Reverse proxy
+
+Routes HTTP traffic to apps by hostname. Each app gets `<app-name>.<domain>`.
+
+```toml
+[proxy]
+  enabled = true
+  domain = "example.com"
+  http_port = 80
+  https_port = 443
+  request_timeout = "30s"
+  api_forward = "127.0.0.1:8080"   # Forward root domain to API (optional)
+```
+
+### TLS with Let's Encrypt
+
+```toml
+[proxy.tls]
+  enabled = true
+  email = "admin@example.com"
+  cache_dir = "/var/lib/zwrm/certs"
+  allowed_hosts = []               # Additional TLS hostnames
+```
+
+Certificates are automatically obtained and renewed via Let's Encrypt. The cache directory stores certificates on disk.
+
+### Health checks
+
+The proxy monitors backend health and removes unhealthy VMs from the rotation:
+
+```toml
+[proxy.health]
+  interval = "10s"
+  timeout = "2s"
+  failure_threshold = 3            # Failures before marking unhealthy
+  recovery_threshold = 2           # Successes before marking healthy
+  startup_grace_period = "30s"     # Grace period before checks start
+```
+
+## SSH proxy
+
+Enables `zwrm ssh` access through NAT to VMs that don't have public IPs. Uses certificate-based authentication.
+
+```toml
+[ssh_proxy]
+  enabled = true
+  port = 2222
+  host_key_path = "/var/lib/zwrm/ssh_proxy_host_key"
+  idle_timeout = "10m"
+
+  [ssh_proxy.ca]
+    ca_path = "/var/lib/zwrm/ssh_ca"
+    certificate_ttl = "24h"
+```
+
+The SSH CA keypair is generated automatically on first start if it doesn't exist.
+
+## PostgreSQL proxy
+
+External PostgreSQL access via HAProxy with TLS. Allows developers to connect to managed databases from outside the cluster.
+
+```toml
+[postgres_proxy]
+  enabled = true
+  domain = "pg.example.com"
+  port = 5432
+  haproxy_config_path = "/etc/haproxy/haproxy.cfg"
+  haproxy_map_path = "/etc/haproxy/postgres.map"
+  haproxy_reload_command = "systemctl reload haproxy"
+  connection_timeout = "10s"
+  client_timeout = "1h"
+  server_timeout = "1h"
+
+  [postgres_proxy.tls]
+    certbot_enabled = true
+    certbot_email = "admin@example.com"
+    certbot_dns_plugin = "route53"
+    certbot_credentials_path = "/etc/certbot/credentials"
+```
+
+<Info>
+The PostgreSQL proxy requires HAProxy to be installed separately. ZWRM generates the HAProxy config and reloads it when databases are created or destroyed.
+</Info>
+
+## Authentication service
+
+ZWRM can run a Better Auth-based authentication service as a subprocess for multi-user setups.
+
+```toml
+[auth]
+  database_url = "postgres://user:pass@localhost:5432/zwrm_auth"
+  max_orgs_per_user = 5
+
+  [auth.service]
+    enabled = true
+    internal_port = 3000
+    auth_dir = "/usr/local/share/zwrmd/auth"
+    routes = ["auth.example.com"]
+
+    [auth.service.env]
+      BETTER_AUTH_SECRET = ""       # JWT signing secret (openssl rand -base64 32)
+      BETTER_AUTH_URL = "https://auth.example.com"
+      RESEND_API_KEY = ""           # For transactional emails
+      TRUSTED_ORIGINS = "https://dashboard.example.com"
+      # Optional OAuth providers:
+      # GITHUB_CLIENT_ID = ""
+      # GITHUB_CLIENT_SECRET = ""
+      # GOOGLE_CLIENT_ID = ""
+      # GOOGLE_CLIENT_SECRET = ""
+```
+
+The auth service requires a separate PostgreSQL database and a Node.js runtime.
+
+<Tip>
+For single-user setups with localhost access only, you don't need the auth service — localhost requests bypass authentication automatically.
+</Tip>
