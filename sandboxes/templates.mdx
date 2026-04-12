@@ -61,6 +61,20 @@ Custom templates are built from a Dockerfile. The Dockerfile defines the complet
     ```bash
     zwrm templates list
     ```
+
+    To set a default egress policy for all sandboxes created from this template:
+    ```bash
+    zwrm templates create my-ml --dockerfile ./Dockerfile \
+      --egress-mode deny_all \
+      --egress-allow-cidr 0.0.0.0/0 \
+      --egress-deny-cidr 10.0.0.0/8
+    ```
+
+    Egress flags:
+    - `--egress-mode` — `allow_all` or `deny_all` default for sandboxes from this template
+    - `--egress-allow-cidr CIDR` — Default allowed outbound CIDR (repeatable; implies `deny_all`)
+    - `--egress-deny-cidr CIDR` — Default denied outbound CIDR (repeatable)
+    - `--egress-allow-port PORT` — Default TCP port restriction for `allow_cidrs` (repeatable)
   </Tab>
   <Tab title="API">
     ```bash
@@ -68,10 +82,15 @@ Custom templates are built from a Dockerfile. The Dockerfile defines the complet
       -H "Content-Type: application/json" \
       -d '{
         "name": "my-ml",
-        "dockerfile_content": "FROM ubuntu:22.04\nRUN apt-get update && apt-get install -y python3 python3-pip\nRUN pip3 install numpy pandas scikit-learn\n",
+        "dockerfile": "FROM ubuntu:22.04\nRUN apt-get update && apt-get install -y python3 python3-pip\nRUN pip3 install numpy pandas scikit-learn\n",
         "description": "Machine learning template",
         "env": {
           "PYTHONUNBUFFERED": "1"
+        },
+        "egress": {
+          "mode": "deny_all",
+          "allow_cidrs": ["0.0.0.0/0"],
+          "deny_cidrs": ["10.0.0.0/8"]
         }
       }'
     ```
@@ -103,9 +122,12 @@ The template build pipeline converts a Dockerfile into a Firecracker-bootable ex
 1. **Docker build** — Standard `docker build` using the provided Dockerfile
 2. **Container export** — Export the built image as a tar archive
 3. **ext4 creation** — Create an ext4 filesystem and extract the tar contents into it
-4. **Init injection** — Inject init scripts for VM boot (networking, overlayfs setup, SSH)
-5. **Agent skeleton** — Copy `/home/agent` to `/etc/skel/agent-skel/` for user provisioning
-6. **Cache** — Store the result with a content-addressed cache key
+4. **Init injection** — Inject init scripts for VM boot (networking, overlayfs setup)
+5. **Daemon injection** — Install `zwrm-sandboxd`, the in-VM agent daemon that the host communicates with for command execution and file operations
+6. **Agent skeleton** — Copy `/home/agent` to `/etc/skel/agent-skel/` for user provisioning
+7. **Cache** — Store the result with a content-addressed cache key
+
+After a template image is built, the control plane creates a **golden snapshot** in the background: a pre-taken Firecracker memory+state snapshot for each VM size. When a warm-pool slot isn't available, cold-starting from a golden snapshot is faster than a full kernel boot.
 
 <Info>
 Build caching is content-addressed. The cache key includes the repository URL and commit hash. Rebuilding with no upstream changes is a no-op.
@@ -128,7 +150,7 @@ When you update a template's Dockerfile, rebuild it to create a new version:
   </Tab>
 </Tabs>
 
-Rebuilding increments the template version and triggers a new build. Existing sandboxes continue using their current image — only new sandboxes use the updated template.
+Rebuilding increments the template version, invalidates any existing golden snapshots, and triggers a new build. Existing sandboxes continue using their current image — only new sandboxes use the updated template.
 
 ## Deleting custom templates
 

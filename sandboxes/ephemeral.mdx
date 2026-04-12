@@ -28,6 +28,10 @@ A background reaper loop runs every 10 seconds and destroys any ephemeral sandbo
     - `--timeout` — Duration until auto-destroy (default: `5m`, max: `24h`)
     - `--size` — VM preset (default: `shared-cpu-1x`)
     - `--env KEY=VALUE` — Environment variables (repeatable)
+    - `--egress-mode` — Outbound firewall mode: `allow_all` or `deny_all`
+    - `--egress-allow-cidr CIDR` — Allow outbound to this CIDR (repeatable; implies `deny_all`)
+    - `--egress-deny-cidr CIDR` — Explicitly deny outbound to this CIDR (repeatable)
+    - `--egress-allow-port PORT` — Restrict allowed CIDRs to this TCP port (repeatable)
   </Tab>
   <Tab title="API">
     ```bash
@@ -71,7 +75,7 @@ The maximum timeout is 24 hours (`86400s`). Keepalive requests exceeding this ar
 
 ## Executing commands
 
-Run a command inside the sandbox. The command executes via SSH and returns stdout, stderr, exit code, and duration.
+Run a command inside the sandbox. The command executes inside the VM via the in-VM agent daemon and returns stdout, stderr, exit code, and duration.
 
 <Tabs>
   <Tab title="CLI">
