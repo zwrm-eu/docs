@@ -36,6 +36,15 @@ All sandbox endpoints are under `/v1/sandboxes`. Requests require authentication
   Arbitrary metadata as key-value pairs.
 </ParamField>
 
+<ParamField body="egress" type="object">
+  Outbound firewall policy. If omitted, the template's default egress policy is used (which itself defaults to `allow_all`). See [Egress controls](/sandboxes/egress).
+
+  - `mode` (string, required) — `allow_all` or `deny_all`
+  - `allow_cidrs` (string[]) — CIDRs to allow when mode is `deny_all`
+  - `deny_cidrs` (string[]) — CIDRs to explicitly block (evaluated before allows)
+  - `allow_ports` (integer[]) — Restrict `allow_cidrs` to these destination TCP ports
+</ParamField>
+
 ```bash
 POST /v1/sandboxes
 ```
@@ -65,6 +74,9 @@ curl -X POST http://localhost:8080/v1/sandboxes \
   "env": {"API_KEY": "sk-..."},
   "timeout_seconds": 600,
   "expires_at": "2026-04-05T15:10:00Z",
+  "egress": {
+    "mode": "allow_all"
+  },
   "created_at": "2026-04-05T15:00:00Z",
   "updated_at": "2026-04-05T15:00:00Z"
 }
@@ -75,7 +87,7 @@ curl -X POST http://localhost:8080/v1/sandboxes \
 | Status | Condition |
 |--------|-----------|
 | `201` | Sandbox created |
-| `400` | Invalid mode, size, or timeout |
+| `400` | Invalid mode, size, timeout, or egress policy |
 | `404` | Template not found |
 
 ---
@@ -287,7 +299,6 @@ curl -X POST http://localhost:8080/v1/sandboxes/sbx_abc123/execute \
 | `200` | Command completed (check `exit_code` for success/failure) |
 | `400` | Missing command or invalid timeout |
 | `409` | Sandbox not running |
-| `503` | SSH key not configured on server |
 
 ---
 

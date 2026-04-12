@@ -28,6 +28,10 @@ Persistent sandboxes are long-lived environments designed for development worklo
     - `--idle-timeout` — Duration of inactivity before auto-suspend (default: `10m`)
     - `--size` — VM preset (default: `shared-cpu-1x`)
     - `--env KEY=VALUE` — Environment variables (repeatable)
+    - `--egress-mode` — Outbound firewall mode: `allow_all` or `deny_all`
+    - `--egress-allow-cidr CIDR` — Allow outbound to this CIDR (repeatable; implies `deny_all`)
+    - `--egress-deny-cidr CIDR` — Explicitly deny outbound to this CIDR (repeatable)
+    - `--egress-allow-port PORT` — Restrict allowed CIDRs to this TCP port (repeatable)
   </Tab>
   <Tab title="API">
     ```bash
