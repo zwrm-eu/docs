@@ -74,7 +74,7 @@ Custom templates are built from a Dockerfile. The Dockerfile defines the complet
     - `--egress-mode` — `allow_all` or `deny_all` default for sandboxes from this template
     - `--egress-allow-cidr CIDR` — Default allowed outbound CIDR (repeatable; implies `deny_all`)
     - `--egress-deny-cidr CIDR` — Default denied outbound CIDR (repeatable)
-    - `--egress-allow-port PORT` — Default TCP port restriction for `allow_cidrs` (repeatable)
+    - `--egress-allow-port PORT` — Default TCP port restriction for `--egress-allow-cidr` (repeatable)
   </Tab>
   <Tab title="API">
     ```bash

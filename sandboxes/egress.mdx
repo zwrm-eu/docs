@@ -58,9 +58,10 @@ Pass an `egress` object when creating a sandbox to override the template default
       --egress-allow-cidr 1.0.0.1/32 \
       --egress-allow-port 443
 
-    # Deny a specific subnet, allow everything else
+    # Allow all external traffic but deny a specific subnet
     zwrm sandbox create --template python \
-      --egress-mode allow_all \
+      --egress-mode deny_all \
+      --egress-allow-cidr 0.0.0.0/0 \
       --egress-deny-cidr 10.0.0.0/8
     ```
 
@@ -71,7 +72,7 @@ Pass an `egress` object when creating a sandbox to override the template default
     | `--egress-mode` | `allow_all` or `deny_all`. When omitted and other egress flags are set, defaults to `deny_all`. |
     | `--egress-allow-cidr` | Allow outbound to this CIDR (repeatable). Implies `deny_all`. |
     | `--egress-deny-cidr` | Deny outbound to this CIDR (repeatable). |
-    | `--egress-allow-port` | Restrict `allow_cidrs` to this TCP port (repeatable). |
+    | `--egress-allow-port` | Restrict `--egress-allow-cidr` to this TCP port (repeatable). |
   </Tab>
   <Tab title="API">
     ```bash
