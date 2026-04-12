@@ -104,3 +104,11 @@ zwrm postgres restore status <restore-id>
 ```
 
 Shows the restore type, status, target database ID, and any error details.
+
+## In-place restore safety
+
+When restoring over an existing database (in-place restore), ZWRM applies several safety measures to prevent data loss:
+
+- **Old volume retention** — the original data volume is kept for 24 hours after the swap completes. A background reaper deletes it once the retention window expires. If the restored database turns out to be unhealthy during that window, contact your administrator to recover from the retained volume.
+- **Post-swap health check** — after swapping the database record to point at the restored VM and volume, ZWRM polls the database for up to 30 seconds. If the restored database does not become healthy, the restore is marked failed and the old volume is retained for recovery.
+- **Deferred S3 backup deletion** — old pre-restore backups are only deleted after a new base backup of the restored database succeeds. If the new base backup fails, the old backups are kept so you retain some restore coverage.

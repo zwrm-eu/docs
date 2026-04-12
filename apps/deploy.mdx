@@ -59,6 +59,12 @@ zwrm deploy --app my-other-app --context ./other-app
 
 ZWRM uses content-addressed caching based on your Dockerfile, build context, and build args. If nothing has changed, the build is skipped entirely. Use `--force-build` to bypass the cache when needed.
 
+## Concurrent deploy protection
+
+Only one deployment can be in progress per app at a time. If you trigger a new deploy while one is already running, the API returns `409 Conflict` with the message `A deployment is already in progress for this app`. Wait for the current deployment to finish (or fail) before starting another.
+
+If any critical setup step fails — deploying secrets, creating volumes, applying firewall rules, or registering with the proxy — the deployment is marked failed immediately with a descriptive error. Check `zwrm status` for the error message.
+
 ## Health checks
 
 After deploying, ZWRM automatically health-checks your app's public URL:
