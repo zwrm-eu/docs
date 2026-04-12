@@ -8,7 +8,7 @@ icon: "box"
 Sandboxes are currently in **beta**. Do not run production workloads on sandboxes — data loss may occur during this phase.
 </Warning>
 
-Sandboxes are lightweight, isolated virtual machines built on [Firecracker](https://firecracker-microvm.github.io/) that spin up in milliseconds. Each sandbox runs a full Linux environment from a pre-built template, with SSH access, filesystem operations, and command execution via API.
+Sandboxes are lightweight, isolated virtual machines built on [Firecracker](https://firecracker-microvm.github.io/) that spin up in milliseconds. Each sandbox runs a full Linux environment from a pre-built template, with filesystem operations and command execution via API.
 
 ## Key concepts
 
@@ -43,7 +43,7 @@ Every sandbox is a Firecracker microVM running on a Linux host with KVM support:
 
 1. **Create** — A sandbox is created from a template. If a warm pool VM is available, it's claimed instantly. Otherwise, a new VM cold-boots (~2-3 seconds).
 
-2. **Run** — The sandbox is a fully functional Linux VM with SSH access. Execute commands, upload/download files, and interact via the REST API or CLI.
+2. **Run** — The sandbox is a fully functional Linux VM. Execute commands, upload/download files, and interact via the REST API or CLI.
 
 3. **Suspend** (persistent only) — After the idle timeout expires, the VM's full memory and CPU state are snapshotted to disk. The Firecracker process is killed, freeing all host resources.
 

@@ -1,0 +1,158 @@
+---
+title: "Egress controls"
+description: "Restrict outbound network access from sandbox VMs"
+icon: "shield-halved"
+---
+
+By default, sandbox VMs have unrestricted outbound access to the internet. Egress controls let you restrict that access at the iptables level — per sandbox or as a default for all sandboxes created from a given template.
+
+## Modes
+
+| Mode | Behavior |
+|------|----------|
+| `allow_all` | All outbound traffic is permitted (default) |
+| `deny_all` | All outbound traffic is dropped unless explicitly allowed via `allow_cidrs` |
+
+The metadata service at `169.254.169.254` is always reachable regardless of the policy. The in-VM agent daemon uses it to fetch its auth token at boot.
+
+## Policy fields
+
+<ParamField body="mode" type="string" required>
+  `allow_all` or `deny_all`.
+</ParamField>
+
+<ParamField body="allow_cidrs" type="string[]">
+  CIDRs to allow outbound traffic to. Only evaluated when `mode` is `deny_all`. Example: `["1.1.1.1/32", "8.8.8.8/32"]`.
+</ParamField>
+
+<ParamField body="deny_cidrs" type="string[]">
+  CIDRs to explicitly deny. Evaluated before `allow_cidrs`, so use this to carve out subnets from a broad allow rule. Example: `["10.0.0.0/8"]`.
+</ParamField>
+
+<ParamField body="allow_ports" type="integer[]">
+  Restrict `allow_cidrs` rules to these destination TCP ports. If omitted, the allowed CIDRs are reachable on any port. Requires `allow_cidrs` to be set. Example: `[443, 8080]`.
+</ParamField>
+
+## Validation
+
+The API validates egress policies on create and returns `400` for:
+
+- Unknown mode (must be `allow_all` or `deny_all`)
+- `allow_all` combined with `allow_cidrs`, `deny_cidrs`, or `allow_ports`
+- `allow_ports` set without `allow_cidrs`
+- `deny_cidrs` containing the metadata service range (`169.254.0.0/16`)
+- Malformed CIDR notation
+- Port numbers outside 1–65535
+
+## Per-sandbox egress
+
+Pass an `egress` object when creating a sandbox to override the template default.
+
+<Tabs>
+  <Tab title="CLI">
+    ```bash
+    # Block all outbound except HTTPS to Cloudflare DNS
+    zwrm sandbox create --template python \
+      --egress-mode deny_all \
+      --egress-allow-cidr 1.1.1.1/32 \
+      --egress-allow-cidr 1.0.0.1/32 \
+      --egress-allow-port 443
+
+    # Deny a specific subnet, allow everything else
+    zwrm sandbox create --template python \
+      --egress-mode allow_all \
+      --egress-deny-cidr 10.0.0.0/8
+    ```
+
+    Flags (available on `sandbox create` and `sandbox run`):
+
+    | Flag | Description |
+    |------|-------------|
+    | `--egress-mode` | `allow_all` or `deny_all`. When omitted and other egress flags are set, defaults to `deny_all`. |
+    | `--egress-allow-cidr` | Allow outbound to this CIDR (repeatable). Implies `deny_all`. |
+    | `--egress-deny-cidr` | Deny outbound to this CIDR (repeatable). |
+    | `--egress-allow-port` | Restrict `allow_cidrs` to this TCP port (repeatable). |
+  </Tab>
+  <Tab title="API">
+    ```bash
+    curl -X POST http://localhost:8080/v1/sandboxes \
+      -H "Content-Type: application/json" \
+      -d '{
+        "template": "python",
+        "mode": "ephemeral",
+        "timeout": "10m",
+        "egress": {
+          "mode": "deny_all",
+          "allow_cidrs": ["1.1.1.1/32", "1.0.0.1/32"],
+          "allow_ports": [443]
+        }
+      }'
+    ```
+
+    The resolved policy is echoed back in the sandbox response:
+
+    ```json
+    {
+      "id": "sbx_abc123",
+      "status": "running",
+      "egress": {
+        "mode": "deny_all",
+        "allow_cidrs": ["1.1.1.1/32", "1.0.0.1/32"],
+        "allow_ports": [443]
+      }
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Template-level egress defaults
+
+Set a default egress policy on a template so every sandbox created from it inherits the same restrictions.
+
+<Tabs>
+  <Tab title="CLI">
+    ```bash
+    zwrm templates create secure-python \
+      --dockerfile ./Dockerfile \
+      --egress-mode deny_all \
+      --egress-allow-cidr 0.0.0.0/0 \
+      --egress-deny-cidr 10.0.0.0/8 \
+      --egress-deny-cidr 172.16.0.0/12 \
+      --egress-deny-cidr 192.168.0.0/16
+    ```
+
+    This template allows all external internet traffic but blocks RFC 1918 private address space.
+  </Tab>
+  <Tab title="API">
+    ```bash
+    curl -X POST http://localhost:8080/v1/templates \
+      -H "Content-Type: application/json" \
+      -d '{
+        "name": "secure-python",
+        "dockerfile": "FROM python:3.12-slim",
+        "egress": {
+          "mode": "deny_all",
+          "allow_cidrs": ["0.0.0.0/0"],
+          "deny_cidrs": ["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"]
+        }
+      }'
+    ```
+  </Tab>
+</Tabs>
+
+When creating a sandbox, you can override the template's default by passing a different `egress` object. Passing no `egress` field inherits the template default.
+
+<Info>
+Rebuilding a template (`zwrm templates rebuild`) does not change the stored egress policy. The policy is attached to the template record, not the image.
+</Info>
+
+## How it works
+
+Egress rules are implemented as iptables rules in the `ZWRM` chain on the host. When a sandbox is created with a `deny_all` policy, the manager installs:
+
+1. **Allow rules** — one `ACCEPT` per `allow_cidrs` entry (optionally port-scoped), inserted near the top of the chain
+2. **Deny rule** — a final `DROP` for all traffic from the sandbox IP, appended at the bottom
+
+The metadata service (`169.254.169.254/32`) always has an unconditional `ACCEPT` that sits above per-sandbox rules.
+
+Rules are cleaned up automatically when the sandbox is destroyed or suspended.
