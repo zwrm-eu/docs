@@ -1,0 +1,58 @@
+---
+title: "Environment Variables"
+description: "Override control plane and agent configuration via environment variables."
+icon: "list"
+---
+
+Environment variables override their corresponding config file values. For the control plane, CLI flags are not supported beyond `--config` and `--generate-config` — use environment variables or the config file instead.
+
+## Control plane
+
+| Variable | Config field | Notes |
+|----------|-------------|-------|
+| `PORT` | `server.port` | |
+| `DATABASE_DRIVER` | `database.driver` | `"sqlite"` or `"postgres"` |
+| `DATABASE_URL` | `database.url` | Also sets driver to `"postgres"` |
+| `DB_PATH` | `database.path` | SQLite file path |
+| `SUBNET` | `network.subnet` | |
+| `EXTERNAL_INTERFACE` | `network.external_interface` | |
+| `ENABLE_BRIDGE` | `network.bridge.enabled` | `"true"` to enable |
+| `BRIDGE_SUBNET` | `network.bridge.subnet` | |
+| `ENABLE_PROXY` | `proxy.enabled` | `"true"` to enable |
+| `PROXY_DOMAIN` | `proxy.domain` | |
+| `PROXY_HTTP_PORT` | `proxy.http_port` | |
+| `PROXY_HTTPS_PORT` | `proxy.https_port` | |
+| `PROXY_TLS_EMAIL` | `proxy.tls.email` | Also enables TLS |
+| `PROXY_TLS_CACHE_DIR` | `proxy.tls.cache_dir` | |
+| `HEALTH_CHECK_INTERVAL` | `proxy.health.interval` | |
+| `WORKER_POOL_SIZE` | `workers.pool_size` | |
+| `SCHEDULER_STRATEGY` | `scheduler.strategy` | `"spread"` or `"pack"` |
+| `AUTH_DATABASE_URL` | `auth.database_url` | |
+| `SECRETS_MASTER_KEY_PATH` | `secrets.master_key_path` | |
+| `SECRETS_METADATA_SERVICE_ENABLED` | `secrets.metadata_service_enabled` | `"false"` to disable |
+| `SECRETS_METADATA_SERVICE_ADDRESS` | `secrets.metadata_service_address` | |
+| `CORS_ALLOWED_ORIGINS` | `cors.allowed_origins` | Comma-separated, supports wildcards |
+| `SKIP_STARTUP_CLEANUP` | *(direct)* | Set to `"1"` to skip stale process cleanup |
+| `SOCKET_DIR` | *(direct)* | Firecracker socket directory (default: `/tmp`) |
+
+## Host agent
+
+| Variable | Config field | Notes |
+|----------|-------------|-------|
+| `AGENT_HOST_ID` | `host_id` | |
+| `AGENT_GRPC_PORT` | `grpc_port` | |
+| `AGENT_CONTROL_PLANE_URL` | `control_plane_url` | |
+| `AGENT_LICENSE_KEY` | `license_key` | |
+| `AGENT_REGION` | `region` | |
+| `AGENT_DATACENTER` | `datacenter` | |
+| `AGENT_CAPACITY_CPUS` | `capacity_cpus` | |
+| `AGENT_CAPACITY_MEMORY_MB` | `capacity_memory_mb` | |
+| `AGENT_IMAGE_CACHE_DIR` | `image_cache_dir` | |
+| `AGENT_IMAGE_CACHE_MAX_GB` | `image_cache_max_gb` | |
+| `SOCKET_DIR` | *(direct)* | Socket directory for cleanup (default: `/tmp`) |
+
+## Override precedence
+
+For the **control plane**: config file < environment variables. CLI flags (`--config`, `--generate-config`) control which config file is loaded but don't override individual values.
+
+For the **host agent**: config file < environment variables < CLI flags. CLI flags take highest precedence when provided.
