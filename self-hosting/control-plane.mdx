@@ -1,0 +1,165 @@
+---
+title: "Control Plane"
+description: "Configure and run the zwrmd control plane server."
+icon: "tower-control"
+---
+
+The control plane (`zwrmd`) is the central server that manages apps, deployments, VMs, volumes, secrets, databases, and sandboxes. It runs a REST API, background workers for image building and deployment, and optionally a reverse proxy, SSH proxy, and PostgreSQL proxy.
+
+## CLI flags
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--config` | `/etc/zwrm/config.toml` | Path to config file |
+| `--generate-config` | `false` | Generate default config and exit |
+
+## Systemd service
+
+Create `/etc/systemd/system/zwrmd.service`:
+
+```ini
+[Unit]
+Description=ZWRM Control Plane
+After=network.target docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/zwrmd --config /etc/zwrm/config.toml
+Restart=on-failure
+RestartSec=5
+User=root
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=zwrmd
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable --now zwrmd
+sudo journalctl -u zwrmd -f
+```
+
+## Configuration
+
+The control plane reads `/etc/zwrm/config.toml`. Generate a default config with `zwrmd --generate-config`.
+
+### Server
+
+```toml
+[server]
+  port = 8080
+  read_timeout = "15s"
+  write_timeout = "15s"
+  idle_timeout = "60s"
+```
+
+### Database
+
+```toml
+[database]
+  driver = "postgres"           # "sqlite" or "postgres"
+  path = "/var/lib/zwrm/state.db"  # SQLite path (single-host only)
+  url = ""                      # PostgreSQL connection string
+```
+
+<Tip>
+Use PostgreSQL for production and multi-host setups. SQLite is fine for local development.
+</Tip>
+
+### Workers
+
+```toml
+[workers]
+  pool_size = 4                 # Concurrent deployment workers
+  cleanup_interval = "30s"      # VM orphan check interval
+
+  [workers.restart]
+    enabled = true
+    default_policy = "on-failure"   # "always", "on-failure", "never"
+    max_restarts = 5
+    initial_delay = "5s"
+    max_delay = "5m"
+    healthy_reset_period = "10m"
+```
+
+### Scheduler
+
+```toml
+[scheduler]
+  strategy = "spread"           # "spread" or "pack"
+```
+
+### Build
+
+```toml
+[build]
+  images_dir = "/var/lib/zwrm/images"
+  cache_dir = "/var/lib/zwrm/cache"
+```
+
+### Secrets
+
+```toml
+[secrets]
+  master_key_path = "/var/lib/zwrm/secrets/master.key"
+  metadata_service_enabled = true
+  metadata_service_address = "169.254.169.254:1338"
+```
+
+### Volumes
+
+```toml
+[volumes]
+  max_size_mb = 51200           # 50 GB max per volume
+  max_per_app = 1
+  min_free_disk_mb = 10240      # 10 GB minimum free disk
+  storage_dir = "/var/lib/zwrm/volumes"
+```
+
+### CORS
+
+```toml
+[cors]
+  allowed_origins = ["https://*.example.com"]
+```
+
+Supports exact origins (`https://app.example.com`) and wildcard patterns (`https://*.example.com`).
+
+## Startup sequence
+
+1. Load configuration and apply environment variable overrides
+2. Initialize database (SQLite or PostgreSQL)
+3. Clean up stale Firecracker processes and reconcile machine state
+4. Set up VM networking (IPAM, NAT, iptables rules)
+5. Start background services (workers, restart manager, cache cleanup)
+6. Initialize reverse proxy, SSH proxy, and metadata server (if configured)
+7. Start HTTP server
+8. Wait for `SIGINT` or `SIGTERM`
+
+## Graceful shutdown
+
+Shutdown timeout is 30 seconds. Components stop in order: metadata server, SSH proxy, reverse proxy, API server (drains workers), HTTP server (drains connections), private networking cleanup, database close.
+
+## Authentication model
+
+- **Localhost bypass**: Requests from `127.0.0.1` or `::1` get automatic `host-admin` access
+- **Session tokens**: `Authorization: Bearer <token>` validated against the auth database
+- **API keys**: SHA-256 hashed, validated against the `apikey` table
+- **Org scoping**: All resources are scoped to the user's active organization
+
+<CardGroup cols={2}>
+  <Card title="Networking" icon="network-wired" href="/self-hosting/networking">
+    VM networking, IP forwarding, and private networking.
+  </Card>
+  <Card title="Proxy & TLS" icon="lock" href="/self-hosting/proxy-and-tls">
+    Reverse proxy, TLS, SSH proxy, and PostgreSQL proxy.
+  </Card>
+  <Card title="Environment Variables" icon="list" href="/self-hosting/environment-variables">
+    Override any config value via environment variables.
+  </Card>
+</CardGroup>
