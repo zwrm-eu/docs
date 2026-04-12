@@ -40,7 +40,7 @@ zwrm sandbox exec sbx_abc123 -- python3 -c "print('Hello from ZWRM!')"
 Hello from ZWRM!
 ```
 
-Commands run via SSH inside the VM. You can set a custom timeout and working directory:
+Commands run inside the VM via the in-VM agent daemon. You can set a custom timeout and working directory:
 
 ```bash
 zwrm sandbox exec sbx_abc123 --timeout 60s --workdir /home/user -- bash -c "ls -la"

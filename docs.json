@@ -75,6 +75,7 @@
               "sandboxes/quickstart",
               "sandboxes/ephemeral",
               "sandboxes/persistent",
+              "sandboxes/egress",
               "sandboxes/templates",
               "sandboxes/warm-pool",
               "sandboxes/api-reference"
