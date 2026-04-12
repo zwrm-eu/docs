@@ -9,7 +9,7 @@ ZWRM can be self-hosted on any Linux server with KVM support. You run the contro
 ## Components
 
 | Component | Binary | Role |
-|-----------|--------|------|
+| --- | --- | --- |
 | **Control plane** | `zwrmd` | Central server that manages apps, deployments, VMs, databases, sandboxes, secrets, and the reverse proxy. Runs Firecracker VMs on the local host. |
 | **Host agent** | `zwrm-agent` | Runs on additional worker hosts. Receives gRPC commands from the control plane to start/stop VMs, pulls images, and reports resource usage via heartbeats. |
 | **CLI** | `zwrm` | Client tool for developers. Talks to the control plane REST API. |
@@ -20,17 +20,17 @@ ZWRM can be self-hosted on any Linux server with KVM support. You run the contro
 
 The simplest setup: one server runs `zwrmd`, which handles everything — API, reverse proxy, TLS, image builds, and Firecracker VMs.
 
-```
+```text
 Developer (zwrm CLI)
     │
     ▼
 ┌──────────────────────────┐
-│  zwrmd (control plane)   │
-│  ├── REST API            │
-│  ├── Reverse proxy + TLS │
-│  ├── Build pipeline      │
-│  ├── VM manager          │
-│  └── PostgreSQL state DB │
+│  zwrmd (control plane)                   │
+│  ├── REST API                          │
+│  ├── Reverse proxy + TLS               │
+│  ├── Build pipeline                    │
+│  ├── VM manager                        │
+│  └── PostgreSQL state DB               │
 └──────────────────────────┘
     │
     ▼
@@ -41,28 +41,26 @@ Developer (zwrm CLI)
 
 Add `zwrm-agent` on worker hosts to distribute VMs across machines. The control plane schedules workloads using spread or pack strategies.
 
-```
+```text
 Developer (zwrm CLI)
-    │
-    ▼
+		▼
 ┌──────────────────────────┐
-│  zwrmd (control plane)   │
-│  ├── REST API            │
-│  ├── Reverse proxy + TLS │
-│  ├── gRPC server         │
-│  ├── Scheduler           │
-│  └── Image registry      │
-└──────────┬───────────────┘
-           │ gRPC
+│  zwrmd (control plane)                   │
+│  ├── REST API                          │
+│  ├── Reverse proxy + TLS               │
+│  ├── gRPC server                       │
+│  ├── Scheduler                         │
+│  └── Image registry                    │
+└────────┬─────────────────┘
+             gRPC
      ┌─────┴─────┐
-     ▼           ▼
+     ▼                 ▼
 ┌──────────┐ ┌──────────┐
-│ zwrm-agent│ │ zwrm-agent│
-│ (host 1) │ │ (host 2) │
-└──────────┘ └──────────┘
-     │           │
-     ▼           ▼
-   VMs         VMs
+│ zwrm-agent	  │ │ zwrm-agent	  │
+│ (host 1)		  │ │ (host 2)		  │
+└────┬─────┘ └─────┬────┘
+  	    ▼                   ▼
+   		VMs            		 VMs
 ```
 
 ## Prerequisites
@@ -76,6 +74,7 @@ Developer (zwrm CLI)
   <Card title="Installation" icon="download" href="/self-hosting/installation">
     Install the control plane, agent, or CLI.
   </Card>
+
   <Card title="Quickstart" icon="rocket" href="/self-hosting/quickstart">
     Go from bare server to running apps in minutes.
   </Card>
