@@ -123,6 +123,52 @@ zwrm ssh [machine-id] [--app <name>] [--direct] [--user <user>]
 
 ---
 
+## `zwrm sftp`
+
+Transfer files to/from a running VM through the SSH proxy. Uses the same dedicated key and short-lived certificate flow as `zwrm ssh`.
+
+Run without a subcommand for an interactive `sftp>` shell. Use `get` / `put` / `ls` for one-shot transfers in scripts — they exit non-zero on any sftp error.
+
+```bash
+zwrm sftp                                    # interactive
+zwrm sftp get /etc/hostname ./hostname       # download
+zwrm sftp put ./payload.bin /tmp/payload     # upload
+zwrm sftp get -r /var/log ./logs             # recursive download
+zwrm sftp ls /tmp                            # remote listing
+zwrm sftp --machine abc123 ls /var/log       # target a specific machine
+```
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--app` | string | from `zwrm.toml` | Application name |
+| `--app-id` | string | — | Application UUID |
+| `--machine` | string | — | Machine ID |
+| `--user` | string | from app config | SSH user |
+
+### `zwrm sftp get REMOTE LOCAL`
+
+Download a file (or directory with `-r`) from the VM.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--recursive`, `-r` | bool | `false` | Recursively copy directories |
+
+### `zwrm sftp put LOCAL REMOTE`
+
+Upload a file (or directory with `-r`) to the VM.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--recursive`, `-r` | bool | `false` | Recursively copy directories |
+
+### `zwrm sftp ls [REMOTE]`
+
+List a remote directory on the VM. Defaults to the VM's working directory when no path is given.
+
+SFTP requires the SSH proxy to be enabled on the server; there is no direct mode for SFTP. Modern `scp` clients (OpenSSH ≥ 9.0) also transfer files over SFTP, so once `zwrm sftp` works you can transfer files via system `scp` against the proxy directly — username and port match `zwrm ssh` (use `ssh -v` to see them).
+
+---
+
 ## `zwrm secrets`
 
 Manage encrypted application secrets. [Guide →](/apps/secrets)
