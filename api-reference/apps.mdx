@@ -1,0 +1,75 @@
+---
+title: "Apps & machines"
+description: "Applications, deployments, machines, routes, logs, and metrics."
+icon: "cloud-arrow-up"
+---
+
+## Apps
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/v1/apps` | Create an app |
+| `GET` | `/v1/apps` | List apps (`?include_system=true` includes platform-managed apps) |
+| `GET` | `/v1/apps/by-name/{app_name}` | Get an app by name |
+| `GET` | `/v1/apps/{app_id}` | Get an app |
+| `DELETE` | `/v1/apps/{app_id}` | Delete an app (`?force=true` skips safety checks) |
+| `POST` | `/v1/apps/{app_id}/transfer` | Transfer the app to another organization |
+| `PUT` | `/v1/apps/{app_id}/config` | Update app configuration |
+| `POST` | `/v1/apps/{app_id}/scale` | Scale to a target machine count |
+| `GET` | `/v1/apps/{app_id}/health` | App health summary |
+| `GET` | `/v1/apps/{app_id}/metrics` | Aggregated app metrics |
+| `GET` | `/v1/vm-presets` | List available VM size presets |
+
+## Deployments
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/v1/apps/{app_id}/deploy` | Start a deployment |
+| `POST` | `/v1/apps/{app_id}/deploy/upload` | Upload a build context and deploy |
+| `GET` | `/v1/apps/{app_id}/deployments` | List deployments |
+| `GET` | `/v1/deployments/{deployment_id}` | Get deployment status |
+
+Deploys are rate-limited as expensive operations.
+
+## Machines
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/v1/apps/{app_id}/machines` | Create a machine |
+| `GET` | `/v1/apps/{app_id}/machines` | List an app's machines |
+| `GET` | `/v1/machines/{machine_id}` | Get a machine |
+| `DELETE` | `/v1/machines/{machine_id}` | Destroy a machine |
+| `POST` | `/v1/machines/{machine_id}/stop` | Stop |
+| `POST` | `/v1/machines/{machine_id}/start` | Start |
+| `POST` | `/v1/machines/{machine_id}/restart` | Restart |
+| `GET` | `/v1/machines/{machine_id}/restart-info` | Auto-restart status and count |
+| `POST` | `/v1/machines/{machine_id}/clear-restart-count` | Reset the auto-restart counter |
+| `GET` | `/v1/machines/{machine_id}/metrics` | Machine metrics |
+| `GET` | `/v1/machines/{machine_id}/health` | Machine health |
+| `GET` | `/v1/machines/{machine_id}/ssh` | SSH connection info |
+
+## Logs
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/v1/machines/{machine_id}/logs` | Recent console output (`?lines=<n>`) |
+| `GET` | `/v1/machines/{machine_id}/logs/stream` | Live stream (WebSocket) |
+| `GET` | `/v1/apps/{app_id}/logs` | Recent logs across the app's machines (`?lines=`, `?search=`, `?since=`) |
+| `GET` | `/v1/apps/{app_id}/logs/stream` | Live app-wide stream (WebSocket) |
+
+## Routes
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/v1/apps/{app_id}/routes` | Create a custom hostname route |
+| `GET` | `/v1/apps/{app_id}/routes` | List routes |
+| `GET` | `/v1/routes/{route_id}` | Get a route |
+| `DELETE` | `/v1/routes/{route_id}` | Delete a route |
+
+## SSH
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/v1/ssh/certificates` | Issue a short-lived SSH certificate |
+| `GET` | `/v1/ssh/ca` | SSH CA public key info |
+| `GET` | `/v1/ssh-proxy/info` | SSH proxy connection info |

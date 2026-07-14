@@ -1,0 +1,74 @@
+---
+title: "Agents"
+description: "Agent definitions, workspaces, channels, connectors, and per-agent skills."
+icon: "robot"
+---
+
+An agent is [pure configuration](/agents/overview); these endpoints manage the definition and its attached resources. Agents are referenced by ID; most CLI commands resolve instance names for you.
+
+## Agents
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/v1/agents` | Create an agent (strict: `409` if the name is taken in the org) |
+| `GET` | `/v1/agents` | List agents |
+| `GET` | `/v1/agents/{agent_id}` | Get an agent (includes required-secrets checklist) |
+| `PATCH` | `/v1/agents/{agent_id}` | Update configuration (only provided fields change) |
+| `DELETE` | `/v1/agents/{agent_id}` | Delete the agent (VM, volume, record) |
+| `POST` | `/v1/agents/connect` | Connect: boot a VM for an interactive session (creates the agent if the name is new) |
+| `POST` | `/v1/agents/{agent_id}/disconnect` | Disconnect: destroy the VM, keep the volume |
+| `PUT` | `/v1/agents/{agent_id}/volume` | Resize the volume (grow-only) |
+| `DELETE` | `/v1/agents/{agent_id}/volume` | Delete the volume |
+| `PUT` | `/v1/agents/{agent_id}/instructions` | Set the per-agent instructions |
+| `GET` | `/v1/agents/{agent_id}/budget` | Budget caps and today's usage |
+| `PUT` | `/v1/agents/{agent_id}/budget` | Set budget caps |
+| `GET` | `/v1/agents/{agent_id}/logs` | Connect/disconnect activity log |
+
+## Workspaces
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/v1/agents/{agent_id}/workspaces` | List the agent's workspaces |
+| `DELETE` | `/v1/agents/{agent_id}/workspaces/{workspace_id}` | Delete a workspace (and its volume) |
+| `PUT` | `/v1/agents/{agent_id}/workspace-ttl` | Set keyed-workspace TTL |
+| `GET` | `/v1/agents/{agent_id}/workspaces/{workspace_ref}/files/{path}` | Browse/download workspace files (VM must be up) |
+| `PUT` | `/v1/agents/{agent_id}/workspaces/{workspace_ref}/files/{path}` | Upload a file into the workspace |
+
+## Message channels
+
+Deliver [`send_message`](/agents/messaging) output to email, WhatsApp, SMS, or SNS.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/v1/agents/{agent_id}/channels` | List channels (and available channel types) |
+| `POST` | `/v1/agents/{agent_id}/channels` | Add a channel |
+| `PATCH` | `/v1/agents/{agent_id}/channels/{channel_id}` | Enable/disable a channel |
+| `DELETE` | `/v1/agents/{agent_id}/channels/{channel_id}` | Remove a channel |
+
+## Connectors
+
+Attach [MCP gateway virtual servers](/context/connectors) to the agent.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/v1/agents/{agent_id}/connectors` | List attached connectors |
+| `PUT` | `/v1/agents/{agent_id}/connectors/{server}` | Attach or update (enabled / escalate flags) |
+| `DELETE` | `/v1/agents/{agent_id}/connectors/{server}` | Detach |
+| `POST` | `/v1/agents/{agent_id}/connectors/{server}/verify` | Live-test (initialize → tools/list) |
+| `POST` | `/v1/agents/{agent_id}/connectors/copy` | Copy connectors from another agent |
+
+## Per-agent skills
+
+Toggle [skills](/context/skills) for this agent; the library itself lives under [`/v1/skills`](/api-reference/skills-mcp).
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/v1/agents/{agent_id}/skills` | Effective per-agent skill state |
+| `PUT` | `/v1/agents/{agent_id}/skills/{skill_ref}` | Enable or disable a skill |
+| `DELETE` | `/v1/agents/{agent_id}/skills/{skill_ref}` | Detach (a built-in resets to default-enabled) |
+
+## Terminal
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/v1/agents/{agent_id}/terminal` | Interactive terminal (WebSocket) |

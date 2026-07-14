@@ -1,0 +1,93 @@
+---
+title: "API overview"
+description: "Base URL, authentication, org scoping, and conventions for the ZWRM REST API."
+icon: "book-open"
+---
+
+Everything the `zwrm` CLI and the dashboard do goes through the REST API under `/v1`. This reference maps the full endpoint surface; the guides explain the concepts behind each resource.
+
+## Base URL
+
+```
+https://<platform>/v1
+```
+
+For ZWRM cloud this is your platform URL; for [self-hosted](/self-hosting/overview) deployments it's your control plane's address.
+
+## Authentication
+
+All endpoints (except `GET /v1/health` and trigger ingest) require authentication with an API token:
+
+```bash
+curl -H "Authorization: Bearer <token>" https://<platform>/v1/apps
+```
+
+- `Authorization: Bearer <token>` — the standard form. The `X-API-Key: <token>` header is accepted as an alternative.
+- Get a token with `zwrm auth token`, or mint one via [`POST /v1/auth/tokens`](/api-reference/platform#auth).
+
+## Organization scoping
+
+Every resource is scoped to an organization. Requests run against your default org; pass `X-Org-ID: <org-id>` to target another org you're a member of.
+
+## Rate limits
+
+Requests are rate-limited per token. Expensive operations (deploys, run dispatch, session creation, sandbox creation, backups) have stricter limits than plain reads.
+
+## Errors
+
+Errors return JSON with a message:
+
+```json
+{ "error": "Not found", "message": "No app with that ID" }
+```
+
+The [OpenAI-compatible endpoints](/agents/openai-api) are the exception — they render errors in the OpenAI wire shape.
+
+## Streaming conventions
+
+| Transport | Used by |
+|-----------|---------|
+| **SSE** (`text/event-stream`) | [Session events](/api-reference/runs-sessions#session-events) with `?follow=true` |
+| **WebSocket** | Machine/app [log streaming](/api-reference/apps#logs), the agent [terminal](/api-reference/agents#terminal) |
+
+## Health
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/v1/health` | Liveness probe (no auth) |
+| `GET` | `/v1/status` | Platform status for the authenticated caller |
+
+## Sections
+
+<CardGroup cols={2}>
+  <Card title="Apps & machines" icon="cloud-arrow-up" href="/api-reference/apps">
+    Apps, deploys, machines, routes, logs, metrics.
+  </Card>
+  <Card title="Secrets" icon="key" href="/api-reference/secrets">
+    App-scoped and org-wide secrets.
+  </Card>
+  <Card title="Volumes" icon="hard-drive" href="/api-reference/volumes">
+    Volumes, snapshots, restore.
+  </Card>
+  <Card title="PostgreSQL" icon="database" href="/api-reference/postgres">
+    Databases, backups, restores, app links.
+  </Card>
+  <Card title="Sandboxes" icon="box" href="/sandboxes/api-reference">
+    Ephemeral and persistent microVM sandboxes.
+  </Card>
+  <Card title="Agents" icon="robot" href="/api-reference/agents">
+    Agent config, workspaces, channels, connectors.
+  </Card>
+  <Card title="Runs & sessions" icon="play" href="/api-reference/runs-sessions">
+    Autonomous runs, live sessions, the event timeline, the inbox.
+  </Card>
+  <Card title="Skills & MCP" icon="plug" href="/api-reference/skills-mcp">
+    Skill library, MCP gateway management and data plane.
+  </Card>
+  <Card title="Automations" icon="bolt" href="/api-reference/automations">
+    Inbound triggers, schedules, outbound webhooks.
+  </Card>
+  <Card title="Platform & org" icon="building" href="/api-reference/platform">
+    Auth, orgs, domains, audit logs, templates, hosts.
+  </Card>
+</CardGroup>

@@ -1,0 +1,81 @@
+---
+title: "Runs & sessions"
+description: "Autonomous runs, live sessions, the event timeline, and the inbox."
+icon: "play"
+---
+
+## Runs
+
+One autonomous task on a workspace. See the [Runs guide](/agents/runs).
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/v1/agents/{agent_id}/runs` | Dispatch a run (prompt, session key, model/effort/size/timeout overrides) |
+| `GET` | `/v1/agents/{agent_id}/runs` | List an agent's runs (`?status=`) |
+| `GET` | `/v1/agent-runs` | List runs across agents (`?status=`) |
+| `GET` | `/v1/agent-runs/{id}` | Get a run (status, summary, error, outputs) |
+| `POST` | `/v1/agent-runs/{id}/cancel` | Cancel |
+| `POST` | `/v1/agent-runs/{id}/continue` | Follow-up run on the finished run's workspace |
+
+## Sessions
+
+A session is one live conversation — a run's headless session or an interactive chat. Creating a session boots (or wakes) a VM on the agent's workspace.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/v1/agents/{agent_id}/sessions` | Start a session |
+| `GET` | `/v1/agents/{agent_id}/sessions` | List sessions |
+| `GET` | `/v1/agents/{agent_id}/sessions/{session_id}` | Get a session |
+| `GET` | `/v1/agents/{agent_id}/sessions/{session_id}/events` | Event timeline (see below) |
+| `POST` | `/v1/agents/{agent_id}/sessions/{session_id}/messages` | Send a user message into the session |
+| `POST` | `/v1/agents/{agent_id}/sessions/{session_id}/interrupt` | Interrupt the current turn |
+| `POST` | `/v1/agents/{agent_id}/sessions/{session_id}/permissions/{request_id}` | Answer a permission request |
+| `POST` | `/v1/agents/{agent_id}/sessions/{session_id}/mode` | Switch permission mode |
+| `POST` | `/v1/agents/{agent_id}/sessions/{session_id}/end` | End the session |
+
+Session statuses: `creating`, `idle`, `working`, `blocked` (waiting on a permission decision), `ended`, `error`.
+
+## Session events
+
+```
+GET /v1/agents/{agent_id}/sessions/{session_id}/events[?after_seq=<n>][&follow=true]
+```
+
+- Without `follow`, returns the timeline from `after_seq` (default `0`) to the end — long conversations are paged internally, never silently truncated.
+- With `follow=true`, streams as **SSE**. The server subscribes to the live feed before replaying stored events and dedupes by `seq`, so a follower never misses a durable event. A slow consumer is resynced from its cursor and can only lose ephemeral partials.
+
+Every event carries a per-session monotonic `seq`, a `type`, a `ts`, and a `payload`:
+
+| Event type | Durable | Meaning |
+|------------|---------|---------|
+| `session.started` / `session.status` / `session.ended` / `session.error` | yes | Lifecycle and status changes (payload includes permission mode) |
+| `sdk.system` | yes | Session init metadata |
+| `sdk.assistant` | yes | A complete assistant message |
+| `sdk.user` | yes | Tool results / user-side messages |
+| `sdk.result` | yes | End-of-turn result with usage and cost |
+| `permission.request` / `permission.decision` | yes | Tool-permission round-trips |
+| `message.created` | yes | The agent called `send_message` |
+| `sdk.partial` | no | Token-stream deltas (streaming only; superseded by the following `sdk.assistant`) |
+
+<Note>
+`sdk.*` payloads are Claude Agent SDK messages passed through verbatim — treat their inner structure as defined by the SDK, not by ZWRM.
+</Note>
+
+## Inbox (agent messages)
+
+Messages agents send via [`send_message`](/agents/messaging).
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/v1/agent-messages` | List messages (`?unreplied=true`) |
+| `GET` | `/v1/agent-messages/{id}` | Get a message |
+| `POST` | `/v1/agent-messages/{id}/reply` | Reply — steers the live session or dispatches a follow-up run |
+
+## OpenAI-compatible facade
+
+Chat with an agent from any OpenAI client. Full semantics in the [guide](/agents/openai-api).
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/v1/openai/chat/completions` | One conversation turn (streaming supported) |
+| `GET` | `/v1/openai/models` | Your agents as models |

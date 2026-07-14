@@ -1,0 +1,48 @@
+---
+title: "Automations"
+description: "Inbound triggers, schedules, and outbound webhooks."
+icon: "bolt"
+---
+
+## Inbound triggers (webhooks)
+
+External events → agent runs. See the [Webhooks guide](/automations/webhooks) for payload matching, routing, and response semantics.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/v1/triggers/hook/{slug}` | **Public ingest endpoint** — no bearer auth; secured by the trigger secret (`X-Webhook-Secret` or HMAC `X-Webhook-Signature`) |
+| `POST` | `/v1/triggers` | Create a trigger (returns the secret exactly once) |
+| `GET` | `/v1/triggers` | List triggers (`?agent_id=`) |
+| `GET` | `/v1/triggers/{trigger_id}` | Get a trigger |
+| `PATCH` | `/v1/triggers/{trigger_id}` | Update (pause/resume, conditions, routes) |
+| `DELETE` | `/v1/triggers/{trigger_id}` | Delete (with its delivery log) |
+| `GET` | `/v1/triggers/{trigger_id}/deliveries` | Delivery log (`?limit=`, default 100) |
+
+## Schedules
+
+Cron → agent runs. See the [Schedules guide](/automations/schedules).
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/v1/schedules` | Create a schedule |
+| `GET` | `/v1/schedules` | List schedules (`?agent=` ID or name) |
+| `GET` | `/v1/schedules/{schedule_id}` | Get a schedule (next/last run) |
+| `PATCH` | `/v1/schedules/{schedule_id}` | Update (pause/resume, cron, prompt — the agent binding is immutable) |
+| `DELETE` | `/v1/schedules/{schedule_id}` | Delete (with its firing log) |
+| `GET` | `/v1/schedules/{schedule_id}/firings` | Firing log (`?limit=`, default 100) |
+
+## Outbound webhooks
+
+Platform events → your endpoints. See the [Outbound webhooks guide](/automations/outbound-webhooks) for event types, signing, and retry behavior.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/v1/org/webhooks` | Create a webhook (signing secret returned once) |
+| `GET` | `/v1/org/webhooks` | List webhooks |
+| `GET` | `/v1/org/webhooks/{webhook_id}` | Get a webhook |
+| `PUT` | `/v1/org/webhooks/{webhook_id}` | Update |
+| `DELETE` | `/v1/org/webhooks/{webhook_id}` | Delete |
+| `POST` | `/v1/org/webhooks/{webhook_id}/test` | Send a `webhook.test` event |
+| `GET` | `/v1/org/webhooks/{webhook_id}/deliveries` | Delivery history (`?limit=`, default 20, max 200) |
+| `GET` | `/v1/org/webhooks/deliveries/{delivery_id}` | Get a delivery |
+| `POST` | `/v1/org/webhooks/deliveries/{delivery_id}/retry` | Re-send a delivery (`422` once max attempts are spent) |
