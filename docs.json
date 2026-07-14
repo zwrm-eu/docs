@@ -61,6 +61,7 @@
               "agents/workspaces",
               "agents/messaging",
               "agents/interactive",
+              "agents/openai-api",
               "agents/budgets",
               "agents/templates",
               "agents/secrets"
