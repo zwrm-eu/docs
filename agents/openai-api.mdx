@@ -1,0 +1,51 @@
+---
+title: "OpenAI-compatible API"
+description: "Talk to any agent from any OpenAI client — base URL, API key, model name."
+icon: "message-bot"
+---
+
+Every agent is reachable through an OpenAI-compatible chat completions API. Point any stock OpenAI client (openai SDKs, LangChain, Open WebUI, …) at ZWRM and chat with an agent:
+
+- **Base URL** — `https://<platform>/v1/openai`
+- **API key** — your ZWRM API key
+- **Model** — the agent's name
+
+```python
+from openai import OpenAI
+
+client = OpenAI(base_url="https://<platform>/v1/openai", api_key="<zwrm-api-key>")
+
+response = client.chat.completions.create(
+    model="support-bot",
+    messages=[{"role": "user", "content": "Summarize the open tickets"}],
+)
+print(response.choices[0].message.content)
+```
+
+## Endpoints
+
+| Endpoint | Description |
+|----------|-------------|
+| `POST /v1/openai/chat/completions` | One conversation turn with an agent |
+| `GET /v1/openai/models` | Your agents, presented as models |
+
+Streaming works the usual way (`stream: true`) — text arrives as `chat.completion.chunk` frames, and token usage is reported from the underlying session.
+
+## Conversation continuity
+
+The conversation is **server-side state** — the workspace transcript. The caller never manages history:
+
+- Continuity is keyed by the `X-Session-Key` header, or the request's `user` field if no header is set.
+- No key means the agent's **default workspace** — the same conversation the dashboard chat uses.
+- Only the **last user message** of each request is injected; prior messages in the `messages` array are ignored because the server already has the transcript.
+
+Session and VM lifecycle (boot, wake-on-message, idle-suspend) stay invisible — a request to a suspended workspace just takes a moment longer while the VM wakes.
+
+## Semantics and limits
+
+- **One reply per turn.** `n`, `tools`, and `functions` are rejected — an agent brings its own tools and produces a single reply.
+- **Sampling params are ignored.** `temperature`, `top_p`, etc. are accepted but the agent's own configuration governs the model call.
+- **Turns serialize per conversation.** Concurrent completions on the same session key queue behind each other.
+- **Busy conversations return `409`** — e.g. while a [run](/agents/runs) is executing on the workspace, or while the session waits on an [escalation](/agents/messaging#escalations). Retry when it finishes.
+- **Turn deadline.** A completion request is bounded at 30 minutes; on timeout the HTTP request fails but the turn itself finishes into the transcript.
+- Errors use the OpenAI wire shape (`invalid_request_error`, `authentication_error`, `rate_limit_error`, `server_error`).

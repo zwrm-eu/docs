@@ -61,12 +61,36 @@ zwrm mcp install github-tools --client cursor
 zwrm mcp install github-tools --all           # every supported client
 ```
 
-Supported clients: `claude-code`, `claude-api`, `cursor`, `vscode`, `windsurf`, `goose`, `openai`. Authentication is your ZWRM API key as a bearer token; any member of the org can connect to any of the org's virtual servers.
+Supported clients: `claude-code`, `claude-api`, `cursor`, `vscode`, `windsurf`, `goose`, `openai`, `openapi`, `custom-gpt`. Authentication is your ZWRM API key as a bearer token; any member of the org can connect to any of the org's virtual servers.
 
 ```bash
 claude mcp add --transport http github-tools https://mcp.example.com/acme/github-tools \
   --header "Authorization: Bearer <your-zwrm-api-key>"
 ```
+
+## REST / OpenAPI face
+
+Every virtual server is also a plain REST API — same URL space, auth, curation, and audit as the MCP endpoint. This makes gateway tools usable from anything that speaks OpenAPI but not MCP: n8n, LangChain OpenAPI toolkits, generated SDKs, GPT Actions.
+
+```bash
+# OpenAPI 3.1 description (one POST per tool)
+curl -s -H "Authorization: Bearer <zwrm-api-key>" \
+  https://mcp.<domain>/<org>/<server>/openapi.json
+
+# Invoke a tool — the JSON body is the tool's arguments
+curl -s -X POST \
+  -H "Authorization: Bearer <zwrm-api-key>" \
+  -H "Content-Type: application/json" \
+  -d '{"query": "open issues"}' \
+  https://mcp.<domain>/<org>/<server>/tools/<tool>
+```
+
+- Tool input/output schemas embed verbatim in the OpenAPI document — MCP tool schemas are JSON Schema 2020-12, OpenAPI 3.1's native dialect.
+- Results are flattened for REST consumers: text content that parses as JSON is returned as JSON, binary content becomes a `data:` URI, a single content item is unwrapped. Add `?envelope=full` for the raw MCP `CallToolResult`.
+- A tool that runs and reports an error returns `422` — an outcome the caller can act on, not a gateway failure.
+- Argument bodies are capped at 1 MiB.
+
+For **Custom GPTs** (`zwrm mcp install <server> --client custom-gpt`): fetch the OpenAPI schema with curl and paste it into the GPT editor's Actions configuration, with Bearer auth. The schema importer can't send headers — the `?token=<key>` URL form exists for import-by-URL, but it embeds your API key in the URL, so prefer curl-and-paste or use a key you can revoke.
 
 ## Agents and the gateway
 
