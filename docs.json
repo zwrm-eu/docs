@@ -155,48 +155,6 @@
             ]
           }
         ]
-      },
-      {
-        "tab": "Self-Hosting",
-        "groups": [
-          {
-            "group": "Getting Started",
-            "pages": [
-              "self-hosting/overview",
-              "self-hosting/installation",
-              "self-hosting/quickstart"
-            ]
-          },
-          {
-            "group": "Control Plane",
-            "pages": [
-              "self-hosting/control-plane",
-              "self-hosting/networking",
-              "self-hosting/proxy-and-tls"
-            ]
-          },
-          {
-            "group": "Host Agents",
-            "pages": [
-              "self-hosting/host-agent"
-            ]
-          },
-          {
-            "group": "Operations",
-            "pages": [
-              "self-hosting/multi-host",
-              "self-hosting/upgrading",
-              "self-hosting/monitoring"
-            ]
-          },
-          {
-            "group": "Reference",
-            "pages": [
-              "self-hosting/api-reference",
-              "self-hosting/environment-variables"
-            ]
-          }
-        ]
       }
     ],
     "global": {
