@@ -12,6 +12,7 @@ These flags are available on every command:
 |------|------|---------|-------------|
 | `--config` | string | `~/.zwrm/config.toml` | CLI configuration file path |
 | `--api-url` | string | `https://zwrm.io` | Control plane API URL |
+| `--org` | string | from config | Organization slug or ID (overrides env/config) |
 | `--verbose`, `-v` | bool | `false` | Enable verbose output |
 
 ---
@@ -21,14 +22,15 @@ These flags are available on every command:
 Initialize a new `zwrm.toml` configuration file.
 
 ```bash
-zwrm init [--name <name>] [--dockerfile <path>] [--no-prompt]
+zwrm init [--name <name>] [--dockerfile <path>] [--no-prompt] [--no-workflow]
 ```
 
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
 | `--name` | string | current directory name | Application name |
-| `--dockerfile` | string | auto-detected | Dockerfile path |
+| `--dockerfile` | string | `Dockerfile` | Dockerfile path |
 | `--no-prompt` | bool | `false` | Use defaults without prompting |
+| `--no-workflow` | bool | `false` | Don't create a GitHub Actions deploy workflow |
 
 ---
 
@@ -107,19 +109,43 @@ zwrm logs [--app <name>] [--machine <id>] [--follow] [--lines <n>]
 
 ## `zwrm ssh`
 
-SSH into a running VM. [Guide →](/apps/ssh)
+SSH into a running VM, or run a single command on it. [Guide →](/apps/ssh)
 
 ```bash
-zwrm ssh [machine-id] [--app <name>] [--direct] [--user <user>]
+zwrm ssh [machine-id] [flags] [-- command [args...]]
 ```
+
+Everything after `--` runs on the VM instead of opening an interactive shell; the CLI exits with the remote command's exit code.
 
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
 | `--app` | string | from `zwrm.toml` | Application name |
 | `--app-id` | string | — | Application UUID |
 | `--machine` | string | — | Machine ID (alternative to positional) |
+| `--command`, `-C` | string | — | Remote command (alternative to `-- command`) |
 | `--direct` | bool | `false` | Direct connection (host access only) |
+| `--tty`, `-t` / `--no-tty`, `-T` | bool | auto | Force / disable PTY allocation |
 | `--user` | string | — | SSH user override |
+
+```bash
+zwrm ssh -- uptime
+zwrm ssh --app myapp -- bash -lc 'cd /app && python3 task.py'
+echo 'print(1)' | zwrm ssh -- python3 -
+```
+
+---
+
+## `zwrm sftp`
+
+Transfer files to/from a running VM through the SSH proxy. Run without a subcommand for an interactive SFTP shell, or use one-shot subcommands:
+
+```bash
+zwrm sftp get <remote> <local>
+zwrm sftp put <local> <remote>
+zwrm sftp ls <remote-dir>
+```
+
+All forms accept `--app`, `--app-id`, `--machine`, and `--user`. Modern `scp` (OpenSSH ≥ 9.0) also works against the proxy directly.
 
 ---
 
@@ -170,6 +196,8 @@ zwrm volumes create <name> [--size <mb>] [--mount <path>] [--app <name>]
 |------|------|---------|-------------|
 | `--size` | int | `1024` | Volume size in MB |
 | `--mount` | string | `/data` | Mount point in the VM |
+| `--host` | string | scheduler picks | Host to create the volume on |
+| `--region` | string | — | Constrain placement to a region (ignored with `--host`) |
 | `--no-sync` | bool | `false` | Don't update zwrm.toml |
 
 ### `zwrm volumes list`
@@ -177,6 +205,14 @@ zwrm volumes create <name> [--size <mb>] [--mount <path>] [--app <name>]
 ```bash
 zwrm volumes list [--app <name>]
 ```
+
+### `zwrm volumes resize`
+
+```bash
+zwrm volumes resize <name> --size <mb> [--app <name>]
+```
+
+Grow-only: the new size must be larger than the current one.
 
 ### `zwrm volumes destroy`
 
@@ -266,7 +302,7 @@ zwrm postgres create <name> [--size <preset>] [--database <dbname>]
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
 | `--size` | string | `small` | Preset: `small`, `medium`, `large` |
-| `--database` | string | `postgres` | Initial database name |
+| `--database` | string | instance name | Initial database name |
 
 ### `zwrm postgres list`
 
@@ -336,7 +372,7 @@ zwrm postgres restore <name> --name <new-name> [--backup <id>] [--pitr <timestam
 
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
-| `--name` | string | — | Name for the restored database (required) |
+| `--name` | string | — | Name for the restored database (omit for in-place restore) |
 | `--backup` | string | latest | Specific backup ID |
 | `--pitr` | string | — | Point-in-time recovery target (RFC 3339) |
 | `--size` | string | same as source | Size preset override |
@@ -378,6 +414,8 @@ Manage authentication. [Guide →](/auth)
 zwrm auth login [--token <token>]
 ```
 
+`--token` is for headless/SSH environments.
+
 ### `zwrm auth logout`
 
 ```bash
@@ -392,8 +430,98 @@ zwrm auth whoami
 
 ### `zwrm auth token`
 
+Print the current session token.
+
 ```bash
 zwrm auth token
+```
+
+### `zwrm auth tokens`
+
+Manage long-lived API tokens.
+
+```bash
+zwrm auth tokens create [--name <name>] [--expiry <duration>]
+zwrm auth tokens list
+zwrm auth tokens revoke <token-id>
+```
+
+| Flag (`create`) | Type | Default | Description |
+|------|------|---------|-------------|
+| `--name` | string | — | Token name (e.g. `github-actions`) |
+| `--expiry` | string | no expiry | Expiry duration (e.g. `8760h` for one year) |
+
+---
+
+## `zwrm org`
+
+Manage organizations and org-wide resources.
+
+```bash
+zwrm org create <name>
+zwrm org list
+```
+
+### `zwrm org secrets`
+
+Organization-wide secrets, inherited by every app and agent. [Guide →](/secrets)
+
+```bash
+zwrm org secrets set <NAME>=<VALUE>
+zwrm org secrets list
+zwrm org secrets unset <NAME>
+zwrm org secrets add --from-file <path>
+```
+
+---
+
+## `zwrm transfer`
+
+Move an app (with its secrets and agents) to another organization. Requires ownership of both orgs; linked Postgres databases must be unlinked first.
+
+```bash
+zwrm transfer --app <name> --to-org <org>
+```
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--app` | string | from `zwrm.toml` | App name (found across all your orgs) |
+| `--app-id` | string | — | App ID (alternative to `--app`) |
+| `--to-org` | string | — | Destination organization slug or ID |
+
+---
+
+## `zwrm sandbox`
+
+Manage sandboxes. [Guide →](/sandbox)
+
+```bash
+zwrm sandbox create --template <name> [--size <preset>] [--timeout <dur>] [--persistent] [--idle-timeout <dur>] [--env KEY=VALUE ...] [--egress-mode allow_all|deny_all] [--egress-allow-cidr <cidr>] [--disk-size-mb <n>]
+zwrm sandbox run --template <name> -- <command>   # create, run, destroy
+zwrm sandbox exec <id> -- <command> [--timeout 30s] [--workdir <dir>]
+zwrm sandbox list [--status running|creating|suspended|destroyed]
+zwrm sandbox status <id>
+zwrm sandbox upload <id> <local> <remote>
+zwrm sandbox download <id> <remote> <local>
+zwrm sandbox keepalive <id> [--timeout <dur>]
+zwrm sandbox wake <id>
+zwrm sandbox destroy <id> [-f]
+```
+
+See the [Sandboxes guides](/sandbox) for egress control, persistence, and template details.
+
+---
+
+## `zwrm templates`
+
+Manage agent and sandbox VM templates. [Guide →](/agents/templates)
+
+```bash
+zwrm templates list
+zwrm templates create <name> --dockerfile <path> [--description <text>] [--disk-size-mb <n>] [--env KEY=VALUE ...] [--egress-mode allow_all|deny_all]
+zwrm templates rebuild <id>
+zwrm templates update-quota <id> [--disk-size-mb <n>] [--ops-per-sec <n>] [--bandwidth-mbps <n>] [--clear-rate-limit]
+zwrm templates delete <id> [-f]
 ```
 
 ---
@@ -608,6 +736,41 @@ Show monitoring dashboard URLs. [Guide →](/apps/dashboard)
 
 ```bash
 zwrm dashboard [--open]
+```
+
+---
+
+## `zwrm host`
+
+Manage cluster hosts — for [self-hosted](/self-hosting/overview) deployments. [Guide →](/self-hosting/multi-host)
+
+```bash
+zwrm host list
+zwrm host show <host-id>
+zwrm host drain <host-id>
+zwrm host drain-status <host-id>
+zwrm host undrain <host-id>
+zwrm host activate <host-id>
+zwrm host remove <host-id> [--force]
+```
+
+---
+
+## `zwrm admin`
+
+Control plane administration — host-admin only, for [self-hosted](/self-hosting/overview) deployments.
+
+```bash
+zwrm admin backup                      # take a control plane backup
+zwrm admin backups                     # list backups
+zwrm admin backups delete <backup-id>
+
+zwrm admin secrets rotate              # rotate the secrets master key
+zwrm admin secrets rotation-status
+zwrm admin secrets retire-version <version>
+zwrm admin secrets escrow-init        # initialize key escrow
+zwrm admin secrets migrate-to-kdf
+zwrm admin secrets recover
 ```
 
 ---
