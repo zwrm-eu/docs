@@ -1,0 +1,65 @@
+---
+title: "Skills & MCP"
+description: "The skill library, MCP gateway management, and the gateway data plane."
+icon: "plug"
+---
+
+## Skill library
+
+Org-scoped skill bundles. See the [Skills guide](/context/skills). Per-agent enablement lives under [`/v1/agents/{agent_id}/skills`](/api-reference/agents#per-agent-skills).
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/v1/skills` | Create a skill |
+| `GET` | `/v1/skills` | List skills (org + built-ins) |
+| `GET` | `/v1/skills/{skill_ref}` | Get by ID or slug |
+| `PATCH` | `/v1/skills/{skill_ref}` | Update name/description/status |
+| `DELETE` | `/v1/skills/{skill_ref}` | Delete (built-ins are read-only) |
+| `POST` | `/v1/skills/{skill_ref}/version` | Upload a bundle zip as the next version (`Content-Type: application/zip`, raw body) |
+
+## MCP gateway management
+
+Org-level upstreams and virtual servers. See the [MCP Gateway guide](/context/mcp-gateway). Upstream credentials are write-only — never returned.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/v1/org/mcp/upstreams` | Register an upstream MCP server |
+| `GET` | `/v1/org/mcp/upstreams` | List upstreams |
+| `GET` | `/v1/org/mcp/upstreams/{name}` | Get an upstream |
+| `PUT` | `/v1/org/mcp/upstreams/{name}` | Update (URL, credentials, transport, enabled) |
+| `DELETE` | `/v1/org/mcp/upstreams/{name}` | Remove (`?force=true` if virtual servers reference it) |
+| `POST` | `/v1/org/mcp/upstreams/{name}/sync` | Re-sync the tool catalog |
+| `GET` | `/v1/org/mcp/upstreams/{name}/tools` | Synced tool catalog |
+| `POST` | `/v1/org/mcp/servers` | Create a virtual server |
+| `GET` | `/v1/org/mcp/servers` | List virtual servers |
+| `GET` | `/v1/org/mcp/servers/{name}` | Get a virtual server and its exposed tools |
+| `PUT` | `/v1/org/mcp/servers/{name}` | Update composition |
+| `DELETE` | `/v1/org/mcp/servers/{name}` | Delete |
+| `GET` | `/v1/org/mcp/servers/{name}/config` | Client install snippet (`?client=`) |
+
+## Gateway data plane
+
+The endpoints clients and agents actually connect to — also reachable as `https://mcp.<domain>/{org}/{server}` via the proxy.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `*` | `/v1/mcp/{org}/{server}` | The virtual server's MCP endpoint (Streamable HTTP) |
+| `GET` | `/v1/mcp/{org}/{server}/openapi.json` | OpenAPI 3.1 description of the [REST face](/context/mcp-gateway#rest--openapi-face) |
+| `POST` | `/v1/mcp/{org}/{server}/tools/{tool}` | Invoke a tool over REST (JSON body = arguments; `?envelope=full` for the raw MCP result; tool errors return `422`) |
+
+## MCP registry
+
+Registry v0.1 API for client auto-discovery (e.g. VS Code's MCP gallery).
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/v1/mcp/registry/v0.1/servers` | List the org's virtual servers in registry format |
+| `GET` | `/v1/mcp/registry/v0.1/servers/{name}/versions[/{version}]` | Server version detail |
+
+## Agent-run MCP server
+
+A control-plane MCP server (separate from the gateway) exposing your autonomous runs as tools: `get_agent_run`, `list_agent_runs`, `cancel_agent_run`. The `zwrm mcp` CLI command is its stdio twin.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `*` | `/v1/mcp` | Agent-run MCP server (Streamable HTTP) |

@@ -1,0 +1,44 @@
+---
+title: "PostgreSQL"
+description: "Managed Postgres databases, backups, restores, and app links."
+icon: "database"
+---
+
+## Databases
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/v1/postgres` | Create a database |
+| `GET` | `/v1/postgres` | List databases |
+| `GET` | `/v1/postgres/presets` | List size presets |
+| `GET` | `/v1/postgres/by-name/{name}` | Get by name |
+| `GET` | `/v1/postgres/{postgres_id}` | Get a database |
+| `DELETE` | `/v1/postgres/{postgres_id}` | Destroy a database |
+| `POST` | `/v1/postgres/{postgres_id}/stop` | Stop |
+| `POST` | `/v1/postgres/{postgres_id}/start` | Start |
+| `GET` | `/v1/postgres/{postgres_id}/connection` | Connection string |
+| `POST` | `/v1/postgres/{postgres_id}/scale` | Scale replicas |
+
+## Backups & restore
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/v1/postgres/{postgres_id}/backups` | List backups |
+| `POST` | `/v1/postgres/{postgres_id}/backups` | Take a backup |
+| `GET` | `/v1/postgres/backups/{backup_id}` | Get a backup |
+| `DELETE` | `/v1/postgres/backups/{backup_id}` | Delete a backup |
+| `POST` | `/v1/postgres/{postgres_id}/wal-archiving` | Enable WAL archiving (point-in-time recovery) |
+| `DELETE` | `/v1/postgres/{postgres_id}/wal-archiving` | Disable WAL archiving |
+| `POST` | `/v1/postgres/{postgres_id}/restore` | Restore into a new database (backup or PITR target) |
+| `GET` | `/v1/postgres/restores/{restore_id}` | Restore progress |
+
+## App links
+
+Linking injects the database's connection string into an app as a secret. See [Linking](/postgres/linking).
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/v1/apps/{app_id}/databases` | Link a database to an app |
+| `GET` | `/v1/apps/{app_id}/databases` | List an app's linked databases |
+| `DELETE` | `/v1/apps/{app_id}/databases/{postgres_id}` | Unlink |
+| `GET` | `/v1/postgres/{postgres_id}/links` | List apps linked to a database |

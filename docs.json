@@ -99,8 +99,7 @@
               "sandboxes/persistent",
               "sandboxes/egress",
               "sandboxes/templates",
-              "sandboxes/warm-pool",
-              "sandboxes/api-reference"
+              "sandboxes/warm-pool"
             ]
           }
         ]
@@ -112,6 +111,47 @@
             "group": "Reference",
             "pages": [
               "cli-reference"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Getting Started",
+            "pages": [
+              "api-reference/overview"
+            ]
+          },
+          {
+            "group": "Core Platform",
+            "pages": [
+              "api-reference/apps",
+              "api-reference/secrets",
+              "api-reference/volumes",
+              "api-reference/postgres",
+              "sandboxes/api-reference"
+            ]
+          },
+          {
+            "group": "Agents",
+            "pages": [
+              "api-reference/agents",
+              "api-reference/runs-sessions"
+            ]
+          },
+          {
+            "group": "Context & Automations",
+            "pages": [
+              "api-reference/skills-mcp",
+              "api-reference/automations"
+            ]
+          },
+          {
+            "group": "Administration",
+            "pages": [
+              "api-reference/platform"
             ]
           }
         ]

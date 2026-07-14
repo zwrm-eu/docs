@@ -1,0 +1,87 @@
+---
+title: "Platform & org"
+description: "Auth, organizations, domains, audit logs, templates, and host management."
+icon: "building"
+---
+
+## Auth
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/v1/auth/whoami` | The authenticated user and org memberships |
+| `POST` | `/v1/auth/tokens` | Create an API token |
+| `GET` | `/v1/auth/tokens` | List tokens |
+| `DELETE` | `/v1/auth/tokens/{token_id}` | Revoke a token |
+| `GET` | `/v1/auth/sessions` | List CLI sessions |
+| `DELETE` | `/v1/auth/sessions` | Revoke all CLI sessions |
+| `DELETE` | `/v1/auth/sessions/{session_id}` | Revoke one CLI session |
+
+## Organizations
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/v1/orgs` | Create an organization |
+| `GET` | `/v1/orgs` | List your organizations |
+| `GET` | `/v1/org/settings` | Org settings |
+| `PUT` | `/v1/org/settings` | Update org settings |
+
+## Custom domains
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/v1/org/domains` | Add a custom domain |
+| `GET` | `/v1/org/domains` | List domains |
+| `GET` | `/v1/org/domains/{domain_id}` | Get a domain |
+| `DELETE` | `/v1/org/domains/{domain_id}` | Remove a domain |
+| `POST` | `/v1/org/domains/{domain_id}/verify` | Verify DNS |
+
+## Audit logs
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/v1/org/audit-logs` | List audit events (`?page=`, `?per_page=`) |
+| `GET` | `/v1/org/audit-logs/export` | Export (`?format=`) |
+
+## Templates
+
+VM image templates for agents and sandboxes. See [Templates](/agents/templates).
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/v1/templates` | List templates |
+| `POST` | `/v1/templates` | Create/register a template |
+| `GET` | `/v1/templates/{id}` | Get a template |
+| `DELETE` | `/v1/templates/{id}` | Delete |
+| `POST` | `/v1/templates/{id}/rebuild` | Rebuild the image |
+| `PATCH` | `/v1/templates/{id}/quota` | Update template quota |
+
+## Hosts
+
+Host visibility and lifecycle — mainly relevant for [self-hosted](/self-hosting/overview) deployments.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/v1/hosts` | List hosts |
+| `GET` | `/v1/hosts/{host_id}` | Get a host |
+| `POST` | `/v1/hosts/{host_id}/drain` | Drain (migrate workloads off) |
+| `GET` | `/v1/hosts/{host_id}/drain-status` | Drain progress |
+| `POST` | `/v1/hosts/{host_id}/drain/retry/{machine_id}` | Retry one migration |
+| `POST` | `/v1/hosts/{host_id}/undrain` | Cancel draining |
+| `POST` | `/v1/hosts/{host_id}/activate` | Activate a host |
+| `DELETE` | `/v1/hosts/{host_id}` | Remove a host (host-admin) |
+
+## System administration
+
+Host-admin only.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/v1/system/backups` | Take a control-plane backup |
+| `GET` | `/v1/system/backups` | List backups |
+| `GET` | `/v1/system/backups/{backup_id}` | Get a backup |
+| `DELETE` | `/v1/system/backups/{backup_id}` | Delete a backup |
+| `POST` | `/v1/system/secrets/rotate` | Rotate the secrets master key |
+| `GET` | `/v1/system/secrets/rotation-status` | Rotation progress |
+| `POST` | `/v1/system/secrets/retire/{version}` | Retire an old key version |
+
+Internal endpoints under `/v1/internal/*` (host-agent facing: image registry, WAL proxy, volume usage, discovery) are covered in the [self-hosting API reference](/self-hosting/api-reference).

@@ -1,0 +1,29 @@
+---
+title: "Volumes"
+description: "Persistent volumes, snapshots, and restore."
+icon: "hard-drive"
+---
+
+## Volumes
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/v1/volumes` | List all volumes in the org |
+| `GET` | `/v1/volumes/limits` | Volume quota and usage |
+| `POST` | `/v1/apps/{app_id}/volumes` | Create a volume for an app |
+| `GET` | `/v1/apps/{app_id}/volumes` | List an app's volumes |
+| `GET` | `/v1/volumes/{volume_id}` | Get a volume |
+| `DELETE` | `/v1/volumes/{volume_id}` | Delete a volume |
+| `POST` | `/v1/volumes/{volume_id}/resize` | Grow a volume (grow-only) |
+
+## Snapshots
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/v1/volumes/{volume_id}/snapshots` | Take a snapshot |
+| `GET` | `/v1/volumes/{volume_id}/snapshots` | List snapshots |
+| `GET` | `/v1/volumes/snapshots/{snapshot_id}` | Get a snapshot |
+| `DELETE` | `/v1/volumes/snapshots/{snapshot_id}` | Delete a snapshot |
+| `POST` | `/v1/volumes/{volume_id}/restore` | Restore from a snapshot |
+| `POST` | `/v1/volumes/{volume_id}/snapshots/enable` | Enable automatic snapshots |
+| `DELETE` | `/v1/volumes/{volume_id}/snapshots/enable` | Disable automatic snapshots |
