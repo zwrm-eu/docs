@@ -1,0 +1,42 @@
+---
+title: "Workspaces"
+description: "Session continuity, files, and retention for agent execution state."
+icon: "folder-tree"
+---
+
+A **workspace** is where an agent's execution state lives: a persistent volume plus a session-continuity key. The VM that runs on it is ephemeral — the workspace volume (files, cloned repos, conversation transcript) is what carries everything forward between runs, chats, and SSH sessions.
+
+## Keyed vs anonymous
+
+| | Keyed workspace | Anonymous workspace |
+|---|---|---|
+| Created by | `--session <key>` on a run, or a schedule's `--session-key` | A run without `--session` |
+| Conversation | Continues across runs with the same key | One-shot; continue only via `zwrm agent run continue <run-id>` |
+| TTL | Agent's configured TTL (default 30 days), refreshed on use | 72 hours |
+
+Set the keyed-workspace TTL per agent:
+
+```bash
+zwrm agent update my-project --workspace-ttl 720h   # 0 = never expire
+```
+
+When a workspace expires, its volume is reclaimed with it. Continuing or running on a workspace refreshes the clock.
+
+## Concurrency
+
+One live session per workspace: runs on the same session key queue and execute in order, while runs on different workspaces execute in parallel. This makes a session key a safe serialization point — a schedule that updates the same report every morning can never trample itself.
+
+## Repos
+
+There is no built-in repo concept. A repo is whatever the prompt (or a skill) clones onto the workspace volume. `gh` is pre-authenticated in every VM, so "clone acme/api and open a PR" just works — and the clone persists on the volume for the next run with the same key.
+
+## Files
+
+- **Browse and download** workspace files via the dashboard, or via the API (`GET /v1/agents/{agent}/workspaces/{key}/files/...`) while a VM is up.
+- **Run deliverables** — files the agent stages in `~/outputs/` are snapshotted onto the run when it finalizes, so they remain available after the VM is gone.
+
+## VM lifecycle
+
+- A VM boots when a run, chat, or SSH session starts on the workspace and is destroyed when the execution finishes. The volume always survives.
+- Idle workspace VMs are **suspended** (Firecracker snapshot — no compute) and **woken on message**, so a live session resumes exactly where it was, mid-turn if necessary.
+- An execution's teardown never kills a VM you are SSH-ed into.

@@ -1,0 +1,66 @@
+---
+title: "Runs"
+description: "Dispatch autonomous agent tasks and iterate on them."
+icon: "play"
+---
+
+A **run** is one autonomous task: a prompt executed as a headless session in a fresh VM on a workspace. Dispatching a run returns immediately with a run ID; the run finishes with a summary and any files the agent staged in `~/outputs/`.
+
+## Start a run
+
+```bash
+zwrm agent run --agent research --session weekly-report \
+  --prompt "Update the report with this week's numbers" \
+  --model opus --effort high --size performance-2x --timeout 30m
+```
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--agent` | string | — | Agent instance name or ID (required) |
+| `--prompt` | string | — | The task (required) |
+| `--session` | string | — | Session continuity key. Same key = continue that workspace; empty = fresh anonymous workspace |
+| `--model` | string | agent default | `opus` or `sonnet` |
+| `--effort` | string | agent default | `low`, `medium`, `high`, `xhigh`, `max` |
+| `--size` | string | agent default | VM preset for this run |
+| `--timeout` | duration | server default | e.g. `30m` |
+
+- Runs on **different** workspaces execute in parallel; runs on the **same** session key serialize (one live session per workspace).
+- `--session` selects the workspace: same key means the conversation continues — the transcript is resumed from the volume. No key means a fresh anonymous workspace (72h TTL).
+
+## Check on a run
+
+```bash
+zwrm agent run status <run-id>
+zwrm agent run list [--status <status>]
+zwrm agent run cancel <run-id>
+```
+
+`status` shows run, agent, status, model, effort, PR, summary, and error. `list` supports filtering with `--status` (e.g. `queued`, `running`, `completed`, `failed`).
+
+You can also watch or steer a live run from its session timeline in the dashboard (run page → *Open Session Timeline*).
+
+### Run statuses
+
+| Status | Meaning |
+|--------|---------|
+| `queued`, `booting`, `cloning`, `running`, `pushing` | In progress |
+| `sleeping` | Parked by the agent via `sleep` — VM snapshotted, zero compute |
+| `needs_attention` | Paused on an [escalation](/agents/messaging#escalations) waiting for your decision |
+| `canceling` | Cancel requested |
+| `completed`, `failed`, `timed_out`, `canceled` | Terminal |
+
+## Continue a run
+
+```bash
+zwrm agent run continue <run-id> --prompt "Now address the review feedback"
+```
+
+Dispatches a follow-up run on the finished run's workspace — full conversation and files intact. This is the only way to continue an *anonymous* workspace, and the standard way to iterate ("fix the review feedback on the PR you opened"). It accepts the same `--model`, `--effort`, `--size`, and `--timeout` overrides.
+
+## Outputs
+
+When the final turn ends, the run completes and the VM is gone. Deliverables:
+
+- **Summary** — shown in `run status` and on the run page.
+- **Files** — anything the agent staged in `~/outputs/` is snapshotted onto the run at finalize.
+- **Messages** — anything sent via `send_message` lands in the agent's [Inbox](/agents/messaging) and your configured channels.

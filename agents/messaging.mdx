@@ -1,0 +1,53 @@
+---
+title: "Messaging"
+description: "How agents wait, ask questions, and get answered."
+icon: "inbox"
+---
+
+Runs are honest about their lifecycle: when the final turn ends, the run completes and the VM is gone — an agent cannot poll or wake itself up. Instead, it has platform tools for waiting and communicating, and you have an inbox for answering.
+
+## Waiting
+
+- **`sleep(seconds)` / `sleep_until(timestamp)`** — the agent parks the run (max 6 hours). The VM is snapshotted while sleeping (zero compute) and resumes mid-turn with full state. For anything longer, the agent is instructed to finish with a handoff instead.
+
+## Asking: `send_message`
+
+`send_message(text)` notifies you through the agent detail page's **Inbox** tab, [outbound webhooks](/automations/outbound-webhooks) (`agent_message.created`), and configured message channels. It is fire-and-forget.
+
+<Note>
+`send_message` is the **only** agent output that reaches you. Plain assistant text stays in the session timeline and notifies nobody — the run preamble tells the agent so.
+</Note>
+
+## Answering
+
+Reply from the agent's Inbox tab in the dashboard, or from the CLI:
+
+```bash
+zwrm agent messages list [--unreplied]
+zwrm agent messages reply <message-id> --text "Yes, ship it"
+```
+
+A live session is steered in place; a finished one gets a follow-up run on the same workspace. Either way, the agent sees your answer with full context.
+
+## Message channels
+
+Channels deliver an agent's `send_message` output beyond the dashboard:
+
+```bash
+zwrm agent channels list --agent my-project
+zwrm agent channels add --agent my-project --type email --target you@example.com
+zwrm agent channels add --agent my-project --type whatsapp --target +4915112345678
+```
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--agent` | string | — | Agent (required) |
+| `--type` | string | `email` | `email`, `whatsapp`, `sms`, or `sns` |
+| `--target` | string | — | Email address, E.164 phone number, or SNS topic ARN (required) |
+| `--org-wide` | bool | `false` | Make this the org-default binding |
+
+Manage existing channels with `zwrm agent channels enable|disable|remove <channel-id> --agent <agent>`. Available channel types depend on what your deployment has configured — `channels list` prints the deliverable types.
+
+## Escalations
+
+Connector tools attached with `--escalate` pause the run (`needs_attention`) until you approve or deny the tool call from the run page. The VM waits suspended at no cost. See [Connectors](/context/connectors) for details.

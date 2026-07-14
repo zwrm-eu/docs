@@ -1,0 +1,87 @@
+---
+title: "MCP Gateway"
+description: "Register upstream MCP servers once, compose curated virtual servers, connect any client."
+icon: "network-wired"
+---
+
+The MCP gateway gives your organization one place to manage MCP. You register **upstreams** (external MCP servers) once — with credentials and a synced tool catalog — then compose curated subsets into **virtual servers**, each exposed as a single standardized HTTP MCP endpoint. Instead of every developer maintaining their own `.mcp.json` with N tokens, the org manages upstreams centrally and hands out one endpoint per use case.
+
+## Concepts
+
+| Concept | What it is |
+|---------|------------|
+| **Upstream** | An org-registered connection to an external MCP server: URL, transport, encrypted credentials, synced tool catalog, health. |
+| **Virtual server** | A curated composition: selected tools from one or more upstreams, served as one MCP endpoint. |
+| **Endpoint** | `https://mcp.<domain>/{org}/{server}` — Streamable HTTP, authenticated with your ZWRM API key. |
+
+## Upstreams
+
+```bash
+zwrm mcp upstream add github https://api.githubcopilot.com/mcp/ --bearer-token ghp_...
+zwrm mcp upstream add internal https://mcp.internal.example.com --header "X-Api-Key: abc123"
+zwrm mcp upstream list
+zwrm mcp upstream tools github
+zwrm mcp upstream sync github
+zwrm mcp upstream rm github [--force]
+```
+
+| Flag (`upstream add`) | Description |
+|------|-------------|
+| `--bearer-token` | Bearer token sent to the upstream |
+| `--header "Name: value"` | Custom auth header (repeatable; mutually exclusive with `--bearer-token`) |
+| `--transport` | `streamable-http` (default) or `sse` |
+| `--allow-private` | Allow private/internal addresses (host-admin only) |
+
+- Credentials are encrypted at rest and **never returned by the API**.
+- The tool catalog is synced on add, every 5 minutes, on demand (`sync`), and when the upstream signals a tool-list change. The cached catalog keeps serving even when the upstream is down.
+- When a previously synced tool's description or schema changes, the gateway records a catalog-change audit event — a defense against tool-poisoning ("rug pull") attacks.
+- `rm --force` removes an upstream even when virtual servers still reference it.
+
+## Virtual servers
+
+```bash
+zwrm mcp server create github-tools \
+  --upstream "github:list_issues,create_issue,get_pull_request" \
+  --description "GitHub issue triage tools"
+zwrm mcp server list
+zwrm mcp server get github-tools
+zwrm mcp server rm github-tools
+```
+
+- `--upstream` is repeatable: `"name"` selects all of that upstream's tools, `"name:tool1,tool2"` selects a subset. Tool allowlists are the composition — build a read-only variant by selecting only read tools.
+- `--description` is served as the MCP `instructions` for connecting clients.
+- Tool names pass through unmodified unless two upstreams collide, in which case they are prefixed `{upstream}_{tool}`.
+- `get` shows the endpoint, the exposed tool mapping, and any problems.
+
+## Connecting clients
+
+```bash
+zwrm mcp install github-tools                 # config for Claude Code (default)
+zwrm mcp install github-tools --client cursor
+zwrm mcp install github-tools --all           # every supported client
+```
+
+Supported clients: `claude-code`, `claude-api`, `cursor`, `vscode`, `windsurf`, `goose`, `openai`. Authentication is your ZWRM API key as a bearer token; any member of the org can connect to any of the org's virtual servers.
+
+```bash
+claude mcp add --transport http github-tools https://mcp.example.com/acme/github-tools \
+  --header "Authorization: Bearer <your-zwrm-api-key>"
+```
+
+## Agents and the gateway
+
+Agents consume virtual servers as [connectors](/context/connectors). The key property: **upstream credentials never enter the agent VM** — the VM holds only a short-lived, revocable gateway token, and the gateway injects the real credentials upstream.
+
+## Security model
+
+- Two strictly separated credential planes: client → gateway (ZWRM API keys) and gateway → upstream (org-managed credentials). Tokens are never passed through in either direction.
+- Upstream URLs are validated against private/internal address ranges (SSRF protection), with DNS re-resolution at dial time. The `--allow-private` escape hatch is host-admin only.
+- Every proxied tool call is audited with tool, upstream, duration, and caller.
+
+## The `zwrm mcp` stdio server
+
+Separate from the gateway, `zwrm mcp` with no subcommand runs a local stdio MCP server that exposes your autonomous agent runs as tools (`get_agent_run`, `list_agent_runs`, `cancel_agent_run`) — useful for letting a local coding agent watch over your ZWRM runs:
+
+```bash
+claude mcp add zwrm-agents -- zwrm mcp
+```

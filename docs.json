@@ -54,11 +54,32 @@
             ]
           },
           {
-            "group": "Coding Agents",
+            "group": "Agents",
             "pages": [
               "agents/overview",
-              "agents/usage",
+              "agents/runs",
+              "agents/workspaces",
+              "agents/messaging",
+              "agents/interactive",
+              "agents/budgets",
+              "agents/templates",
               "agents/secrets"
+            ]
+          },
+          {
+            "group": "Context",
+            "pages": [
+              "context/skills",
+              "context/connectors",
+              "context/mcp-gateway"
+            ]
+          },
+          {
+            "group": "Automations",
+            "pages": [
+              "automations/webhooks",
+              "automations/schedules",
+              "automations/outbound-webhooks"
             ]
           },
           {

@@ -1,0 +1,71 @@
+---
+title: "Interactive sessions"
+description: "SSH into an agent workspace, chat from the dashboard, and manage agents."
+icon: "terminal"
+---
+
+## SSH
+
+```bash
+zwrm agent claude            # default instance
+zwrm agent claude my-project # named instance = separate agent + volume
+zwrm a claude                # shorthand
+```
+
+Connecting boots a VM on the agent's default workspace and drops you into the agent tool over SSH. Disconnecting destroys the VM and keeps the volume. Connecting to a name that doesn't exist in your org creates the agent.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--instance` | string | `default` | Named instance (alternative to the positional argument) |
+| `--size` | string | agent's stored size | VM size preset (`performance-2x` for a new agent) |
+| `--cmd` | string | — | Override the default startup command (e.g. `"aider"`) |
+| `--template` | string | — | Agent template: registry ID or `github.com/user/repo` |
+
+Runs and chat can share a live SSH VM — an execution's teardown never kills a VM you are SSH-ed into.
+
+## Chat
+
+The dashboard's chat opens a session on the agent's `default` workspace — it boots its own VM and resumes the workspace conversation. Ending the chat releases the VM; the conversation stays resumable.
+
+## Managing agents
+
+### List
+
+```bash
+zwrm agent list
+```
+
+Shows all agent instances across your organizations, with type, status, org, size, template, volume, and age.
+
+### Destroy vs delete
+
+```bash
+zwrm agent destroy my-project   # stop the VM, keep the volume
+zwrm agent delete my-project    # delete the agent entirely: VM, volume, and record
+```
+
+`delete` (alias `rm`) accepts `-f/--force` to skip confirmation.
+
+### Resize the volume
+
+```bash
+zwrm agent resize my-project --volume 20GB
+```
+
+Grow-only; the agent must be stopped.
+
+### Activity log
+
+```bash
+zwrm agent logs my-project [--limit 50]
+```
+
+Shows connect, disconnect, and reset events.
+
+### Update configuration
+
+```bash
+zwrm agent update my-project --model opus --effort high
+```
+
+See [Configuring an agent](/agents/overview#configuring-an-agent) for all flags.

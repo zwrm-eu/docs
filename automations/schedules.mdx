@@ -1,0 +1,54 @@
+---
+title: "Schedules"
+description: "Run agents on a cron schedule."
+icon: "clock"
+---
+
+Schedules fire agent runs on a cron rhythm — a morning digest, a nightly dependency check, a weekly report. Scheduled runs are ordinary [runs](/agents/runs) with a cron for a caller. In the dashboard they live under **Automations → Schedules**.
+
+## Create a schedule
+
+```bash
+zwrm schedules create "Morning digest" \
+  --agent support-bot \
+  --cron "0 9 * * 1-5" \
+  --prompt "Summarize overnight tickets" \
+  --session-key morning-digest
+```
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--agent` | string | — | Agent to run, by ID or name (required) |
+| `--cron` | string | — | Standard 5-field cron in **UTC**, or `@hourly` / `@daily` / `@weekly` / `@monthly` (required) |
+| `--prompt` | string | — | The prompt for each run (required) |
+| `--session-key` | string | — | Workspace continuity key (blank = fresh workspace per run) |
+| `--paused` | bool | `false` | Create the schedule disabled |
+
+- Cron is always interpreted in **UTC**; minimum granularity is one minute. Seconds fields and `@every` are not supported.
+- With a `--session-key`, every firing continues the same workspace — same conversation, same files. Without one, each firing is a one-shot run.
+- The agent binding is immutable — delete and recreate the schedule to move it to another agent.
+- Up to **20 schedules per agent**; prompts up to 16 KiB.
+
+## Overlap behavior
+
+A schedule never stacks runs: if the previous run is still going when the next window arrives, the firing is logged as `skipped_still_running` and the schedule waits for the next window. A run parked on an [escalation](/agents/messaging#escalations) counts as still running — a schedule blocked on a human decision skips visibly rather than piling up.
+
+## Inspect and manage
+
+```bash
+zwrm schedules list [--agent support-bot]
+zwrm schedules firings <schedule-id> [--limit 50]
+zwrm schedules pause <schedule-id>
+zwrm schedules resume <schedule-id>
+zwrm schedules delete <schedule-id>
+```
+
+`list` shows each schedule's cron, enabled state, next run, and last run. The firing log records **every due firing regardless of outcome**: `fired`, `skipped_still_running`, `rejected_budget`, or `error`.
+
+### Pause and resume
+
+Resuming (or changing the cron) recomputes the next run from now — a long-paused schedule **never catch-up-fires** a backlog.
+
+### Budgets
+
+If the agent's [daily budget](/agents/budgets) is exhausted, firings are logged as `rejected_budget` and skipped; the schedule keeps its rhythm and tries again at the next window.

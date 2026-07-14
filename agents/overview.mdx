@@ -1,31 +1,70 @@
 ---
-title: "Coding Agents"
-description: "Run persistent coding agent VMs with full platform access."
+title: "Agents"
+description: "AI workers that run autonomous tasks and interactive sessions on isolated microVMs."
 icon: "robot"
 ---
 
-ZWRM Agents are persistent coding agent VMs running on isolated Firecracker microVMs. Connect your preferred AI coding tool (Claude, Codex, etc.) to a full VM with a home directory volume that survives across sessions.
+ZWRM Agents are AI workers (Claude Code, Codex) that run in isolated Firecracker microVMs. An **agent is pure configuration** — instructions, default model, effort, VM size, connectors, skills, and budgets. Execution state lives in **workspaces**: a persistent volume plus a session-continuity key. VMs are **ephemeral**: one boots when a run or chat starts and is torn down when it finishes; the workspace volume (files, repos, conversation transcript) is what carries everything forward.
 
-Agents have full access to the ZWRM platform — the `zwrm` CLI is pre-installed and authenticated. Your agent can build, deploy, scale, and manage applications directly from within its VM. Ship code from ideation to production without leaving the agent session.
+Agents have full access to the ZWRM platform — the `zwrm` CLI is pre-installed and authenticated inside every VM. Your agent can build, deploy, scale, and manage applications directly.
 
 ## Quick start
 
 ```bash
+# Boot into an interactive SSH workspace
 zwrm agent claude
+
+# Dispatch an autonomous run (returns immediately)
+zwrm agent run --agent default --prompt "Summarize the open PRs in acme/api"
+zwrm agent run status <run-id>
+
+# Continue that exact conversation later
+zwrm agent run continue <run-id> --prompt "Now address the review feedback"
 ```
 
-This creates (or reconnects to) a Claude coding agent VM and drops you into an SSH session.
+On first use, the CLI prompts for required credentials (Claude/Codex auth, GitHub token, git config). They are stored as agent secrets and injected into every VM at boot; `gh` is authenticated automatically.
 
-## How it works
+## The model
 
-1. **VM creation** — A Firecracker VM is provisioned with your chosen agent type.
-2. **Persistent home** — A volume is attached to the VM's home directory, so your files, config, and history persist across sessions.
-3. **Platform access** — The `zwrm` CLI is available inside the VM with your credentials, so the agent can deploy apps, manage secrets, create databases, and more.
-4. **SSH session** — You're connected via SSH with the agent's default command running.
+| Concept | What it is |
+|---------|------------|
+| **Agent** | A named definition: instructions, defaults (model, effort, size), connectors, skills, budgets. Never owns a VM. |
+| **Workspace** | A volume + a session key. Same key ⇒ same conversation and files; no key ⇒ a fresh anonymous workspace (72h TTL). |
+| **Run** | One autonomous task: a prompt executed as a headless session in a fresh VM on the chosen workspace. |
+| **Session** | One live conversation (a run's headless session, or a dashboard chat). One live session per workspace. |
+
+There is no built-in repo concept: a repo is whatever the prompt (or a skill) clones onto the workspace volume. `gh` is pre-authenticated, so "clone acme/api and open a PR" just works — and the clone persists on the volume for the next run with the same session key.
+
+## Agent types
+
+| Type | Description |
+|------|-------------|
+| `claude` | Claude Code |
+| `codex` | OpenAI Codex |
+
+Agent names are **unique per organization, across types**: `default` can name a claude agent *or* a codex agent in an org, not both. Connecting with the wrong type for an existing name is rejected. Connecting to a name that doesn't exist creates it.
+
+## Configuring an agent
+
+Everything an agent *is* can be changed with a single command — only the flags you pass change:
+
+```bash
+zwrm agent update my-project --model opus --effort high --size performance-2x
+```
+
+| Flag | Description |
+|------|-------------|
+| `--size` | Default VM size preset (e.g. `performance-2x`) |
+| `--model` | Default model: `opus` or `sonnet` |
+| `--effort` | Default reasoning effort: `low`, `medium`, `high`, `xhigh`, `max` |
+| `--instructions` | Per-agent system-prompt append |
+| `--workspace-ttl` | Keyed workspace retention (e.g. `720h`; `0` = never expire) |
+| `--daily-budget` | Daily spend cap in USD (`0` = unlimited) |
+| `--max-runs-per-day` | Daily run-count cap (`0` = unlimited) |
 
 ## What agents can do
 
-From inside a coding agent VM, you (or the agent) can:
+From inside any agent VM, the agent (or you, over SSH) can:
 
 - **Deploy apps** — `zwrm deploy` to build and ship directly from the agent
 - **Manage secrets** — `zwrm secrets set` to configure environment variables
@@ -34,20 +73,31 @@ From inside a coding agent VM, you (or the agent) can:
 - **View logs** — `zwrm logs -f` to stream application output
 - **SSH into apps** — `zwrm ssh` to debug running VMs
 
-## Supported agent types
+## Where to go next
 
-| Type | Description |
-|------|-------------|
-| `claude` | Claude Code agent |
-| `codex` | Codex agent |
-
-## Named instances
-
-By default, each agent type gets one instance. Use named instances to run multiple environments:
-
-```bash
-zwrm agent claude my-project
-zwrm agent claude another-project
-```
-
-Each named instance has its own VM and persistent volume.
+<CardGroup cols={2}>
+  <Card title="Runs" icon="play" href="/agents/runs">
+    Dispatch autonomous tasks and iterate on them.
+  </Card>
+  <Card title="Workspaces" icon="folder-tree" href="/agents/workspaces">
+    Session continuity, files, and retention.
+  </Card>
+  <Card title="Messaging" icon="inbox" href="/agents/messaging">
+    How agents wait, ask, and get answered.
+  </Card>
+  <Card title="Interactive sessions" icon="terminal" href="/agents/interactive">
+    SSH sessions, dashboard chat, and managing agents.
+  </Card>
+  <Card title="Connectors" icon="plug" href="/context/connectors">
+    Attach MCP tools from the gateway — credentials never enter the VM.
+  </Card>
+  <Card title="Skills" icon="wand-magic-sparkles" href="/context/skills">
+    Reusable instruction bundles synced to the workspace.
+  </Card>
+  <Card title="Budgets" icon="coins" href="/agents/budgets">
+    Cap spend and run counts per day.
+  </Card>
+  <Card title="Automations" icon="bolt" href="/automations/webhooks">
+    Trigger runs from webhooks and schedules.
+  </Card>
+</CardGroup>

@@ -1,0 +1,58 @@
+---
+title: "Skills"
+description: "Reusable instruction bundles that agents discover in their workspace."
+icon: "wand-magic-sparkles"
+---
+
+A **skill** is a named, org-scoped instruction bundle that ZWRM materializes into the agent's workspace at `~/.claude/skills/<slug>/`, where the agent auto-discovers it. Skills let you package "how we do X here" once and reuse it across agents.
+
+## The skill library
+
+```bash
+zwrm skills list
+zwrm skills create translate --name "Translate" --description "Use when translating documents"
+zwrm skills upload translate ./translate-bundle.zip
+zwrm skills delete translate
+```
+
+- `create` registers the skill; `--description` is the when-to-use hint shown to agents and humans.
+- `upload` publishes a **bundle** (zip) as the skill's next version and live-pushes it to running workspaces of agents that have the skill enabled. Agents always track the latest version — there is no per-agent pinning.
+- `delete` removes the skill from agents and live workspaces.
+
+### Bundle rules
+
+A bundle is a zip with exactly one `SKILL.md` at its root, plus supporting text files (`.md .txt .py .js .ts .mjs .sh .json .yaml .yml .toml .csv .xml .xsd`). Limits: 10 MB compressed, 5 MB uncompressed total, 512 KB per file, 100 files.
+
+### Limits
+
+Up to **50 skills per organization** and **20 enabled skills per agent**.
+
+## Enabling skills per agent
+
+```bash
+zwrm agent skills list my-project
+zwrm agent skills enable my-project translate
+zwrm agent skills disable my-project translate
+```
+
+Enable/disable live-syncs running workspaces; suspended or cold workspaces pick up changes at the next session start.
+
+## Built-in document skills
+
+Every agent gets Anthropic's document skills enabled by default:
+
+| Skill | Handles |
+|-------|---------|
+| `xlsx` | Excel spreadsheets |
+| `docx` | Word documents |
+| `pptx` | PowerPoint presentations |
+| `pdf` | PDF documents |
+
+They show up in the library with a *built-in* label and are **read-only** — updates come with platform releases. Their content never passes through the platform: at session start, the workspace VM fetches a pinned commit from `github.com/anthropics/skills` into `~/.claude/skills/` (cached on the volume until the pin changes; needs egress to github.com — if the fetch fails, the session starts without them).
+
+- Disable per agent with `zwrm agent skills disable <agent> xlsx` or from the agent page.
+- An org skill with the same slug takes precedence over a built-in.
+
+## Hand-dropped skills
+
+You can also drop any skill directly into `~/.claude/skills/<name>/` on the workspace. Hand-dropped directories are never touched by the platform sync — even if a library skill later uses the same slug.

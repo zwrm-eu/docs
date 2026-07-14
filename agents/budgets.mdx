@@ -1,0 +1,34 @@
+---
+title: "Budgets"
+description: "Cap an agent's daily spend and run count."
+icon: "coins"
+---
+
+Budgets cap spend and run counts per agent, per day. Caps reset at 00:00 UTC; `0` means unlimited. They are enforced when a run or session starts.
+
+## Show current budget and usage
+
+```bash
+zwrm agent budget my-project
+```
+
+With no flags, prints the configured caps plus today's usage (USD spent and runs started).
+
+## Set caps
+
+```bash
+zwrm agent budget my-project --daily-usd 25 --max-runs 40
+```
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--daily-usd` | float | `0` | Daily spend cap in USD (`0` = unlimited) |
+| `--max-runs` | int | `0` | Daily run-count cap (`0` = unlimited) |
+
+The same caps can be set via `zwrm agent update --daily-budget --max-runs-per-day` or from the agent page in the dashboard.
+
+## What happens at the cap
+
+- Direct runs (`zwrm agent run`) are rejected at dispatch.
+- [Schedule](/automations/schedules) firings are logged as `rejected_budget` and skipped — the schedule keeps its rhythm and fires again next window.
+- [Webhook](/automations/webhooks) deliveries return `429` with the budget reason, so the sender can retry later; the delivery is logged as `rejected_budget`.

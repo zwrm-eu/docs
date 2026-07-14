@@ -1,0 +1,39 @@
+---
+title: "Templates & sizes"
+description: "Customize the agent VM image and pick the right VM size."
+icon: "layer-group"
+---
+
+Agents boot from the standard agent image, optionally customized by a template.
+
+## Templates
+
+```bash
+zwrm agent claude --template python-ml
+zwrm agent claude --template github.com/user/my-template
+```
+
+A template is either a **registry ID** or a **GitHub repo** containing a Dockerfile that extends `ghcr.io/zwrm-eu/agent-base:latest`. The template is stored on the agent, so reconnects reuse it. GitHub templates are built per repo + commit and cached.
+
+Registry templates:
+
+| Template | Description |
+|----------|-------------|
+| `default` | Full-stack kitchen sink |
+| `python-ml` | Python + ML tooling |
+| `node-fullstack` | Node.js full-stack |
+| `rust` | Rust toolchain |
+| `data-science` | Data-science stack |
+
+## VM sizes
+
+| Preset family | Description |
+|---------------|-------------|
+| `shared-cpu-1x/2x/4x/…` | Share host CPU — cheap, small memory |
+| `performance-*` | Dedicated CPU |
+
+The default agent size is `performance-2x`. Set a per-agent default with `zwrm agent update --size`, or override per run with `zwrm agent run --size`.
+
+<Warning>
+Builds want `performance-2x` or larger — a 512 MB VM will OOM a `go build`.
+</Warning>
