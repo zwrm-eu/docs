@@ -1,0 +1,53 @@
+---
+title: "Outbound webhooks"
+description: "Subscribe external endpoints to platform events."
+icon: "tower-broadcast"
+---
+
+Outbound webhooks push platform events to your own HTTP endpoints — the reverse direction of [inbound webhooks](/automations/webhooks). Use them to get notified when deploys finish, machines restart, backups fail, or an agent run needs your attention.
+
+Outbound webhooks are managed via the API (there is no CLI command yet):
+
+```
+POST   /v1/org/webhooks
+GET    /v1/org/webhooks
+GET    /v1/org/webhooks/{id}
+PUT    /v1/org/webhooks/{id}
+DELETE /v1/org/webhooks/{id}
+POST   /v1/org/webhooks/{id}/test
+GET    /v1/org/webhooks/{id}/deliveries
+POST   /v1/org/webhooks/deliveries/{delivery_id}/retry
+```
+
+## Events
+
+| Category | Events |
+|----------|--------|
+| Deploys | `deploy.completed`, `deploy.failed`, `deploy.rolled_back` |
+| Machines | `machine.started`, `machine.stopped`, `machine.destroyed` |
+| Scaling | `scale.up`, `scale.down` |
+| Backups | `backup.completed`, `backup.failed` |
+| Secrets | `secret.created`, `secret.updated`, `secret.deleted` |
+| PostgreSQL | `postgres.health_failed`, `postgres.health_recovered`, `postgres.failover_started`, `postgres.failover_completed`, `postgres.failover_failed` |
+| Agents | `agent_run.completed`, `agent_run.failed`, `agent_run.needs_attention`, `agent_message.created` |
+| Testing | `webhook.test` |
+
+The agent events make outbound webhooks the machine-readable counterpart of the [Inbox](/agents/messaging): `agent_run.needs_attention` fires when a run pauses on an escalation, and `agent_message.created` fires on every `send_message`.
+
+## Verifying deliveries
+
+Each delivery is signed with the webhook's secret (returned once, at creation):
+
+| Header | Content |
+|--------|---------|
+| `X-Webhook-Signature` | `sha256=<hex>` — HMAC-SHA256 of the raw body |
+| `X-Webhook-Event` | The event type |
+| `X-Webhook-Delivery` | Unique delivery ID |
+
+Verify by computing the HMAC of the raw request body with your secret and comparing in constant time.
+
+## Delivery semantics
+
+- Non-2xx responses (and transport errors) are retried up to **8 attempts** with growing backoff (30s → 2m → 10m → 1h → 6h).
+- Delivery history is retained for 14 days and can be inspected — and individual deliveries re-sent — via the API.
+- Endpoint URLs must be public `http(s)` on ports 80/443; private and internal addresses are rejected.

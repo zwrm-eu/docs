@@ -1,0 +1,101 @@
+---
+title: "Webhooks"
+description: "Turn external events into agent runs."
+icon: "bolt"
+---
+
+Inbound webhooks (called **triggers** in the CLI) turn external events into agent runs: Stripe fires on a new order, GitHub on a new issue, your monitoring on an alert — and an agent picks it up with the event payload as context. In the dashboard they live under **Automations → Webhooks**.
+
+## Create a webhook
+
+```bash
+zwrm triggers create "Stripe orders" \
+  --default-agent support-bot \
+  --instruction "Handle this incoming order event" \
+  --session-key-path data.customer.id
+```
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--default-agent` | string | — | Catch-all agent (ID or name) when no route matches |
+| `--instruction` | string | — | The agent's task for each delivery |
+| `--message-template` | string | raw body | Render `{dot.path}` tokens over the body |
+| `--session-key-path` | string | — | Dot-path whose value keys session continuity (blank = one-shot) |
+| `--match` | JSON | — | Match-condition gate: `[{path,op,value?}]` |
+| `--routes` | JSON | — | Routing rules: `[{agent_id,when?}]` |
+| `--rate-per-day` | int | `0` | Daily delivery cap (`0` = unlimited) |
+| `--no-secret` | bool | `false` | Create a slug-gated trigger with no secret |
+
+On success the CLI prints the hook URL and — **exactly once** — the secret. Store it immediately.
+
+## Sending events
+
+```
+POST https://<platform>/v1/triggers/hook/<slug>
+```
+
+Authenticate each delivery either way:
+
+- `X-Webhook-Secret: <secret>` — the plain secret as a header, or
+- `X-Webhook-Signature: sha256=<hex>` — HMAC-SHA256 of the **raw body** with the secret.
+
+Bodies are parsed as JSON (up to 1 MiB). The agent's prompt is built from the trigger's instruction plus the rendered body (via `--message-template`, or the raw body if no template is set).
+
+### Idempotency
+
+Send an `Idempotency-Key` header to make retries safe: a key that was already accepted returns `{"status":"duplicate"}` without dispatching a second run.
+
+### Session continuity
+
+Deliveries can share a workspace (conversation + files) with either:
+
+- `--session-key-path data.customer.id` — extract the key from the payload, or
+- an `X-Session-Key` header on the request (wins over the path).
+
+Blank = every delivery is a one-shot run on a fresh workspace.
+
+## Matching and routing
+
+**Match conditions** (`--match`) gate the trigger — every condition must hold or the delivery is ignored (with a `200 ignored` response, so providers stop retrying):
+
+```json
+[{"path": "type", "op": "equals", "value": "checkout.session.completed"},
+ {"path": "data.object.amount_total", "op": "exists"}]
+```
+
+Operators: `exists`, `not_exists`, `equals` (default), `not_equals`, `in`. Paths are dot-descent into JSON objects (no array indexing).
+
+**Routes** (`--routes`) pick the agent: the first route whose `when` conditions all match wins; a route with no `when` is a catch-all. If no route matches, the `--default-agent` handles it; with neither, the delivery is dropped.
+
+```json
+[{"agent_id": "billing-bot", "when": [{"path": "type", "op": "equals", "value": "invoice.paid"}]},
+ {"agent_id": "support-bot"}]
+```
+
+The dashboard has a visual editor for conditions and routes.
+
+## Responses
+
+| Status | Meaning |
+|--------|---------|
+| `200 {"status":"accepted","run_id":…}` | Run dispatched |
+| `200 {"status":"ignored"}` | Match conditions not met — stop retrying |
+| `200 {"status":"duplicate"}` | Idempotency key already processed |
+| `409` | Same idempotency key currently in flight — retry shortly |
+| `413` | Body over 1 MiB |
+| `429` | Daily rate cap or [agent budget](/agents/budgets) exceeded — retry later |
+| `503` | Transient dispatch failure — safe to retry |
+
+ZWRM does not retry inbound deliveries itself — the status codes are chosen so the *sender's* retry logic does the right thing.
+
+## Inspect and manage
+
+```bash
+zwrm triggers list
+zwrm triggers deliveries <trigger-id> [--limit 50]
+zwrm triggers pause <trigger-id>
+zwrm triggers resume <trigger-id>
+zwrm triggers delete <trigger-id>
+```
+
+The delivery log records every delivery with its disposition: `accepted`, `duplicate`, `ignored`, `rejected_route`, `rejected_rate`, or `rejected_budget`, plus the dispatched run ID.

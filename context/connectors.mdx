@@ -1,0 +1,41 @@
+---
+title: "Connectors"
+description: "Attach MCP gateway virtual servers to agents — credentials never enter the VM."
+icon: "plug"
+---
+
+Connectors give an agent tools from the [MCP gateway](/context/mcp-gateway). Attaching a virtual server to an agent makes its tools available in every session as `mcp__<server>__<tool>` — while the upstream credentials stay at the gateway.
+
+## Manage connectors
+
+```bash
+zwrm agent connectors list my-project
+zwrm agent connectors attach my-project github-tools
+zwrm agent connectors attach my-project github-tools --escalate
+zwrm agent connectors attach my-project github-tools --disabled
+zwrm agent connectors detach my-project github-tools
+zwrm agent connectors verify my-project github-tools
+zwrm agent connectors copy new-agent --from my-project
+```
+
+| Command | Description |
+|---------|-------------|
+| `list` | Show attached servers with status (`active`, `disabled`, `server-disabled`), escalate flag, and description |
+| `attach` | Attach a virtual server. `--disabled` attaches without enabling; `--escalate` requires human approval for the connector's tools during autonomous runs |
+| `detach` | Remove the attachment |
+| `verify` | Live-test the connector (initialize → tools/list against its upstream) |
+| `copy --from <agent>` | Copy another agent's connectors with their enabled/escalate flags |
+
+Disabling a virtual server at the gateway (`server-disabled`) is the org-wide kill switch — it overrides every agent's attachment.
+
+## Escalations
+
+Tools from a connector attached with `--escalate` pause the run when the agent tries to use them: the run enters `needs_attention` and waits — VM suspended, at no cost — until you approve or deny the call from the run page. Use this for connectors with side effects (payments, production changes, outbound communication).
+
+## Credential isolation
+
+Agent VMs run model-driven tool calls and arbitrary shell commands, so ZWRM never places upstream credentials inside them:
+
+- The VM receives only the gateway endpoint URL plus a **fresh, session-scoped platform token**, revoked when the session ends.
+- The gateway resolves the connector, injects the org's upstream credentials, and proxies the call.
+- A prompt injection that reads the agent's MCP config can, at worst, obtain a revocable, audited gateway token — never your GitHub/Slack/API tokens.

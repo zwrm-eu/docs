@@ -400,20 +400,38 @@ zwrm auth token
 
 ## `zwrm agent`
 
-Manage coding agent VMs. [Guide →](/agents/overview)
+Manage agents. [Guide →](/agents/overview)
+
+Connect interactively (creates the agent if the name is new):
 
 ```bash
-zwrm agent <type> [instance]
+zwrm agent <type> [instance]      # type: claude | codex
 zwrm a <type> [instance]
 ```
 
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
-| `--template` | string | — | Template from registry |
-| `--size` | string | — | VM size preset |
-| `--shell` | bool | `false` | Start plain bash |
-| `--cmd` | string | — | Override startup command |
-| `--instance` | string | — | Named instance |
+| `--instance` | string | `default` | Named instance |
+| `--size` | string | agent's stored size | VM size preset |
+| `--cmd` | string | — | Override default startup command |
+| `--template` | string | — | Registry ID or `github.com/user/repo` |
+
+### `zwrm agent run`
+
+Start an autonomous run. [Guide →](/agents/runs)
+
+```bash
+zwrm agent run --agent <name> --prompt <text> [--session <key>] [--model <m>] [--effort <e>] [--size <preset>] [--timeout <dur>]
+```
+
+### `zwrm agent run status` / `list` / `cancel` / `continue`
+
+```bash
+zwrm agent run status <run-id>
+zwrm agent run list [--status <status>]
+zwrm agent run cancel <run-id>
+zwrm agent run continue <run-id> --prompt <text> [--model <m>] [--effort <e>] [--size <preset>] [--timeout <dur>]
+```
 
 ### `zwrm agent list`
 
@@ -421,39 +439,165 @@ zwrm a <type> [instance]
 zwrm agent list
 ```
 
-### `zwrm agent destroy`
+### `zwrm agent destroy` / `delete`
 
 ```bash
-zwrm agent destroy <instance>
+zwrm agent destroy [instance]        # stop VM, keep volume
+zwrm agent delete [instance] [-f]    # delete VM, volume, and record
+```
+
+### `zwrm agent update`
+
+Update agent configuration (only passed flags change).
+
+```bash
+zwrm agent update <instance> [--size <preset>] [--model opus|sonnet] [--effort <e>] [--instructions <text>] [--workspace-ttl <dur>] [--daily-budget <usd>] [--max-runs-per-day <n>]
+```
+
+### `zwrm agent budget`
+
+Show or set daily caps. [Guide →](/agents/budgets)
+
+```bash
+zwrm agent budget [instance] [--daily-usd <n>] [--max-runs <n>]
+```
+
+### `zwrm agent resize`
+
+```bash
+zwrm agent resize [instance] --volume <size>   # grow-only, agent must be stopped
+```
+
+### `zwrm agent logs`
+
+```bash
+zwrm agent logs [instance] [--limit 50]
+```
+
+### `zwrm agent messages`
+
+Agent inbox. [Guide →](/agents/messaging)
+
+```bash
+zwrm agent messages list [--unreplied]
+zwrm agent messages reply <message-id> --text <text>
+```
+
+### `zwrm agent channels`
+
+Message delivery channels. [Guide →](/agents/messaging#message-channels)
+
+```bash
+zwrm agent channels list --agent <name>
+zwrm agent channels add --agent <name> --type email|whatsapp|sms|sns --target <target> [--org-wide]
+zwrm agent channels enable|disable|remove <channel-id> --agent <name>
+```
+
+### `zwrm agent connectors`
+
+Attach MCP gateway virtual servers. [Guide →](/context/connectors)
+
+```bash
+zwrm agent connectors list <agent>
+zwrm agent connectors attach <agent> <server> [--disabled] [--escalate]
+zwrm agent connectors detach <agent> <server>
+zwrm agent connectors verify <agent> <server>
+zwrm agent connectors copy <agent> --from <source-agent>
+```
+
+### `zwrm agent skills`
+
+Per-agent skill enablement. [Guide →](/context/skills)
+
+```bash
+zwrm agent skills list <agent>
+zwrm agent skills enable <agent> <skill>
+zwrm agent skills disable <agent> <skill>
 ```
 
 ### `zwrm agent secrets`
 
-Manage agent instance secrets. [Guide →](/agents/secrets)
-
-### `zwrm agent secrets set`
+Manage agent secrets. [Guide →](/agents/secrets)
 
 ```bash
 zwrm agent secrets set <NAME>=<VALUE> [--instance <name>]
-zwrm agent secrets set <NAME> <VALUE> [--instance <name>]
-```
-
-### `zwrm agent secrets list`
-
-```bash
 zwrm agent secrets list [--instance <name>]
-```
-
-### `zwrm agent secrets unset`
-
-```bash
 zwrm agent secrets unset <NAME> [--instance <name>]
+zwrm agent secrets add --from-file <path> [--instance <name>]
 ```
 
-### `zwrm agent secrets add`
+---
+
+## `zwrm skills`
+
+Manage the org skill library. [Guide →](/context/skills)
 
 ```bash
-zwrm agent secrets add --from-file <path> [--instance <name>]
+zwrm skills list
+zwrm skills create <slug> [--name <name>] [--description <text>]
+zwrm skills upload <skill> <bundle.zip>
+zwrm skills delete <skill>
+```
+
+---
+
+## `zwrm mcp`
+
+MCP gateway and local MCP server. [Guide →](/context/mcp-gateway)
+
+`zwrm mcp` with no subcommand runs a stdio MCP server exposing your agent runs (`get_agent_run`, `list_agent_runs`, `cancel_agent_run`).
+
+### `zwrm mcp upstream`
+
+```bash
+zwrm mcp upstream add <name> <url> [--bearer-token <t>] [--header "Name: value"] [--transport streamable-http|sse] [--allow-private]
+zwrm mcp upstream list
+zwrm mcp upstream tools <name>
+zwrm mcp upstream sync <name>
+zwrm mcp upstream rm <name> [--force]
+```
+
+### `zwrm mcp server`
+
+```bash
+zwrm mcp server create <name> --upstream "<name>[:tool1,tool2]" [--upstream ...] [--description <text>]
+zwrm mcp server list
+zwrm mcp server get <name>
+zwrm mcp server rm <name>
+```
+
+### `zwrm mcp install`
+
+```bash
+zwrm mcp install <server> [--client claude-code|claude-api|cursor|vscode|windsurf|goose|openai] [--all]
+```
+
+---
+
+## `zwrm triggers`
+
+Inbound webhooks: external events → agent runs. [Guide →](/automations/webhooks)
+
+```bash
+zwrm triggers list
+zwrm triggers create <name> [--default-agent <a>] [--instruction <text>] [--message-template <tpl>] [--session-key-path <path>] [--match <json>] [--routes <json>] [--rate-per-day <n>] [--no-secret]
+zwrm triggers deliveries <trigger-id> [--limit 50]
+zwrm triggers pause|resume <trigger-id>
+zwrm triggers delete <trigger-id>
+```
+
+---
+
+## `zwrm schedules`
+
+Cron → agent runs. [Guide →](/automations/schedules)
+
+```bash
+zwrm schedules list [--agent <name>]
+zwrm schedules create <name> --agent <a> --cron "<expr>" --prompt <text> [--session-key <key>] [--paused]
+zwrm schedules firings <schedule-id> [--limit 50]
+zwrm schedules pause|resume <schedule-id>
+zwrm schedules delete <schedule-id>
 ```
 
 ---
