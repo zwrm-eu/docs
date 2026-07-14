@@ -57,7 +57,7 @@ VM image templates for agents and sandboxes. See [Templates](/agents/templates).
 
 ## Hosts
 
-Host visibility and lifecycle — mainly relevant for [self-hosted](/self-hosting/overview) deployments.
+Host visibility and lifecycle (platform operators).
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -84,4 +84,4 @@ Host-admin only.
 | `GET` | `/v1/system/secrets/rotation-status` | Rotation progress |
 | `POST` | `/v1/system/secrets/retire/{version}` | Retire an old key version |
 
-Internal endpoints under `/v1/internal/*` (host-agent facing: image registry, WAL proxy, volume usage, discovery) are covered in the [self-hosting API reference](/self-hosting/api-reference).
+Internal endpoints under `/v1/internal/*` (host-agent facing: image registry, WAL proxy, volume usage, discovery) are not part of the public API surface.
