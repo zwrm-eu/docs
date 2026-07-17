@@ -1,0 +1,71 @@
+---
+title: "Capabilities"
+description: "Scope what an agent is allowed to do on the platform."
+icon: "shield-halved"
+---
+
+Every agent VM carries a platform token so the agent can run `zwrm` commands — deploy, read logs, create databases. Capabilities decide **which** of those the token is allowed to do.
+
+## Default
+
+An agent gets every capability except `destroy`. It can build, ship, and manage; it cannot irreversibly delete an app, machine, database, or volume.
+
+```bash
+zwrm agent update my-project --allowed-scopes apps:read,deploy,logs:read
+zwrm agent update my-project --allowed-scopes ""   # reset to the platform default
+```
+
+The dashboard's agent page has the same picker, with a *default* / *custom* toggle. Leaving an agent on the default means it tracks future platform defaults rather than freezing today's list.
+
+## Available capabilities
+
+Scopes are `resource:action` pairs, plus a few atomic verbs:
+
+| Group | Scopes |
+|-------|--------|
+| Apps & deploy | `apps:read`, `deploy`, `scale` |
+| Secrets | `secrets:read`, `secrets:write` |
+| Databases | `postgres:read`, `postgres:write` |
+| Volumes | `volumes:read`, `volumes:write` |
+| Networking | `routes:write` |
+| Observability | `logs:read` |
+| Agent library | `skills:read`, `skills:write`, `memories:read`, `memories:write` |
+| Automation | `schedules:read`, `schedules:write`, `triggers:read`, `triggers:write` |
+| Account | `ssh`, `identity` |
+| Teardown | `destroy` |
+
+<Warning>
+`destroy` covers permanently deleting apps, machines, databases, and volumes. It is off by default — grant it only to agents that genuinely need to tear things down.
+</Warning>
+
+Transferring an app to another organization is not grantable at all: no agent or scoped token can move an app out of your org.
+
+## What the agent sees
+
+A call outside an agent's capabilities fails with `403 token is not authorized for this endpoint`. The platform instructions tell agents that a 403 here is a policy limit rather than a bug — they should report it and ask you to grant the capability, not retry or work around it.
+
+Agent tokens are also **pinned to their agent and organization**: an agent's token only acts as that agent, inside its org.
+
+<Note>
+The pin confines agent-addressed routes. Org-level resources — the skill library, schedules, triggers — resolve their target from the request rather than the URL, so an agent granted `skills:write` or `schedules:write` can manage those across its own organization, not just its own agent.
+</Note>
+
+## Scoped API tokens
+
+The same vocabulary works for your own tokens, so a CI job or dashboard gets exactly the reach it needs:
+
+```bash
+zwrm auth tokens create --name ci --scopes apps:read,deploy --org acme --expiry 8760h
+zwrm auth tokens create --name obs --scopes apps:read,logs:read --org acme
+```
+
+| Flag | Description |
+|------|-------------|
+| `--scopes` | Comma-separated `resource:action` list; omit for an unrestricted token |
+| `--org` | Organization the token is bound to (required when scoped) |
+| `--expiry` | Duration, e.g. `8760h`; omit for no expiry |
+| `--name` | Token label |
+
+A scoped token is confined to its organization — it cannot reach another org even if you're a member. Unscoped tokens keep behaving as before, carrying your full access.
+
+Audit log entries record which credential made each call, so a scoped token's activity is attributable to that token rather than just to you.

@@ -62,5 +62,5 @@ Dispatches a follow-up run on the finished run's workspace — full conversation
 When the final turn ends, the run completes and the VM is gone. Deliverables:
 
 - **Summary** — shown in `run status` and on the run page.
-- **Files** — anything the agent staged in `~/outputs/` is snapshotted onto the run at finalize.
+- **Files** — anything the agent staged in `~/outputs/` is snapshotted onto the run at finalize. Every VM boots with `~/outputs/` created and the convention written into the agent's platform instructions, so agents stage user-facing files there without being told.
 - **Messages** — anything sent via `send_message` lands in the agent's [Inbox](/agents/messaging) and your configured channels.

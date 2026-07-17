@@ -37,6 +37,21 @@ Org-level upstreams and virtual servers. See the [MCP Gateway guide](/context/mc
 | `DELETE` | `/v1/org/mcp/servers/{name}` | Delete |
 | `GET` | `/v1/org/mcp/servers/{name}/config` | Client install snippet (`?client=`) |
 
+## Upstream grants
+
+Connected accounts on a per-user OAuth upstream. See [Connector identity](/context/credentials). Grants never return tokens.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/v1/org/mcp/upstreams/{name}/grants` | Start a consent flow; returns `authorize_url`. Empty body = your own account; `{"principal_type":"agent","principal_id":"<agent-id>"}` authorizes an agent |
+| `GET` | `/v1/org/mcp/upstreams/{name}/grants` | List connected accounts (principal + status) |
+| `GET` | `/v1/org/mcp/upstreams/{name}/grants/me` | Your grant status |
+| `DELETE` | `/v1/org/mcp/upstreams/{name}/grants/me` | Disconnect your account |
+| `DELETE` | `/v1/org/mcp/upstreams/{name}/grants/{principal_type}/{principal_id}` | Revoke a grant |
+| `GET` | `/v1/mcp/oauth/callback` | OAuth redirect target (public; not called directly) |
+
+A `zwrm_user` flow can only ever target the caller — you can't start a flow for someone else. Binding or revoking another user's personal grant requires org admin. Agent grants are org-shared: any member may create, bind, and revoke them. A call with no usable grant returns `403`.
+
 ## Gateway data plane
 
 The endpoints clients and agents actually connect to — also reachable as `https://mcp.<domain>/{org}/{server}` via the proxy.

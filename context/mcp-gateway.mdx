@@ -19,18 +19,28 @@ The MCP gateway gives your organization one place to manage MCP. You register **
 ```bash
 zwrm mcp upstream add github https://api.githubcopilot.com/mcp/ --bearer-token ghp_...
 zwrm mcp upstream add internal https://mcp.internal.example.com --header "X-Api-Key: abc123"
+zwrm mcp upstream add sentry https://mcp.sentry.dev/mcp --oauth
 zwrm mcp upstream list
 zwrm mcp upstream tools github
 zwrm mcp upstream sync github
+zwrm mcp upstream grants sentry
 zwrm mcp upstream rm github [--force]
 ```
 
 | Flag (`upstream add`) | Description |
 |------|-------------|
 | `--bearer-token` | Bearer token sent to the upstream |
-| `--header "Name: value"` | Custom auth header (repeatable; mutually exclusive with `--bearer-token`) |
+| `--header "Name: value"` | Custom auth header (repeatable) |
+| `--oauth` | Per-user OAuth sign-in — each member connects their own account |
+| `--oauth-client-id` / `--oauth-client-secret` | OAuth client credentials |
+| `--oauth-token-url` | Token endpoint (client-credentials flow) |
+| `--oauth-scope` | Optional space-separated OAuth scopes |
 | `--transport` | `streamable-http` (default) or `sse` |
 | `--allow-private` | Allow private/internal addresses (host-admin only) |
+
+The auth flags are mutually exclusive — see [Connector identity](/context/credentials) for which to pick and how per-user accounts work.
+
+In the dashboard, the gateway page has a **Quick connect** grid of branded cards (Sentry, GitHub, Mintlify) that pre-fills the registration form so you only supply credentials.
 
 - Credentials are encrypted at rest and **never returned by the API**.
 - The tool catalog is synced on add, every 5 minutes, on demand (`sync`), and when the upstream signals a tool-list change. The cached catalog keeps serving even when the upstream is down.
@@ -50,6 +60,7 @@ zwrm mcp server rm github-tools
 
 - `--upstream` is repeatable: `"name"` selects all of that upstream's tools, `"name:tool1,tool2"` selects a subset. Tool allowlists are the composition — build a read-only variant by selecting only read tools.
 - `--description` is served as the MCP `instructions` for connecting clients.
+- `--credential-mode <upstream>=<mode>` and `--bound-grant <upstream>=<type>:<id>` set which account calls act as on a per-user OAuth upstream. See [Connector identity](/context/credentials#resolution-modes).
 - Tool names pass through unmodified unless two upstreams collide, in which case they are prefixed `{upstream}_{tool}`.
 - `get` shows the endpoint, the exposed tool mapping, and any problems.
 
@@ -94,11 +105,11 @@ For **Custom GPTs** (`zwrm mcp install <server> --client custom-gpt`): fetch the
 
 ## Agents and the gateway
 
-Agents consume virtual servers as [connectors](/context/connectors). The key property: **upstream credentials never enter the agent VM** — the VM holds only a short-lived, revocable gateway token, and the gateway injects the real credentials upstream.
+Agents consume virtual servers as [connectors](/context/connectors). The key property: **upstream credentials never enter the agent VM** — the VM holds only a short-lived, revocable gateway token, and the gateway injects the real credentials upstream. Which identity those calls carry is the [connector identity](/context/credentials) policy.
 
 ## Security model
 
-- Two strictly separated credential planes: client → gateway (ZWRM API keys) and gateway → upstream (org-managed credentials). Tokens are never passed through in either direction.
+- Two strictly separated credential planes: client → gateway (ZWRM API keys) and gateway → upstream (org-managed credentials or vaulted per-principal grants). Tokens are never passed through in either direction.
 - Upstream URLs are validated against private/internal address ranges (SSRF protection), with DNS re-resolution at dial time. The `--allow-private` escape hatch is host-admin only.
 - Every proxied tool call is audited with tool, upstream, duration, and caller.
 

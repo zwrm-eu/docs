@@ -127,6 +127,8 @@ Everything after `--` runs on the VM instead of opening an interactive shell; th
 | `--tty`, `-t` / `--no-tty`, `-T` | bool | auto | Force / disable PTY allocation |
 | `--user` | string | — | SSH user override |
 
+`--machine` also works for app-less machines (Postgres, sandboxes); those connect directly rather than through the proxy, whose usernames are `{app}.{machine}`.
+
 ```bash
 zwrm ssh -- uptime
 zwrm ssh --app myapp -- bash -lc 'cd /app && python3 task.py'
@@ -441,7 +443,7 @@ zwrm auth token
 Manage long-lived API tokens.
 
 ```bash
-zwrm auth tokens create [--name <name>] [--expiry <duration>]
+zwrm auth tokens create [--name <name>] [--expiry <duration>] [--scopes <list>] [--org <org>]
 zwrm auth tokens list
 zwrm auth tokens revoke <token-id>
 ```
@@ -450,6 +452,14 @@ zwrm auth tokens revoke <token-id>
 |------|------|---------|-------------|
 | `--name` | string | — | Token name (e.g. `github-actions`) |
 | `--expiry` | string | no expiry | Expiry duration (e.g. `8760h` for one year) |
+| `--scopes` | list | — | Capability set (comma-separated `resource:action`); empty = unrestricted |
+| `--org` | string | target org | Organization a scoped token is bound to |
+
+```bash
+zwrm auth tokens create --name ci --scopes apps:read,deploy --org acme --expiry 8760h
+```
+
+See [Capabilities](/agents/capabilities) for the scope vocabulary.
 
 ---
 
@@ -579,8 +589,23 @@ zwrm agent delete [instance] [-f]    # delete VM, volume, and record
 Update agent configuration (only passed flags change).
 
 ```bash
-zwrm agent update <instance> [--size <preset>] [--model opus|sonnet] [--effort <e>] [--instructions <text>] [--workspace-ttl <dur>] [--daily-budget <usd>] [--max-runs-per-day <n>]
+zwrm agent update <instance> [--size <preset>] [--model opus|sonnet] [--effort <e>] [--instructions <text>] [--workspace-ttl <dur>] [--daily-budget <usd>] [--max-runs-per-day <n>] [--allowed-scopes <list>]
 ```
+
+`--allowed-scopes` takes a comma-separated `resource:action` list; an empty value resets to the platform default. [Guide →](/agents/capabilities)
+
+### `zwrm agent memory`
+
+Curate an agent's durable memory. [Guide →](/context/memory)
+
+```bash
+zwrm agent memory list <agent>
+zwrm agent memory show <agent> <slug>
+zwrm agent memory save <agent> <slug> --description <text> [--kind user|project|reference|feedback] [--body <md> | --file <path>]
+zwrm agent memory delete <agent> <slug>
+```
+
+`save` reads the body from `--body`, `--file`, or stdin.
 
 ### `zwrm agent budget`
 
@@ -678,21 +703,40 @@ MCP gateway and local MCP server. [Guide →](/context/mcp-gateway)
 ### `zwrm mcp upstream`
 
 ```bash
-zwrm mcp upstream add <name> <url> [--bearer-token <t>] [--header "Name: value"] [--transport streamable-http|sse] [--allow-private]
+zwrm mcp upstream add <name> <url> [--bearer-token <t>] [--header "Name: value"] [--oauth] [--oauth-client-id <id>] [--oauth-client-secret <s>] [--oauth-token-url <url>] [--oauth-scope <scopes>] [--transport streamable-http|sse] [--allow-private]
 zwrm mcp upstream list
 zwrm mcp upstream tools <name>
 zwrm mcp upstream sync <name>
+zwrm mcp upstream grants <name>
 zwrm mcp upstream rm <name> [--force]
 ```
+
+The auth flags are mutually exclusive. [Guide →](/context/credentials)
+
+### `zwrm mcp connect` / `disconnect`
+
+Connect an account to a per-user OAuth upstream. [Guide →](/context/credentials#connecting-an-account)
+
+```bash
+zwrm mcp connect <upstream> [--agent <id|instance>]
+zwrm mcp disconnect <upstream> [--agent <id|instance>]
+```
+
+`--agent` authorizes that agent instead of yourself — the account you consent with becomes the agent's identity on the upstream.
 
 ### `zwrm mcp server`
 
 ```bash
-zwrm mcp server create <name> --upstream "<name>[:tool1,tool2]" [--upstream ...] [--description <text>]
+zwrm mcp server create <name> --upstream "<name>[:tool1,tool2]" [--upstream ...] [--description <text>] [--credential-mode <upstream>=<mode>] [--bound-grant <upstream>=<type>:<id>]
 zwrm mcp server list
 zwrm mcp server get <name>
 zwrm mcp server rm <name>
 ```
+
+| Flag | Description |
+|------|-------------|
+| `--credential-mode` | `<upstream>=org_shared\|caller_user\|caller_agent\|bound_grant` (repeatable) |
+| `--bound-grant` | `<upstream>=<principal_type>:<principal_id>` for `bound_grant` mode (repeatable) |
 
 ### `zwrm mcp install`
 

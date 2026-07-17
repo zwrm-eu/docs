@@ -6,6 +6,10 @@ icon: "inbox"
 
 Runs are honest about their lifecycle: when the final turn ends, the run completes and the VM is gone — an agent cannot poll or wake itself up. Instead, it has platform tools for waiting and communicating, and you have an inbox for answering.
 
+<Note>
+Platform tools exist **only in autonomous [runs](/agents/runs)**. Interactive sessions — dashboard chat, the [OpenAI-compatible API](/agents/openai-api), SSH — don't get them: a live reader is already watching the conversation, so there is nothing to notify and nothing to sleep through.
+</Note>
+
 ## Waiting
 
 - **`sleep(seconds)` / `sleep_until(timestamp)`** — the agent parks the run (max 6 hours). The VM is snapshotted while sleeping (zero compute) and resumes mid-turn with full state. For anything longer, the agent is instructed to finish with a handoff instead.
@@ -15,7 +19,7 @@ Runs are honest about their lifecycle: when the final turn ends, the run complet
 `send_message(text)` notifies you through the agent detail page's **Inbox** tab, [outbound webhooks](/automations/outbound-webhooks) (`agent_message.created`), and configured message channels. It is fire-and-forget.
 
 <Note>
-`send_message` is the **only** agent output that reaches you. Plain assistant text stays in the session timeline and notifies nobody — the run preamble tells the agent so.
+In a run, `send_message` is the **only** agent output that reaches you — plain assistant text stays in the session timeline and notifies nobody. Together with files staged in `~/outputs/`, it forms the two-channel contract for run deliverables, and the run preamble tells the agent so.
 </Note>
 
 ## Answering

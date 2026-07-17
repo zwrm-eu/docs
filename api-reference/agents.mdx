@@ -57,6 +57,26 @@ Attach [MCP gateway virtual servers](/context/connectors) to the agent.
 | `POST` | `/v1/agents/{agent_id}/connectors/{server}/verify` | Live-test (initialize → tools/list) |
 | `POST` | `/v1/agents/{agent_id}/connectors/copy` | Copy connectors from another agent |
 
+## Memory
+
+Durable per-agent entries. See the [Memory guide](/context/memory).
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/v1/agents/{agent_id}/memories` | List entries (metadata only; includes the entry `limit`) |
+| `GET` | `/v1/agents/{agent_id}/memories/{slug}` | Get one entry with its body |
+| `PUT` | `/v1/agents/{agent_id}/memories/{slug}` | Create or replace an entry |
+| `DELETE` | `/v1/agents/{agent_id}/memories/{slug}` | Delete an entry |
+
+`PUT` body: `description` (required), `body` (required), `kind` (`user`, `project`, `reference`, `feedback`), plus two optional guards:
+
+| Field | Effect |
+|-------|--------|
+| `if_absent: true` | Create-only — `409` if the slug exists |
+| `expect_updated_at` | Lost-update guard — `409` if the entry changed since you loaded it (e.g. the agent edited it) |
+
+Exceeding the 100-entry cap also returns `409`. Writes return a `warning` when projecting into a running workspace lagged; the entry itself is still saved.
+
 ## Per-agent skills
 
 Toggle [skills](/context/skills) for this agent; the library itself lives under [`/v1/skills`](/api-reference/skills-mcp).

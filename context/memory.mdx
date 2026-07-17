@@ -1,0 +1,73 @@
+---
+title: "Memory"
+description: "Durable per-agent knowledge that survives sessions and workspaces."
+icon: "brain"
+---
+
+Memory is what an agent knows about you and your work, kept across every session and workspace. Each entry is a slug-keyed markdown note living on the **agent identity** — not the workspace volume — so it outlives workspace TTLs, ended sessions, and finished runs.
+
+| | Memory | [Skills](/context/skills) | Workspace transcript |
+|---|---|---|---|
+| Scope | Per agent | Org library, enabled per agent | One workspace |
+| Author | The agent (or you) | You | The conversation |
+| Holds | Preferences, project facts, corrections | Reusable procedures | The conversation itself |
+
+Memory is agent-curated knowledge; the agent's [instructions](/agents/overview#configuring-an-agent) remain operator policy. Both are appended to the system prompt.
+
+## How recall works
+
+The system prompt carries only a **one-line index** — slug plus description, one row per entry — not the bodies. The agent reads a specific entry from `~/.claude/memory/<slug>.md` when its description looks relevant. Prompt cost therefore scales with the entry count, not the size of the corpus.
+
+Every session and run projects the agent's memory into the workspace:
+
+```
+~/.claude/memory/MEMORY.md      # the live index
+~/.claude/memory/<slug>.md      # one file per entry
+```
+
+Projected files carry a managed header and are rewritten on every sync — edit them through the tools or the API, not by hand. Notes you drop into the directory yourself are left alone. A workspace that was suspended while you changed memory reconciles on wake.
+
+## Agents curate their own memory
+
+In a session an agent has two tools:
+
+- **`save_memory`** — create or replace an entry (slug, description, body, optional kind). Saving an existing slug replaces it, so agents update rather than duplicate.
+- **`delete_memory`** — remove an entry by slug.
+
+So "remember that we deploy on Fridays" or "you got that wrong — our staging DB is X" becomes durable without you touching anything.
+
+## Curating memory yourself
+
+```bash
+zwrm agent memory list my-project
+zwrm agent memory show my-project deploy-process
+zwrm agent memory save my-project deploy-process \
+  --description "How we ship to production" \
+  --kind project \
+  --file ./deploy-notes.md
+zwrm agent memory delete my-project deploy-process
+```
+
+| Flag (`save`) | Description |
+|------|-------------|
+| `--description` | One-line summary shown in the recall index (required) |
+| `--kind` | Optional category: `user`, `project`, `reference`, `feedback` |
+| `--body` | Entry body (markdown) |
+| `--file` | Read the body from a file |
+
+Pass `--body` or `--file`, or pipe the body via stdin. The dashboard's **Context** tab has the same list-and-edit surface.
+
+## Limits
+
+| Limit | Value |
+|-------|-------|
+| Entries per agent | 100 |
+| Body size | 8 KiB |
+| Description | 200 characters, single line |
+| Slug | Lowercase letters, digits, hyphens; max 64 characters |
+
+At the cap, saving a **new** slug fails — the agent is told to consolidate or delete first. Replacing an existing entry always works.
+
+## Writing good entries
+
+The description is what a future session sees in its index, so it has to carry the decision to read further on its own: "How we ship to production — release branch, checks, rollback" beats "deploy stuff". Keep bodies to durable facts; session-local detail belongs in the transcript, and the tool descriptions tell agents so.
