@@ -37,21 +37,32 @@ zwrm agent skills disable my-project translate
 
 Enable/disable live-syncs running workspaces; suspended or cold workspaces pick up changes at the next session start.
 
-## Built-in document skills
+## Built-in skills
 
-Every agent gets Anthropic's document skills enabled by default:
+Every agent gets Anthropic's built-in skills enabled by default:
 
 | Skill | Handles |
 |-------|---------|
-| `xlsx` | Excel spreadsheets |
-| `docx` | Word documents |
-| `pptx` | PowerPoint presentations |
-| `pdf` | PDF documents |
+| `xlsx` | Excel spreadsheets — formulas, formatting, charts, multi-sheet data |
+| `docx` | Word documents — styles, tables, images, PDF conversion |
+| `pptx` | PowerPoint presentations — layouts, text, images, charts |
+| `pdf` | PDFs — merge/split, text and image extraction, form filling |
+| `skill-creator` | Authoring new skills and improving existing ones |
 
 They show up in the library with a *built-in* label and are **read-only** — updates come with platform releases. Their content never passes through the platform: at session start, the workspace VM fetches a pinned commit from `github.com/anthropics/skills` into `~/.claude/skills/` (cached on the volume until the pin changes; needs egress to github.com — if the fetch fails, the session starts without them).
 
 - Disable per agent with `zwrm agent skills disable <agent> xlsx` or from the agent page.
 - An org skill with the same slug takes precedence over a built-in.
+
+## Agent-managed skills
+
+Agents can write skills too. Inside a session an agent has `save_skill`, `update_skill`, and `delete_skill` tools: a skill it authored in its workspace can be persisted straight into the org's library under the agent's own identity — validated like any bundle upload, versioned, auto-enabled for that agent, and synced into its running workspaces.
+
+Ask an agent to "turn this workflow into a skill and save it" and it can, with the built-in `skill-creator` guiding the authoring, test prompts, and iteration.
+
+<Note>
+The tools only mutate skills the calling agent created. Everything else in the library — including built-ins and skills you uploaded — stays read-only to agents.
+</Note>
 
 ## Hand-dropped skills
 

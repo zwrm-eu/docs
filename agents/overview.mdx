@@ -61,6 +61,7 @@ zwrm agent update my-project --model opus --effort high --size performance-2x
 | `--workspace-ttl` | Keyed workspace retention (e.g. `720h`; `0` = never expire) |
 | `--daily-budget` | Daily spend cap in USD (`0` = unlimited) |
 | `--max-runs-per-day` | Daily run-count cap (`0` = unlimited) |
+| `--allowed-scopes` | [Capabilities](/agents/capabilities) the agent's platform token carries |
 
 ## What agents can do
 
@@ -96,6 +97,12 @@ From inside any agent VM, the agent (or you, over SSH) can:
   </Card>
   <Card title="Skills" icon="wand-magic-sparkles" href="/context/skills">
     Reusable instruction bundles synced to the workspace.
+  </Card>
+  <Card title="Memory" icon="brain" href="/context/memory">
+    Durable knowledge that survives sessions and workspaces.
+  </Card>
+  <Card title="Capabilities" icon="shield-halved" href="/agents/capabilities">
+    Scope what an agent may do on the platform.
   </Card>
   <Card title="Budgets" icon="coins" href="/agents/budgets">
     Cap spend and run counts per day.

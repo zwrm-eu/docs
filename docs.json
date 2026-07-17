@@ -62,6 +62,7 @@
               "agents/messaging",
               "agents/interactive",
               "agents/openai-api",
+              "agents/capabilities",
               "agents/budgets",
               "agents/templates",
               "agents/secrets"
@@ -71,8 +72,10 @@
             "group": "Context",
             "pages": [
               "context/skills",
+              "context/memory",
               "context/connectors",
-              "context/mcp-gateway"
+              "context/mcp-gateway",
+              "context/credentials"
             ]
           },
           {

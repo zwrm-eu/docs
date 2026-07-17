@@ -37,5 +37,9 @@ Tools from a connector attached with `--escalate` pause the run when the agent t
 Agent VMs run model-driven tool calls and arbitrary shell commands, so ZWRM never places upstream credentials inside them:
 
 - The VM receives only the gateway endpoint URL plus a **fresh, session-scoped platform token**, revoked when the session ends.
-- The gateway resolves the connector, injects the org's upstream credentials, and proxies the call.
+- The gateway resolves the connector, injects the upstream credentials, and proxies the call.
 - A prompt injection that reads the agent's MCP config can, at worst, obtain a revocable, audited gateway token — never your GitHub/Slack/API tokens.
+
+## Which account the agent acts as
+
+For upstreams using per-user OAuth, an agent doesn't automatically inherit your connected account — agent-held credentials are denied under the default `caller_user` policy. Give the agent its own identity (`caller_agent`), bind a shared pre-consented account (`bound_grant`), or use an org-wide service identity (`org_shared`). See [Connector identity](/context/credentials).

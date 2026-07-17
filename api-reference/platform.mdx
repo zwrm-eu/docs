@@ -9,12 +9,22 @@ icon: "building"
 | Method | Path | Description |
 |--------|------|-------------|
 | `GET` | `/v1/auth/whoami` | The authenticated user and org memberships |
-| `POST` | `/v1/auth/tokens` | Create an API token |
+| `POST` | `/v1/auth/tokens` | Create an API token (see below) |
 | `GET` | `/v1/auth/tokens` | List tokens |
 | `DELETE` | `/v1/auth/tokens/{token_id}` | Revoke a token |
 | `GET` | `/v1/auth/sessions` | List CLI sessions |
 | `DELETE` | `/v1/auth/sessions` | Revoke all CLI sessions |
 | `DELETE` | `/v1/auth/sessions/{session_id}` | Revoke one CLI session |
+
+### Scoped tokens
+
+`POST /v1/auth/tokens` mints an unrestricted user token by default. Pass `scopes` to mint a [capability-scoped](/agents/capabilities) token instead, bound to one organization:
+
+```json
+{ "name": "ci", "scopes": ["apps:read", "deploy"], "org": "acme", "expires_in": 31536000 }
+```
+
+An unknown scope returns `400`; an org you aren't a member of returns `403`. The key is shown once. Requests made with a scoped token outside its capabilities return `403 token is not authorized for this endpoint`.
 
 ## Organizations
 
