@@ -22,12 +22,27 @@ zwrm schedules create "Morning digest" \
 | `--cron` | string | — | Standard 5-field cron in **UTC**, or `@hourly` / `@daily` / `@weekly` / `@monthly` (required) |
 | `--prompt` | string | — | The prompt for each run (required) |
 | `--session-key` | string | — | Workspace continuity key (blank = fresh workspace per run) |
+| `--metadata` | list | — | Tag the schedule with `key=value` (repeatable) |
 | `--paused` | bool | `false` | Create the schedule disabled |
 
 - Cron is always interpreted in **UTC**; minimum granularity is one minute. Seconds fields and `@every` are not supported.
 - With a `--session-key`, every firing continues the same workspace — same conversation, same files. Without one, each firing is a one-shot run.
 - The agent binding is immutable — delete and recreate the schedule to move it to another agent.
 - Up to **20 schedules per agent**; prompts up to 16 KiB.
+
+## Metadata tags
+
+Schedules carry an opaque `key=value` map you can filter on — useful when something else creates schedules on your behalf and needs to find its own again:
+
+```bash
+zwrm schedules create "Weekly report" --agent research --cron "@weekly" \
+  --prompt "Compile the weekly report" \
+  --metadata creator=alice --metadata team=growth
+
+zwrm schedules list --metadata team=growth
+```
+
+Filters are ANDed. Up to 20 entries per schedule; keys up to 64 characters, values up to 256. ZWRM never interprets the contents.
 
 ## Overlap behavior
 

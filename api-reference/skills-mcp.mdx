@@ -29,7 +29,8 @@ Org-level upstreams and virtual servers. See the [MCP Gateway guide](/context/mc
 | `PUT` | `/v1/org/mcp/upstreams/{name}` | Update (URL, credentials, transport, enabled) |
 | `DELETE` | `/v1/org/mcp/upstreams/{name}` | Remove (`?force=true` if virtual servers reference it) |
 | `POST` | `/v1/org/mcp/upstreams/{name}/sync` | Re-sync the tool catalog |
-| `GET` | `/v1/org/mcp/upstreams/{name}/tools` | Synced tool catalog |
+| `GET` | `/v1/org/mcp/upstreams/{name}/tools` | Synced tool catalog; each tool carries `required_scopes` (alternative groups) and `covered` (null when coverage isn't computable) |
+| `GET` | `/v1/org/mcp/discover-scopes?url=<url>` | Probe a server's advertised OAuth scopes before registering it |
 | `POST` | `/v1/org/mcp/servers` | Create a virtual server |
 | `GET` | `/v1/org/mcp/servers` | List virtual servers |
 | `GET` | `/v1/org/mcp/servers/{name}` | Get a virtual server and its exposed tools |

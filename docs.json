@@ -75,7 +75,8 @@
               "context/memory",
               "context/connectors",
               "context/mcp-gateway",
-              "context/credentials"
+              "context/credentials",
+              "context/shared-connectors"
             ]
           },
           {

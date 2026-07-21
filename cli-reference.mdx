@@ -703,7 +703,7 @@ MCP gateway and local MCP server. [Guide →](/context/mcp-gateway)
 ### `zwrm mcp upstream`
 
 ```bash
-zwrm mcp upstream add <name> <url> [--bearer-token <t>] [--header "Name: value"] [--oauth] [--oauth-client-id <id>] [--oauth-client-secret <s>] [--oauth-token-url <url>] [--oauth-scope <scopes>] [--transport streamable-http|sse] [--allow-private]
+zwrm mcp upstream add <name> <url> [--bearer-token <t>] [--header "Name: value"] [--oauth] [--oauth-client-id <id>] [--oauth-client-secret <s>] [--oauth-token-url <url>] [--oauth-scope <scopes>] [--oauth-issuer <url>] [--transport streamable-http|sse] [--allow-private]
 zwrm mcp upstream list
 zwrm mcp upstream tools <name>
 zwrm mcp upstream sync <name>
@@ -727,7 +727,7 @@ zwrm mcp disconnect <upstream> [--agent <id|instance>]
 ### `zwrm mcp server`
 
 ```bash
-zwrm mcp server create <name> --upstream "<name>[:tool1,tool2]" [--upstream ...] [--description <text>] [--credential-mode <upstream>=<mode>] [--bound-grant <upstream>=<type>:<id>]
+zwrm mcp server create <name> --upstream "<name>[:tool1,tool2]" [--upstream ...] [--description <text>] [--bound-grant <upstream>=<type>:<id>]
 zwrm mcp server list
 zwrm mcp server get <name>
 zwrm mcp server rm <name>
@@ -735,8 +735,9 @@ zwrm mcp server rm <name>
 
 | Flag | Description |
 |------|-------------|
-| `--credential-mode` | `<upstream>=org_shared\|caller_user\|caller_agent\|bound_grant` (repeatable) |
-| `--bound-grant` | `<upstream>=<principal_type>:<principal_id>` for `bound_grant` mode (repeatable) |
+| `--bound-grant` | Pin one account for every caller: `<upstream>=<principal_type>:<principal_id>` (repeatable) |
+
+Without `--bound-grant`, each caller acts as their own connected account. [Guide →](/context/credentials)
 
 ### `zwrm mcp install`
 
@@ -765,8 +766,8 @@ zwrm triggers delete <trigger-id>
 Cron → agent runs. [Guide →](/automations/schedules)
 
 ```bash
-zwrm schedules list [--agent <name>]
-zwrm schedules create <name> --agent <a> --cron "<expr>" --prompt <text> [--session-key <key>] [--paused]
+zwrm schedules list [--agent <name>] [--metadata k=v]
+zwrm schedules create <name> --agent <a> --cron "<expr>" --prompt <text> [--session-key <key>] [--metadata k=v] [--paused]
 zwrm schedules firings <schedule-id> [--limit 50]
 zwrm schedules pause|resume <schedule-id>
 zwrm schedules delete <schedule-id>

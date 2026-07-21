@@ -35,12 +35,17 @@ zwrm mcp upstream rm github [--force]
 | `--oauth-client-id` / `--oauth-client-secret` | OAuth client credentials |
 | `--oauth-token-url` | Token endpoint (client-credentials flow) |
 | `--oauth-scope` | Optional space-separated OAuth scopes |
+| `--oauth-issuer` | Pin the authorization server for `--oauth` (requires `--oauth-client-id`) |
 | `--transport` | `streamable-http` (default) or `sse` |
 | `--allow-private` | Allow private/internal addresses (host-admin only) |
 
 The auth flags are mutually exclusive — see [Connector identity](/context/credentials) for which to pick and how per-user accounts work.
 
-In the dashboard, the gateway page has a **Quick connect** grid of branded cards (Sentry, GitHub, Mintlify) that pre-fills the registration form so you only supply credentials.
+In the dashboard, the gateway page has a **Quick connect** grid of branded cards that pre-fills the registration form so you only supply credentials. Some presets — including [Microsoft 365](/context/shared-connectors) — are platform-hosted servers you point at with your own OAuth app.
+
+### Scope-aware tool exposure
+
+On an OAuth upstream, an attachment that selects *all* tools exposes only the tools covered by the scopes you configured — a 320-tool upstream narrowed to the handful your scopes actually permit. Tools needing scopes you didn't request are hidden rather than surfaced only to fail at call time. Explicit tool selections are always exposed, even beyond the configured scopes.
 
 - Credentials are encrypted at rest and **never returned by the API**.
 - The tool catalog is synced on add, every 5 minutes, on demand (`sync`), and when the upstream signals a tool-list change. The cached catalog keeps serving even when the upstream is down.
@@ -60,7 +65,7 @@ zwrm mcp server rm github-tools
 
 - `--upstream` is repeatable: `"name"` selects all of that upstream's tools, `"name:tool1,tool2"` selects a subset. Tool allowlists are the composition — build a read-only variant by selecting only read tools.
 - `--description` is served as the MCP `instructions` for connecting clients.
-- `--credential-mode <upstream>=<mode>` and `--bound-grant <upstream>=<type>:<id>` set which account calls act as on a per-user OAuth upstream. See [Connector identity](/context/credentials#resolution-modes).
+- `--bound-grant <upstream>=<type>:<id>` pins one pre-consented account for every caller on a per-user OAuth upstream. By default each caller acts as their own account — see [Connector identity](/context/credentials).
 - Tool names pass through unmodified unless two upstreams collide, in which case they are prefixed `{upstream}_{tool}`.
 - `get` shows the endpoint, the exposed tool mapping, and any problems.
 
