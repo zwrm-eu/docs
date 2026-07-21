@@ -23,6 +23,8 @@ zwrm skills delete translate
 
 A bundle is a zip with exactly one `SKILL.md` at its root, plus supporting text files (`.md .txt .py .js .ts .mjs .sh .json .yaml .yml .toml .csv .xml .xsd`). Limits: 10 MB compressed, 5 MB uncompressed total, 512 KB per file, 100 files.
 
+Zipping the skill folder itself works — a single wrapper directory is unwrapped automatically, so both `zip -r bundle.zip my-skill/` and compressing the folder in Finder or Explorer are fine. OS junk (`__MACOSX/`, `.DS_Store`, AppleDouble `._*`) is ignored rather than rejected.
+
 ### Limits
 
 Up to **50 skills per organization** and **20 enabled skills per agent**.

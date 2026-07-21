@@ -1,0 +1,76 @@
+---
+title: "Shared connectors"
+description: "Platform-hosted MCP servers you point at with your own OAuth app."
+icon: "puzzle-piece"
+---
+
+Some MCP servers are hosted once by the platform and shared by every organization. This works because they are **stateless credential passthroughs**: every request carries the caller's own token, injected by the gateway from the [per-user OAuth vault](/context/credentials), so the shared instance never holds an identity of its own.
+
+Each org brings its **own OAuth app**. Your client ID and secret live encrypted on your upstream row, consent and tokens are always per user or per agent, and one org's configuration is invisible to every other.
+
+| Connector | URL | You register |
+|-----------|-----|--------------|
+| Microsoft 365 | `https://mcp-ms365.zwrm.io/mcp` | An Entra ID app in your tenant |
+
+## Microsoft 365
+
+Wraps the Microsoft Graph API — OneDrive, Outlook, Calendar, and more (~320 tools). Your org registers an Entra ID app once; each member or agent then connects their own Microsoft account, and every call runs with that account's Graph token.
+
+### 1. Register an Entra ID app
+
+In the [Microsoft Entra admin center](https://entra.microsoft.com) → **App registrations** → **New registration**:
+
+1. **Name** — e.g. `zwrm MCP connector`.
+2. **Supported account types** — *Accounts in this organizational directory only* (single tenant).
+3. **Redirect URI** — platform *Web*, URI `https://mcp.zwrm.io/oauth/callback`.
+4. From the Overview page, note the **Application (client) ID** and **Directory (tenant) ID**.
+5. **Certificates & secrets** → **New client secret** — copy the secret *value* (shown once) and note its expiry.
+6. **API permissions** → **Microsoft Graph** → **Delegated permissions**. Add what you want to expose:
+
+| Permission | Grants |
+|------------|--------|
+| `User.Read` | Always required |
+| `offline_access` | Required — long-lived refresh tokens |
+| `Files.ReadWrite` | OneDrive |
+| `Mail.ReadWrite`, `Mail.Send` | Outlook |
+| `Calendars.ReadWrite` | Calendar |
+
+Grant admin consent if your tenant requires it.
+
+### 2. Register the upstream
+
+```bash
+zwrm mcp upstream add ms365 https://mcp-ms365.zwrm.io/mcp \
+  --oauth \
+  --oauth-client-id <client-id> \
+  --oauth-client-secret <client-secret> \
+  --oauth-scope "User.Read Files.ReadWrite offline_access" \
+  --oauth-issuer "https://login.microsoftonline.com/<tenant-id>/v2.0"
+```
+
+Or in the dashboard: **MCP** → **Add integration** → **Microsoft 365**.
+
+<Warning>
+The `--oauth-issuer` pin is required. The shared instance can't advertise your tenant's authorization server, and Entra ID needs a tenant-specific authority — the `common`/`organizations` authorities fail issuer verification.
+</Warning>
+
+Rotating the client secret is an upstream-credentials update with no re-consent needed. Credentials are replaced whole rather than merged, so re-enter the client ID, scope, and authorization server along with the new secret.
+
+### 3. Connect accounts
+
+- **Members** — `zwrm mcp connect ms365`, or the **Connect** button on the connection row.
+- **Agents** — authorize the agent from its agent page, or bind a pre-consented grant on the server attachment for headless runs. Prefer a purpose-scoped service account: a bound grant exposes that account's entire reach to every caller.
+
+See [Connector identity](/context/credentials) for the full model.
+
+### 4. Curate the tool surface
+
+The upstream ships ~320 tools. An "all tools" attachment automatically exposes only those covered by the scopes you configured — `User.Read Files.ReadWrite offline_access` yields roughly the 50 OneDrive and file tools, and the rest are hidden because they'd only fail with a Graph permission error.
+
+For a tighter surface, compose a [virtual server](/context/mcp-gateway#virtual-servers) selecting exactly what you need. Explicit selections are always exposed, even beyond the configured scopes.
+
+### Limits
+
+- **Work and school accounts only.** Personal Microsoft accounts (outlook.com) need the `consumers` authority and currently break on refresh.
+- Whether an exposed tool actually works still depends on the connected account's consent and your tenant policy — a call outside granted scopes fails with a Graph permission error, not a gateway error.
+- The shared instance sees your users' Graph tokens in flight as it forwards them to Microsoft. If you need hard isolation, run your own instance and point an upstream at it; the rest of the setup is identical.

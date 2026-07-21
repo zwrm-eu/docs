@@ -39,6 +39,22 @@ Authenticate each delivery either way:
 - `X-Webhook-Secret: <secret>` — the plain secret as a header, or
 - `X-Webhook-Signature: sha256=<hex>` — HMAC-SHA256 of the **raw body** with the secret.
 
+### Provider webhooks
+
+Most providers can't send custom headers — they sign with their own fixed header instead. ZWRM recognizes those directly, so you can paste the trigger secret into the provider's webhook settings and it just works:
+
+| Provider | Header | Form |
+|----------|--------|------|
+| GitHub | `X-Hub-Signature-256` | `sha256=<hex>` |
+| GitLab | `X-Gitlab-Token` | Plain secret |
+| Bitbucket Cloud | `X-Hub-Signature` | `sha256=<hex>` |
+| Gitea / Forgejo | `X-Gitea-Signature` | Bare hex |
+| Google Drive / Calendar push | `X-Goog-Channel-Token` | Plain secret |
+
+For GitHub, paste the secret into the webhook's *Secret* field and set the content type to `application/json`.
+
+Verification is accept-if-any: an unmatched header never vetoes one that verifies. Providers whose signatures cover a timestamped string (Stripe, Slack, Svix-based) or that require a validation handshake (Microsoft Graph, Event Grid, Zoom) are not supported by header aliasing.
+
 Bodies are parsed as JSON (up to 1 MiB). The agent's prompt is built from the trigger's instruction plus the rendered body (via `--message-template`, or the raw body if no template is set).
 
 ### Idempotency

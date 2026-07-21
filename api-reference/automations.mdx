@@ -24,12 +24,14 @@ Cron → agent runs. See the [Schedules guide](/automations/schedules).
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `POST` | `/v1/schedules` | Create a schedule |
-| `GET` | `/v1/schedules` | List schedules (`?agent=` ID or name) |
+| `POST` | `/v1/schedules` | Create a schedule (optional `metadata` map) |
+| `GET` | `/v1/schedules` | List schedules (`?agent=` ID or name; `?metadata.<key>=<value>` to filter, ANDed) |
 | `GET` | `/v1/schedules/{schedule_id}` | Get a schedule (next/last run) |
 | `PATCH` | `/v1/schedules/{schedule_id}` | Update (pause/resume, cron, prompt — the agent binding is immutable) |
 | `DELETE` | `/v1/schedules/{schedule_id}` | Delete (with its firing log) |
 | `GET` | `/v1/schedules/{schedule_id}/firings` | Firing log (`?limit=`, default 100) |
+
+`metadata` is an opaque string map (max 20 entries, 64-character keys, 256-character values) accepted on create and update. A malformed `metadata.` filter returns `400` rather than silently widening the listing.
 
 ## Outbound webhooks
 
