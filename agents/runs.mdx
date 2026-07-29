@@ -19,7 +19,7 @@ zwrm agent run --agent research --session weekly-report \
 | `--agent` | string | — | Agent instance name or ID (required) |
 | `--prompt` | string | — | The task (required) |
 | `--session` | string | — | Session continuity key. Same key = continue that workspace; empty = fresh anonymous workspace |
-| `--model` | string | agent default | `opus` or `sonnet` |
+| `--model` | string | agent default | Harness-specific alias or ID — see [Models](/agents/models) |
 | `--effort` | string | agent default | `low`, `medium`, `high`, `xhigh`, `max` |
 | `--size` | string | agent default | VM preset for this run |
 | `--timeout` | duration | server default | e.g. `30m` |
@@ -61,6 +61,7 @@ Dispatches a follow-up run on the finished run's workspace — full conversation
 
 When the final turn ends, the run completes and the VM is gone. Deliverables:
 
-- **Summary** — shown in `run status` and on the run page.
+- **Result** — the final turn's text, shown in `run status` and on the run page.
 - **Files** — anything the agent staged in `~/outputs/` is snapshotted onto the run at finalize. Every VM boots with `~/outputs/` created and the convention written into the agent's platform instructions, so agents stage user-facing files there without being told.
-- **Messages** — anything sent via `send_message` lands in the agent's [Inbox](/agents/messaging) and your configured channels.
+
+To reach a human outside the dashboard, the agent uses an attached [connector](/context/connectors) (email, Teams, Slack, …) — there is no built-in messaging. See [Waiting & outputs](/agents/messaging).

@@ -40,7 +40,7 @@ Org-level upstreams and virtual servers. See the [MCP Gateway guide](/context/mc
 
 ## Upstream grants
 
-Connected accounts on a per-user OAuth upstream. See [Connector identity](/context/credentials). Grants never return tokens.
+Connected accounts on a per-user OAuth upstream. See [Connector identity](/context/credentials). Grants never return tokens; each carries a display-only `principal_label` (the connected account's name/email from the provider's OpenID identity) so lists show who a grant acts as.
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -51,7 +51,7 @@ Connected accounts on a per-user OAuth upstream. See [Connector identity](/conte
 | `DELETE` | `/v1/org/mcp/upstreams/{name}/grants/{principal_type}/{principal_id}` | Revoke a grant |
 | `GET` | `/v1/mcp/oauth/callback` | OAuth redirect target (public; not called directly) |
 
-A `zwrm_user` flow can only ever target the caller — you can't start a flow for someone else. Binding or revoking another user's personal grant requires org admin. Agent grants are org-shared: any member may create, bind, and revoke them. A call with no usable grant returns `403`.
+A `zwrm_user` flow can only ever target the caller — you can't start a flow for someone else. Revoking another user's personal grant requires org admin. Agent grants are org-shared: any member may authorize or revoke them. A call with no usable grant returns `403`.
 
 ## Gateway data plane
 

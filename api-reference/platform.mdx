@@ -1,6 +1,6 @@
 ---
 title: "Platform & org"
-description: "Auth, organizations, domains, audit logs, templates, and host management."
+description: "Auth, organizations, credits, domains, audit logs, and templates."
 icon: "building"
 ---
 
@@ -35,6 +35,19 @@ An unknown scope returns `400`; an org you aren't a member of returns `403`. The
 | `GET` | `/v1/org/settings` | Org settings |
 | `PUT` | `/v1/org/settings` | Update org settings |
 
+## Credits
+
+Prepaid credit balance and the zwrm-runtime metering ledger, in EUR. See [Credits & billing](/billing/credits). Reads are org-scoped and outside the agent-token scope.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/v1/credits` | Balance, currency (`eur`), metering flag, low-balance flag |
+| `GET` | `/v1/credits/ledger` | Ledger history, newest-first (`?before_id=`, `?limit=` 1–200) |
+| `GET` | `/v1/credits/usage` | Per-agent EUR consumption (today + 7 days) |
+| `GET` | `/v1/credits/pricing` | zwrm-runtime model prices in EUR |
+
+Subscriptions and credit-pack purchases run through Stripe in a separate auth service (`/billing/*`), driven from the dashboard — not part of the `/v1` surface.
+
 ## Custom domains
 
 | Method | Path | Description |
@@ -64,34 +77,3 @@ VM image templates for agents and sandboxes. See [Templates](/agents/templates).
 | `DELETE` | `/v1/templates/{id}` | Delete |
 | `POST` | `/v1/templates/{id}/rebuild` | Rebuild the image |
 | `PATCH` | `/v1/templates/{id}/quota` | Update template quota |
-
-## Hosts
-
-Host visibility and lifecycle (platform operators).
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/v1/hosts` | List hosts |
-| `GET` | `/v1/hosts/{host_id}` | Get a host |
-| `POST` | `/v1/hosts/{host_id}/drain` | Drain (migrate workloads off) |
-| `GET` | `/v1/hosts/{host_id}/drain-status` | Drain progress |
-| `POST` | `/v1/hosts/{host_id}/drain/retry/{machine_id}` | Retry one migration |
-| `POST` | `/v1/hosts/{host_id}/undrain` | Cancel draining |
-| `POST` | `/v1/hosts/{host_id}/activate` | Activate a host |
-| `DELETE` | `/v1/hosts/{host_id}` | Remove a host (host-admin) |
-
-## System administration
-
-Host-admin only.
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `POST` | `/v1/system/backups` | Take a control-plane backup |
-| `GET` | `/v1/system/backups` | List backups |
-| `GET` | `/v1/system/backups/{backup_id}` | Get a backup |
-| `DELETE` | `/v1/system/backups/{backup_id}` | Delete a backup |
-| `POST` | `/v1/system/secrets/rotate` | Rotate the secrets master key |
-| `GET` | `/v1/system/secrets/rotation-status` | Rotation progress |
-| `POST` | `/v1/system/secrets/retire/{version}` | Retire an old key version |
-
-Internal endpoints under `/v1/internal/*` (host-agent facing: image registry, WAL proxy, volume usage, discovery) are not part of the public API surface.

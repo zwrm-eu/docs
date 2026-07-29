@@ -59,7 +59,7 @@ Rotating the client secret is an upstream-credentials update with no re-consent 
 ### 3. Connect accounts
 
 - **Members** — `zwrm mcp connect ms365`, or the **Connect** button on the connection row.
-- **Agents** — authorize the agent from its agent page, or bind a pre-consented grant on the server attachment for headless runs. Prefer a purpose-scoped service account: a bound grant exposes that account's entire reach to every caller.
+- **Agents** — authorize the agent from its agent page (or `zwrm mcp connect ms365 --agent <agent>`); the agent then acts as its own connected account. Consent with a purpose-scoped service account, not a personal one — the agent gets that account's entire reach.
 
 See [Connector identity](/context/credentials) for the full model.
 

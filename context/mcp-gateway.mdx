@@ -65,7 +65,7 @@ zwrm mcp server rm github-tools
 
 - `--upstream` is repeatable: `"name"` selects all of that upstream's tools, `"name:tool1,tool2"` selects a subset. Tool allowlists are the composition — build a read-only variant by selecting only read tools.
 - `--description` is served as the MCP `instructions` for connecting clients.
-- `--bound-grant <upstream>=<type>:<id>` pins one pre-consented account for every caller on a per-user OAuth upstream. By default each caller acts as their own account — see [Connector identity](/context/credentials).
+- On a per-user OAuth upstream, every caller always acts as their own connected account — there is no per-attachment identity setting to configure. See [Connector identity](/context/credentials).
 - Tool names pass through unmodified unless two upstreams collide, in which case they are prefixed `{upstream}_{tool}`.
 - `get` shows the endpoint, the exposed tool mapping, and any problems.
 

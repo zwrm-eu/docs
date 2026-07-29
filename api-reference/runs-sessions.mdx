@@ -1,6 +1,6 @@
 ---
 title: "Runs & sessions"
-description: "Autonomous runs, live sessions, the event timeline, and the inbox."
+description: "Autonomous runs, live sessions, and the event timeline."
 icon: "play"
 ---
 
@@ -54,22 +54,11 @@ Every event carries a per-session monotonic `seq`, a `type`, a `ts`, and a `payl
 | `sdk.user` | yes | Tool results / user-side messages |
 | `sdk.result` | yes | End-of-turn result with usage and cost |
 | `permission.request` / `permission.decision` | yes | Tool-permission round-trips |
-| `message.created` | yes | The agent called `send_message` |
 | `sdk.partial` | no | Token-stream deltas (streaming only; superseded by the following `sdk.assistant`) |
 
 <Note>
-`sdk.*` payloads are Claude Agent SDK messages passed through verbatim — treat their inner structure as defined by the SDK, not by ZWRM.
+`sdk.*` payloads are the agent harness's SDK messages passed through verbatim — treat their inner structure as defined by that SDK (Claude Agent SDK for claude agents; the codex / pi SDKs for those harnesses), not by ZWRM.
 </Note>
-
-## Inbox (agent messages)
-
-Messages agents send via [`send_message`](/agents/messaging).
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/v1/agent-messages` | List messages (`?unreplied=true`) |
-| `GET` | `/v1/agent-messages/{id}` | Get a message |
-| `POST` | `/v1/agent-messages/{id}/reply` | Reply — steers the live session or dispatches a follow-up run |
 
 ## OpenAI-compatible facade
 
