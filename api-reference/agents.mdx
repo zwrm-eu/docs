@@ -1,6 +1,6 @@
 ---
 title: "Agents"
-description: "Agent definitions, workspaces, channels, connectors, and per-agent skills."
+description: "Agent definitions, workspaces, connectors, memory, and per-agent skills."
 icon: "robot"
 ---
 
@@ -31,19 +31,8 @@ An agent is [pure configuration](/agents/overview); these endpoints manage the d
 | `GET` | `/v1/agents/{agent_id}/workspaces` | List the agent's workspaces |
 | `DELETE` | `/v1/agents/{agent_id}/workspaces/{workspace_id}` | Delete a workspace (and its volume) |
 | `PUT` | `/v1/agents/{agent_id}/workspace-ttl` | Set keyed-workspace TTL |
-| `GET` | `/v1/agents/{agent_id}/workspaces/{workspace_ref}/files/{path}` | Browse/download workspace files (VM must be up) |
-| `PUT` | `/v1/agents/{agent_id}/workspaces/{workspace_ref}/files/{path}` | Upload a file into the workspace |
-
-## Message channels
-
-Deliver [`send_message`](/agents/messaging) output to email, WhatsApp, SMS, or SNS.
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/v1/agents/{agent_id}/channels` | List channels (and available channel types) |
-| `POST` | `/v1/agents/{agent_id}/channels` | Add a channel |
-| `PATCH` | `/v1/agents/{agent_id}/channels/{channel_id}` | Enable/disable a channel |
-| `DELETE` | `/v1/agents/{agent_id}/channels/{channel_id}` | Remove a channel |
+| `GET` | `/v1/agents/{agent_id}/workspaces/{workspace_ref}/files/{path}` | List (`?list=true`) or download files. Works even when the VM is off — a cold workspace's files are served read-only host-side from the stored volume (`507` under host disk pressure). `workspace_ref` is a workspace ID or key (`default`) |
+| `PUT` | `/v1/agents/{agent_id}/workspaces/{workspace_ref}/files/{path}` | Upload a file into the workspace (requires a live daemon) |
 
 ## Connectors
 

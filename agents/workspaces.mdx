@@ -30,13 +30,30 @@ One live session per workspace: runs on the same session key queue and execute i
 
 There is no built-in repo concept. A repo is whatever the prompt (or a skill) clones onto the workspace volume. `gh` is pre-authenticated in every VM, so "clone acme/api and open a PR" just works — and the clone persists on the volume for the next run with the same key.
 
+## Home volume
+
+Each workspace gets a persistent home volume — **5 GB by default**, and **grow-only**. Resize it from the CLI (the workspace must be stopped and cold first — disconnect and let it settle):
+
+```bash
+zwrm agent resize my-project --volume 20GB
+```
+
+A resize is refused while the workspace is running, suspended, or waking, or while its filesystem is frozen behind a snapshot — disconnect the agent and let the workspace go cold, then resize.
+
 ## Files
 
-- **Browse and download** workspace files via the dashboard, or via the API (`GET /v1/agents/{agent}/workspaces/{key}/files/...`) while a VM is up.
+- **Browse and download** workspace files via the dashboard, or via the API (`GET /v1/agents/{agent}/workspaces/{ref}/files/...`). This works **even when the VM is off** — a cold workspace's files are served read-only straight from the stored volume. **Uploads** (`PUT`) need a live VM.
 - **Run deliverables** — files the agent stages in `~/outputs/` are snapshotted onto the run when it finalizes, so they remain available after the VM is gone.
 
-## VM lifecycle
+## Lifecycle & tiers
 
-- A VM boots when a run, chat, or SSH session starts on the workspace and is destroyed when the execution finishes. The volume always survives.
-- Idle workspace VMs are **suspended** (Firecracker snapshot — no compute) and **woken on message**, so a live session resumes exactly where it was, mid-turn if necessary.
-- An execution's teardown never kills a VM you are SSH-ed into.
+A workspace is tiered automatically to save resources — **you never manage this by hand**; the next message, run, or connect wakes it and resumes the conversation. Defaults below are operator-tunable.
+
+| State | Entered after | What's kept | Wake cost |
+|-------|---------------|-------------|-----------|
+| **Running** | In use | Everything, live | — |
+| **Suspended** | ~15 min idle | Firecracker snapshot (no compute billed) | ~⅓ second, mid-turn |
+| **Cold** | ~48 h suspended | Volume + files + conversation (snapshot dropped) | A few seconds (full boot) |
+| **Archived** | ~30 days cold | Conversation only — **working files on the volume are deleted** | Full boot, conversation rehydrated into a fresh empty volume |
+
+The **conversation survives every tier**; **working files survive until archive**. An execution's teardown never kills a VM you are SSH-ed into.

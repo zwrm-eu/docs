@@ -1,0 +1,79 @@
+---
+title: "Credits & billing"
+description: "Prepaid credits for the zwrm runtime, subscriptions, and invoices."
+icon: "credit-card"
+---
+
+ZWRM has two independent billing surfaces:
+
+- **Prepaid credits** — a EUR balance that meters usage of the **[zwrm runtime](/agents/models#the-zwrm-runtime-pi)** (the `pi` harness). Claude and Codex agents run on *your* Anthropic/OpenAI credentials and never touch credits.
+- **A subscription** — the plan that unlocks compute. Separate from credits; managed entirely in the dashboard.
+
+## Prepaid credits
+
+A credit is one **euro cent**. Balance, the ledger, per-agent usage, and model prices are all denominated in EUR.
+
+Only zwrm-runtime (pi) sessions are metered. Each cost report during a run banks the model cost — converted from the provider's USD cost at the deployment's rate (which folds in FX and margin) — into your daily usage and **debits the org's credit balance in the same atomic write**, so a crash can never lose or double-count a debit. Every debit carries a unique idempotency key: a replayed cost report writes nothing. The sub-cent remainder is carried on the agent, so at most one cent is ever rounded in your favor over an agent's whole life.
+
+### Check your balance and usage
+
+```bash
+zwrm credits              # balance (€), metering status, ok / low / EXHAUSTED
+zwrm credits history      # ledger: purchases, debits, adjustments
+zwrm credits usage        # per-agent zwrm-runtime consumption (today + 7 days)
+```
+
+`history` pages newest-first — `--limit` (max 200) and `--before <ledger-id>` walk older entries.
+
+### Buying credits
+
+Credits are bought in the **dashboard → Settings → Credits**. You pick a one-time EUR credit pack; checkout runs through Stripe, and the purchased cents land in your ledger as a `purchase` entry once payment settles. Stripe issues the receipt/invoice. Available pack amounts (and the minimum) are set per deployment.
+
+VAT is handled by Stripe Tax where the deployment enables it: prices are tax-exclusive, so VAT is added on top for your jurisdiction, and an EU business that enters a VAT ID at checkout gets reverse-charge invoicing.
+
+### Running low and running out
+
+- **Low-balance warning** — when the balance falls under a configured threshold, the dashboard shows a banner and ZWRM emails the org's owners/admins (at most once per 24h). `zwrm credits` reports status `low`.
+- **Exhaustion** — once the balance reaches zero, **new zwrm-runtime work is refused with `402 Payment Required`** (checked per turn for sessions and at dispatch for runs; a turn already in flight is never killed). This is surfaced **per agent**: each zwrm-runtime agent shows the warning and the new-agent dialog disables the zwrm-runtime option. Claude and Codex agents are unaffected — they don't use credits.
+
+<Note>
+Enforcement only applies where metering is on (a deployment can run with metering disabled). It never blocks claude/codex work, and it fails open on a read error rather than stranding an org.
+</Note>
+
+### Model pricing
+
+Live per-token prices for the zwrm-runtime catalog are shown in EUR in the dashboard (Settings → Credits → Model pricing) and served by the API:
+
+```
+GET /v1/credits/pricing
+```
+
+The response carries each model's `input_per_m_eur` / `output_per_m_eur` (per million tokens), context window, and reasoning flag — converted server-side at the deployment rate so clients never do the arithmetic.
+
+### Ledger API
+
+Reads are org-scoped (session/user auth) and deliberately outside the agent-token scope:
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/v1/credits` | Balance, currency (`eur`), metering flag, low-balance flag |
+| `GET` | `/v1/credits/ledger` | Ledger history, newest-first (`?before_id=`, `?limit=` 1–200) |
+| `GET` | `/v1/credits/usage` | Per-agent EUR consumption (today + 7 days), plus deleted-agent charge |
+| `GET` | `/v1/credits/pricing` | zwrm-runtime model prices in EUR |
+
+## Subscriptions & invoices
+
+A subscription is what unlocks compute — an org without one has no plan and no compute (there is no free tier). Plans, intervals (monthly or annual), payment methods, invoices, plan changes, and cancellation are all handled in the **dashboard** through Stripe's billing portal; there is no `zwrm billing` CLI command. Some deployments offer a no-card trial.
+
+## Inviting your team
+
+Organization invitations are sent and accepted in the **dashboard** (there is no CLI for invites): invite a member by email, and they receive a link to accept — signing in or creating an account with the invited address, which then joins them to the org.
+
+```bash
+zwrm org list             # organizations you belong to, with your role and tier
+zwrm org create <name>    # create a new organization
+```
+
+<Note>
+Credit→EUR conversion rate, credit-pack amounts, VAT behavior, trial length, and available plans are all configured per deployment — the exact figures live in the dashboard, not in these docs.
+</Note>

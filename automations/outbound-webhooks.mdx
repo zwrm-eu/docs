@@ -4,7 +4,7 @@ description: "Subscribe external endpoints to platform events."
 icon: "tower-broadcast"
 ---
 
-Outbound webhooks push platform events to your own HTTP endpoints — the reverse direction of [inbound webhooks](/automations/webhooks). Use them to get notified when deploys finish, machines restart, backups fail, or an agent run needs your attention.
+Outbound webhooks push platform events to your own HTTP endpoints — the reverse direction of [triggers](/automations/triggers). Use them to get notified when deploys finish, machines restart, backups fail, or an agent run needs your attention.
 
 Outbound webhooks are managed via the API (there is no CLI command yet):
 
@@ -29,10 +29,10 @@ POST   /v1/org/webhooks/deliveries/{delivery_id}/retry
 | Backups | `backup.completed`, `backup.failed` |
 | Secrets | `secret.created`, `secret.updated`, `secret.deleted` |
 | PostgreSQL | `postgres.health_failed`, `postgres.health_recovered`, `postgres.failover_started`, `postgres.failover_completed`, `postgres.failover_failed` |
-| Agents | `agent_run.completed`, `agent_run.failed`, `agent_run.needs_attention`, `agent_message.created` |
+| Agents | `agent_run.completed`, `agent_run.failed`, `agent_run.needs_attention` |
 | Testing | `webhook.test` |
 
-The agent events make outbound webhooks the machine-readable counterpart of the [Inbox](/agents/messaging): `agent_run.needs_attention` fires when a run pauses on an escalation, and `agent_message.created` fires on every `send_message`.
+The agent events are the machine-readable way to follow runs: `agent_run.completed` and `agent_run.failed` fire at terminal states, and `agent_run.needs_attention` fires when a run pauses on an [escalation](/agents/messaging#escalations). (There is no message event — the platform has no built-in messaging; agents reach out through [connectors](/context/connectors).)
 
 ## Verifying deliveries
 

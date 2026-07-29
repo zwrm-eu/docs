@@ -1,56 +1,37 @@
 ---
-title: "Messaging"
-description: "How agents wait, ask questions, and get answered."
-icon: "inbox"
+title: "Waiting & outputs"
+description: "How a run waits, delivers results, and reaches a human."
+icon: "hourglass-half"
 ---
 
-Runs are honest about their lifecycle: when the final turn ends, the run completes and the VM is gone — an agent cannot poll or wake itself up. Instead, it has platform tools for waiting and communicating, and you have an inbox for answering.
+Runs are honest about their lifecycle: when the final turn ends, the run completes and the VM is gone — an agent cannot poll or wake itself up. While a run is live it has a platform tool for waiting, two native surfaces for delivering results, and (when you attach one) connectors for reaching a human.
 
 <Note>
-Platform tools exist **only in autonomous [runs](/agents/runs)**. Interactive sessions — dashboard chat, the [OpenAI-compatible API](/agents/openai-api), SSH — don't get them: a live reader is already watching the conversation, so there is nothing to notify and nothing to sleep through.
+The platform has **no messaging capability of its own** — no built-in inbox, no message channels, no `send_message` tool. Everything an agent sends to a human goes through an [MCP connector](/context/connectors). The run's result and its `~/outputs/` files are the platform's own delivery surfaces.
 </Note>
 
 ## Waiting
 
 - **`sleep(seconds)` / `sleep_until(timestamp)`** — the agent parks the run (max 6 hours). The VM is snapshotted while sleeping (zero compute) and resumes mid-turn with full state. For anything longer, the agent is instructed to finish with a handoff instead.
 
-## Asking: `send_message`
+Waiting tools exist **only in autonomous [runs](/agents/runs)**. Interactive sessions — dashboard chat, the [OpenAI-compatible API](/agents/openai-api), SSH — don't get them: a live reader is already watching the conversation, so there is nothing to sleep through.
 
-`send_message(text)` notifies you through the agent detail page's **Inbox** tab, [outbound webhooks](/automations/outbound-webhooks) (`agent_message.created`), and configured message channels. It is fire-and-forget.
+## Run outputs
 
-<Note>
-In a run, `send_message` is the **only** agent output that reaches you — plain assistant text stays in the session timeline and notifies nobody. Together with files staged in `~/outputs/`, it forms the two-channel contract for run deliverables, and the run preamble tells the agent so.
-</Note>
+When the final turn ends, a run delivers through exactly two native channels:
 
-## Answering
+- **Result** — the final turn's text, shown in `zwrm agent run status` and on the run page.
+- **Files** — anything the agent staged in `~/outputs/` is snapshotted onto the run at finalize. Every VM boots with `~/outputs/` created and the convention written into the agent's platform instructions, so agents stage user-facing files there without being told.
 
-Reply from the agent's Inbox tab in the dashboard, or from the CLI:
+Plain assistant text from earlier turns stays in the session timeline; the **result** and the **files** are what carry a run's deliverables out.
 
-```bash
-zwrm agent messages list [--unreplied]
-zwrm agent messages reply <message-id> --text "Yes, ship it"
-```
+## Reaching a human
 
-A live session is steered in place; a finished one gets a follow-up run on the same workspace. Either way, the agent sees your answer with full context.
+There is no platform primitive for notifications, replies, or alerts. To reach someone outside the dashboard, attach a [connector](/context/connectors) with the right tool — email, Microsoft Teams, Slack, and so on — and the agent calls it like any other tool. The run preamble tells the agent this directly: if no such connector is available, it must say so in its result and must never claim it notified, messaged, or alerted anyone unless a connector call actually succeeded.
 
-## Message channels
+For a run started by a [Microsoft Teams trigger](/automations/triggers#microsoft-teams-triggers), the reply path is the Microsoft 365 connector: the agent posts back to the originating chat with a connector tool, and the run prompt carries the destination chat ID.
 
-Channels deliver an agent's `send_message` output beyond the dashboard:
-
-```bash
-zwrm agent channels list --agent my-project
-zwrm agent channels add --agent my-project --type email --target you@example.com
-zwrm agent channels add --agent my-project --type whatsapp --target +4915112345678
-```
-
-| Flag | Type | Default | Description |
-|------|------|---------|-------------|
-| `--agent` | string | — | Agent (required) |
-| `--type` | string | `email` | `email`, `whatsapp`, `sms`, or `sns` |
-| `--target` | string | — | Email address, E.164 phone number, or SNS topic ARN (required) |
-| `--org-wide` | bool | `false` | Make this the org-default binding |
-
-Manage existing channels with `zwrm agent channels enable|disable|remove <channel-id> --agent <agent>`. Available channel types depend on what your deployment has configured — `channels list` prints the deliverable types.
+To watch runs and lifecycle events programmatically, subscribe to [outbound webhooks](/automations/outbound-webhooks) — `agent_run.completed`, `agent_run.failed`, and `agent_run.needs_attention` are delivered to your endpoint.
 
 ## Escalations
 

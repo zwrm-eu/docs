@@ -57,6 +57,7 @@
             "group": "Agents",
             "pages": [
               "agents/overview",
+              "agents/models",
               "agents/runs",
               "agents/workspaces",
               "agents/messaging",
@@ -82,9 +83,15 @@
           {
             "group": "Automations",
             "pages": [
-              "automations/webhooks",
+              "automations/triggers",
               "automations/schedules",
               "automations/outbound-webhooks"
+            ]
+          },
+          {
+            "group": "Billing",
+            "pages": [
+              "billing/credits"
             ]
           },
           {
@@ -153,7 +160,7 @@
             ]
           },
           {
-            "group": "Administration",
+            "group": "Platform & org",
             "pages": [
               "api-reference/platform"
             ]

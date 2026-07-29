@@ -1,12 +1,23 @@
 ---
-title: "Webhooks"
+title: "Triggers"
 description: "Turn external events into agent runs."
 icon: "bolt"
 ---
 
-Inbound webhooks (called **triggers** in the CLI) turn external events into agent runs: Stripe fires on a new order, GitHub on a new issue, your monitoring on an alert — and an agent picks it up with the event payload as context. In the dashboard they live under **Automations → Webhooks**.
+**Triggers** turn external events into agent runs: Stripe fires on a new order, GitHub on a new issue, a Teams message arrives — and an agent picks it up with the event payload as context. Each trigger is a slug-gated ingestion endpoint with routing, a match gate, a shared secret, and a daily rate cap. In the dashboard they live under **Automations → Triggers** (distinct from **Schedules**, which are time-driven).
 
-## Create a webhook
+## Providers
+
+Every trigger has a **provider** — the kind of event source it ingests. It's fixed when the trigger is created.
+
+| Provider | Source | Created from |
+|----------|--------|--------------|
+| `webhook` (default) | Any external system that can POST JSON to a URL — including GitHub, GitLab, Stripe, Linear, Shopify, Sentry, and your own systems | CLI, API, dashboard |
+| `msteams` | A Microsoft Teams chat, via a Microsoft Graph change-notification subscription on your connected account | API, dashboard (**not** the CLI) |
+
+Both providers feed the same pipeline once a delivery is normalized to a JSON body: **match gate → route → dedup + rate cap → budget-gated run**.
+
+## Create a webhook trigger
 
 ```bash
 zwrm triggers create "Stripe orders" \
@@ -25,8 +36,9 @@ zwrm triggers create "Stripe orders" \
 | `--routes` | JSON | — | Routing rules: `[{agent_id,when?}]` |
 | `--rate-per-day` | int | `0` | Daily delivery cap (`0` = unlimited) |
 | `--no-secret` | bool | `false` | Create a slug-gated trigger with no secret |
+| `--secret` | string | — | Import a provider-minted signing secret (Linear, Shopify, Sentry) instead of generating one |
 
-On success the CLI prints the hook URL and — **exactly once** — the secret. Store it immediately.
+On success the CLI prints the hook URL and — **exactly once** — the secret. Store it immediately. (`--secret` and `--no-secret` are mutually exclusive.)
 
 ## Sending events
 
@@ -50,10 +62,13 @@ Most providers can't send custom headers — they sign with their own fixed head
 | Bitbucket Cloud | `X-Hub-Signature` | `sha256=<hex>` |
 | Gitea / Forgejo | `X-Gitea-Signature` | Bare hex |
 | Google Drive / Calendar push | `X-Goog-Channel-Token` | Plain secret |
+| Linear | `Linear-Signature` | Bare hex — import the secret with `--secret` |
+| Shopify | `X-Shopify-Hmac-Sha256` | Base64 — import the secret with `--secret` |
+| Sentry | `Sentry-Hook-Signature` | Bare hex — import the secret with `--secret` |
 
-For GitHub, paste the secret into the webhook's *Secret* field and set the content type to `application/json`.
+For GitHub, paste the secret into the webhook's *Secret* field and set the content type to `application/json`. Linear, Shopify, and Sentry mint their **own** signing secret — copy it from the provider and pass it to `--secret` so ZWRM verifies against the same value.
 
-Verification is accept-if-any: an unmatched header never vetoes one that verifies. Providers whose signatures cover a timestamped string (Stripe, Slack, Svix-based) or that require a validation handshake (Microsoft Graph, Event Grid, Zoom) are not supported by header aliasing.
+Verification is accept-if-any: an unmatched header never vetoes one that verifies. Providers whose signatures cover a timestamped string (Stripe, Slack, Svix-based) or that require a validation handshake (Microsoft Graph, Event Grid, Zoom) are not supported by header aliasing — send those with an explicit `X-Webhook-Secret`/`X-Webhook-Signature` header, or use the `msteams` provider for Teams.
 
 Bodies are parsed as JSON (up to 1 MiB). The agent's prompt is built from the trigger's instruction plus the rendered body (via `--message-template`, or the raw body if no template is set).
 
@@ -90,6 +105,24 @@ Operators: `exists`, `not_exists`, `equals` (default), `not_equals`, `in`. Paths
 
 The dashboard has a visual editor for conditions and routes.
 
+## Microsoft Teams triggers
+
+An `msteams` trigger wakes an agent on messages in a Teams chat — and, uniquely, gives the agent a way to reply. Because it rides a Microsoft Graph subscription on your connected account, it's created from the **dashboard or API only**, not the CLI.
+
+**Prerequisites:** the org has a [Microsoft 365 connector](/context/shared-connectors) (a per-user OAuth MCP upstream), and the user creating the trigger has connected their Microsoft account to it. The trigger uses that delegated grant (Chat.Read; presence needs Presence.ReadWrite).
+
+**Configuration:**
+
+| Field | Description |
+|-------|-------------|
+| `upstream` | The Microsoft 365 connector name (immutable — changing it means a new trigger) |
+| `include_own_messages` | `false` (default) fires only on received messages; `true` also fires on your own outgoing messages |
+| `presence` | Publish "Available" presence for the connected account while the trigger is active |
+
+Each delivery defaults to one persistent session per chat (`session_key_path` = `chat_id`), so the agent keeps context across a conversation. The run prompt carries a **reply preamble**: it tells the agent this came from a Teams message and that the only way to reply is a Microsoft 365 connector tool posting back to the originating `chat_id`. The agent replies **through the connector** — there is no built-in messaging (see [Waiting & outputs](/agents/messaging)).
+
+ZWRM manages the Graph subscription for you (create on activate, renew before its ~70h expiry, drop on delete). Subscription health surfaces read-only as `subscription_active`, `subscription_expires_at`, and any `last_error` / `presence_error`.
+
 ## Responses
 
 | Status | Meaning |
@@ -102,7 +135,7 @@ The dashboard has a visual editor for conditions and routes.
 | `429` | Daily rate cap or [agent budget](/agents/budgets) exceeded — retry later |
 | `503` | Transient dispatch failure — safe to retry |
 
-ZWRM does not retry inbound deliveries itself — the status codes are chosen so the *sender's* retry logic does the right thing.
+ZWRM does not retry inbound deliveries itself — the status codes are chosen so the *sender's* retry logic does the right thing. (Teams deliveries that hit the rate cap or budget are acknowledged `2xx` so Graph doesn't redeliver the whole batch.)
 
 ## Inspect and manage
 

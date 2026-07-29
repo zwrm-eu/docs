@@ -485,6 +485,18 @@ zwrm org secrets add --from-file <path>
 
 ---
 
+## `zwrm credits`
+
+Prepaid credits (EUR) metering the [zwrm runtime](/agents/models#the-zwrm-runtime-pi). Buy credits in the dashboard. [Guide →](/billing/credits)
+
+```bash
+zwrm credits                              # balance, metering status, ok/low/EXHAUSTED
+zwrm credits history [--limit 25] [--before <ledger-id>]   # ledger: purchases, debits, adjustments
+zwrm credits usage                        # per-agent consumption (today + 7 days)
+```
+
+---
+
 ## `zwrm transfer`
 
 Move an app (with its secrets and agents) to another organization. Requires ownership of both orgs; linked Postgres databases must be unlinked first.
@@ -543,9 +555,11 @@ Manage agents. [Guide →](/agents/overview)
 Connect interactively (creates the agent if the name is new):
 
 ```bash
-zwrm agent <type> [instance]      # type: claude | codex
+zwrm agent <type> [instance]      # type: claude | codex | pi
 zwrm a <type> [instance]
 ```
+
+The type picks the harness (`pi` = the zwrm runtime). [Models →](/agents/models)
 
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
@@ -589,10 +603,10 @@ zwrm agent delete [instance] [-f]    # delete VM, volume, and record
 Update agent configuration (only passed flags change).
 
 ```bash
-zwrm agent update <instance> [--size <preset>] [--model opus|sonnet] [--effort <e>] [--instructions <text>] [--workspace-ttl <dur>] [--daily-budget <usd>] [--max-runs-per-day <n>] [--allowed-scopes <list>]
+zwrm agent update <instance> [--size <preset>] [--model <m>] [--effort <e>] [--instructions <text>] [--workspace-ttl <dur>] [--daily-budget <usd>] [--max-runs-per-day <n>] [--allowed-scopes <list>]
 ```
 
-`--allowed-scopes` takes a comma-separated `resource:action` list; an empty value resets to the platform default. [Guide →](/agents/capabilities)
+`--model` is harness-specific (`opus`/`sonnet` for claude, catalog aliases for codex and the zwrm runtime — see [Models](/agents/models)). `--allowed-scopes` takes a comma-separated `resource:action` list; an empty value resets to the platform default. [Guide →](/agents/capabilities)
 
 ### `zwrm agent memory`
 
@@ -625,25 +639,6 @@ zwrm agent resize [instance] --volume <size>   # grow-only, agent must be stoppe
 
 ```bash
 zwrm agent logs [instance] [--limit 50]
-```
-
-### `zwrm agent messages`
-
-Agent inbox. [Guide →](/agents/messaging)
-
-```bash
-zwrm agent messages list [--unreplied]
-zwrm agent messages reply <message-id> --text <text>
-```
-
-### `zwrm agent channels`
-
-Message delivery channels. [Guide →](/agents/messaging#message-channels)
-
-```bash
-zwrm agent channels list --agent <name>
-zwrm agent channels add --agent <name> --type email|whatsapp|sms|sns --target <target> [--org-wide]
-zwrm agent channels enable|disable|remove <channel-id> --agent <name>
 ```
 
 ### `zwrm agent connectors`
@@ -727,17 +722,13 @@ zwrm mcp disconnect <upstream> [--agent <id|instance>]
 ### `zwrm mcp server`
 
 ```bash
-zwrm mcp server create <name> --upstream "<name>[:tool1,tool2]" [--upstream ...] [--description <text>] [--bound-grant <upstream>=<type>:<id>]
+zwrm mcp server create <name> --upstream "<name>[:tool1,tool2]" [--upstream ...] [--description <text>]
 zwrm mcp server list
 zwrm mcp server get <name>
 zwrm mcp server rm <name>
 ```
 
-| Flag | Description |
-|------|-------------|
-| `--bound-grant` | Pin one account for every caller: `<upstream>=<principal_type>:<principal_id>` (repeatable) |
-
-Without `--bound-grant`, each caller acts as their own connected account. [Guide →](/context/credentials)
+On a per-user OAuth upstream, every caller always acts as their own connected account — there is no per-attachment identity setting. [Guide →](/context/credentials)
 
 ### `zwrm mcp install`
 
@@ -749,15 +740,17 @@ zwrm mcp install <server> [--client claude-code|claude-api|cursor|vscode|windsur
 
 ## `zwrm triggers`
 
-Inbound webhooks: external events → agent runs. [Guide →](/automations/webhooks)
+Inbound triggers: external events → agent runs. Creates `webhook`-provider triggers (Microsoft Teams triggers are dashboard/API only). [Guide →](/automations/triggers)
 
 ```bash
 zwrm triggers list
-zwrm triggers create <name> [--default-agent <a>] [--instruction <text>] [--message-template <tpl>] [--session-key-path <path>] [--match <json>] [--routes <json>] [--rate-per-day <n>] [--no-secret]
+zwrm triggers create <name> [--default-agent <a>] [--instruction <text>] [--message-template <tpl>] [--session-key-path <path>] [--match <json>] [--routes <json>] [--rate-per-day <n>] [--no-secret | --secret <s>]
 zwrm triggers deliveries <trigger-id> [--limit 50]
 zwrm triggers pause|resume <trigger-id>
 zwrm triggers delete <trigger-id>
 ```
+
+`--secret` imports a provider-minted signing secret (Linear, Shopify, Sentry); mutually exclusive with `--no-secret`.
 
 ---
 
@@ -781,41 +774,6 @@ Show monitoring dashboard URLs. [Guide →](/apps/dashboard)
 
 ```bash
 zwrm dashboard [--open]
-```
-
----
-
-## `zwrm host`
-
-Manage cluster hosts (platform operators only).
-
-```bash
-zwrm host list
-zwrm host show <host-id>
-zwrm host drain <host-id>
-zwrm host drain-status <host-id>
-zwrm host undrain <host-id>
-zwrm host activate <host-id>
-zwrm host remove <host-id> [--force]
-```
-
----
-
-## `zwrm admin`
-
-Control plane administration (host-admin only).
-
-```bash
-zwrm admin backup                      # take a control plane backup
-zwrm admin backups                     # list backups
-zwrm admin backups delete <backup-id>
-
-zwrm admin secrets rotate              # rotate the secrets master key
-zwrm admin secrets rotation-status
-zwrm admin secrets retire-version <version>
-zwrm admin secrets escrow-init        # initialize key escrow
-zwrm admin secrets migrate-to-kdf
-zwrm admin secrets recover
 ```
 
 ---
