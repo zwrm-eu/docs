@@ -94,7 +94,7 @@ Blank = every delivery is a one-shot run on a fresh workspace.
  {"path": "data.object.amount_total", "op": "exists"}]
 ```
 
-Operators: `exists`, `not_exists`, `equals` (default), `not_equals`, `in`. Paths are dot-descent into JSON objects (no array indexing).
+Operators: `exists`, `not_exists`, `equals` (default), `not_equals`, `in`, plus the string operators `contains`, `not_contains`, `starts_with`, `ends_with`. String operators are **case-sensitive** and match only when the payload value is itself a string — a numeric `50` never matches `"50"` — and their `value` must be a non-empty string (max 512 bytes). Like `not_equals`, `not_contains` also passes when the field is missing; pair it with an `exists` condition to require presence. Paths are dot-descent into JSON objects (no array indexing).
 
 **Routes** (`--routes`) pick the agent: the first route whose `when` conditions all match wins; a route with no `when` is a catch-all. If no route matches, the `--default-agent` handles it; with neither, the delivery is dropped.
 
@@ -147,4 +147,4 @@ zwrm triggers resume <trigger-id>
 zwrm triggers delete <trigger-id>
 ```
 
-The delivery log records every delivery with its disposition: `accepted`, `duplicate`, `ignored`, `rejected_route`, `rejected_rate`, or `rejected_budget`, plus the dispatched run ID.
+The delivery log records every delivery with its disposition: `accepted`, `duplicate`, `ignored`, `rejected_auth`, `rejected_route`, `rejected_rate`, or `rejected_budget`, plus the dispatched run ID. Ignored deliveries record which condition failed and the actual value seen (e.g. `data.type equals 'order' — actual='refund'`).

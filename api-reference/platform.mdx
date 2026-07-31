@@ -33,7 +33,7 @@ An unknown scope returns `400`; an org you aren't a member of returns `403`. The
 | `POST` | `/v1/orgs` | Create an organization |
 | `GET` | `/v1/orgs` | List your organizations |
 | `GET` | `/v1/org/settings` | Org settings |
-| `PUT` | `/v1/org/settings` | Update org settings |
+| `PUT` | `/v1/org/settings` | Update org settings (partial; e.g. `{"require_eu_models": true}` — admin/owner only, see [EU residency](/agents/openai-api#eu-residency)) |
 
 ## Credits
 
@@ -44,7 +44,8 @@ Prepaid credit balance and the zwrm-runtime metering ledger, in EUR. See [Credit
 | `GET` | `/v1/credits` | Balance, currency (`eur`), metering flag, low-balance flag |
 | `GET` | `/v1/credits/ledger` | Ledger history, newest-first (`?before_id=`, `?limit=` 1–200) |
 | `GET` | `/v1/credits/usage` | Per-agent EUR consumption (today + 7 days) |
-| `GET` | `/v1/credits/pricing` | zwrm-runtime model prices in EUR |
+| `GET` | `/v1/credits/pricing` | Credit-metered model prices in EUR |
+| `GET` | `/v1/org/gateway-usage` | Per-model [gateway](/agents/openai-api) consumption over the last N days (`?days=`) |
 
 Subscriptions and credit-pack purchases run through Stripe in a separate auth service (`/billing/*`), driven from the dashboard — not part of the `/v1` surface.
 

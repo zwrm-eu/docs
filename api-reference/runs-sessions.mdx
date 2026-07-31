@@ -60,11 +60,12 @@ Every event carries a per-session monotonic `seq`, a `type`, a `ts`, and a `payl
 `sdk.*` payloads are the agent harness's SDK messages passed through verbatim — treat their inner structure as defined by that SDK (Claude Agent SDK for claude agents; the codex / pi SDKs for those harnesses), not by ZWRM.
 </Note>
 
-## OpenAI-compatible facade
+## OpenAI-compatible API
 
-Chat with an agent from any OpenAI client. Full semantics in the [guide](/agents/openai-api).
+One chat-completions endpoint serving catalog models (`qwen/qwen3-235b-instruct`, …), automatic routing (`zwrm/auto`), and your agents (`agent/<name>`). Full semantics in the [guide](/agents/openai-api).
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `POST` | `/v1/openai/chat/completions` | One conversation turn (streaming supported) |
-| `GET` | `/v1/openai/models` | Your agents as models |
+| `POST` | `/v1/openai/chat/completions` | A completion — catalog model, `zwrm/auto`, or one agent turn (streaming supported) |
+| `GET` | `/v1/openai/models` | `zwrm/auto`, the model catalog (with EUR pricing, capabilities, `eu_resident`), and your agents |
+| `GET` | `/v1/openai/models/{id}` | Single-model lookup (id as sent, slashes included) |

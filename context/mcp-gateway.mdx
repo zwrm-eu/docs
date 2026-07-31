@@ -112,6 +112,8 @@ For **Custom GPTs** (`zwrm mcp install <server> --client custom-gpt`): fetch the
 
 Agents consume virtual servers as [connectors](/context/connectors). The key property: **upstream credentials never enter the agent VM** — the VM holds only a short-lived, revocable gateway token, and the gateway injects the real credentials upstream. Which identity those calls carry is the [connector identity](/context/credentials) policy.
 
+Agents can also *manage* the gateway when granted the `mcp:read` / `mcp:write` [capabilities](/agents/capabilities): reading upstreams, tool catalogs, and virtual servers, or registering and composing them. `mcp:write` is not in the default scope set — registering or repointing an upstream opens a new outbound channel — and OAuth grant management always stays a human consent step, unreachable with any agent token.
+
 ## Security model
 
 - Two strictly separated credential planes: client → gateway (ZWRM API keys) and gateway → upstream (org-managed credentials or vaulted per-principal grants). Tokens are never passed through in either direction.
