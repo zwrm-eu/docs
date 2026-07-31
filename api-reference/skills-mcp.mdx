@@ -19,7 +19,7 @@ Org-scoped skill bundles. See the [Skills guide](/context/skills). Per-agent ena
 
 ## MCP gateway management
 
-Org-level upstreams and virtual servers. See the [MCP Gateway guide](/context/mcp-gateway). Upstream credentials are write-only — never returned.
+Org-level upstreams and virtual servers. See the [MCP Gateway guide](/context/mcp-gateway). Upstream credentials are write-only — never returned. For agent and scoped tokens, reads below are covered by the `mcp:read` [capability](/agents/capabilities) and writes by `mcp:write`; `discover-scopes` and the grant endpoints are outside every agent scope.
 
 | Method | Path | Description |
 |--------|------|-------------|

@@ -53,22 +53,25 @@ Codex runs on your own OpenAI account, so ZWRM does not meter its cost: the per-
 
 ## The zwrm runtime (`pi`)
 
-The native runtime needs **no credentials from you** — the platform owns the model-provider key and injects it at boot; usage is metered against prepaid [credits](/billing/credits). Every model is **EU-hosted** (the platform guarantee), across multiple EU providers; a model's provider follows from the model, not from any configuration you set.
+The native runtime needs **no credentials from you** — the VM boots with a short-lived platform gateway token (`ZWRM_GATEWAY_TOKEN`) and buys its completions from the platform's [LLM gateway](/agents/openai-api); vendor API keys never enter the VM. Usage is metered against prepaid [credits](/billing/credits). Every model is **EU-hosted** (the platform guarantee), across multiple EU providers; a model's provider follows from the model, not from any configuration you set.
 
 | Alias | Model |
 |-------|-------|
 | `glm-5.2` (default) | GLM-5.2 |
 | `deepseek-v4` | DeepSeek V4 Pro |
 | `kimi-code` | Kimi K2.7 Code |
+| `kimi-k3` | Kimi K3 |
 | `qwen-235b` | Qwen3 235B Instruct |
 | `gpt-oss` | gpt-oss 120B |
 | `qwen-thinking` | Qwen3 Next 80B Thinking |
 | `hermes-405b` | Hermes 4 405B |
 
-Live per-token pricing is shown in EUR in the dashboard (**Settings → Credits → Model pricing**) and via [`GET /v1/credits/pricing`](/billing/credits) — the rate and margin are set per deployment, so the docs don't hardcode numbers. The zwrm runtime expresses two permission modes (Ask and Bypass).
+Aliases are what the CLI (`--model`) and the dashboard picker take. Inside the VM — the interactive `pi` session and its `/model` UI — models go by their public gateway slug instead (`qwen/qwen3-235b-instruct`), the same names the [OpenAI-compatible API](/agents/openai-api) serves; catalog and price updates land on the next VM boot.
+
+Live per-token pricing is shown in EUR in the dashboard (the **Models** page, and **Settings → Credits → Model pricing**) and via [`GET /v1/credits/pricing`](/billing/credits) — rates and margins are set per deployment (and can differ per provider), so the docs don't hardcode numbers. The zwrm runtime expresses two permission modes (Ask and Bypass).
 
 <Note>
-The provider API keys (`NEBIUS_API_KEY`, `LYCEUM_API_KEY`) are **reserved for the platform** — they're the billing boundary, so you can't set them as org or agent secrets. That's what makes the zwrm runtime a no-key, credits-metered harness.
+`ZWRM_GATEWAY_TOKEN` is **reserved for the platform** — it's the billing boundary, so you can't set it as an org or agent secret. That's what makes the zwrm runtime a no-key, credits-metered harness. (The provider names `NEBIUS_API_KEY` / `LYCEUM_API_KEY` are no longer reserved — those keys never enter agent VMs anyway.)
 </Note>
 
 ## If a model leaves the catalog

@@ -1,14 +1,14 @@
 ---
 title: "OpenAI-compatible API"
-description: "Talk to any agent from any OpenAI client — base URL, API key, model name."
+description: "One endpoint for catalog models, automatic routing, and your agents — from any OpenAI client."
 icon: "message-bot"
 ---
 
-Every agent is reachable through an OpenAI-compatible chat completions API. Point any stock OpenAI client (openai SDKs, LangChain, Open WebUI, …) at ZWRM and chat with an agent:
+ZWRM serves an OpenAI-compatible chat completions API. Point any stock OpenAI client (openai SDKs, LangChain, Open WebUI, LibreChat, …) at ZWRM and change nothing else:
 
 - **Base URL** — `https://<platform>/v1/openai`
 - **API key** — your ZWRM API key
-- **Model** — the agent's name
+- **Model** — a catalog slug, `zwrm/auto`, or `agent/<name>`
 
 ```python
 from openai import OpenAI
@@ -16,24 +16,101 @@ from openai import OpenAI
 client = OpenAI(base_url="https://<platform>/v1/openai", api_key="<zwrm-api-key>")
 
 response = client.chat.completions.create(
-    model="support-bot",
+    model="agent/support-bot",
     messages=[{"role": "user", "content": "Summarize the open tickets"}],
 )
 print(response.choices[0].message.content)
 ```
 
+## Three kinds of model
+
+The `model` field selects between three different things behind one endpoint:
+
+| `model` | What it is |
+|---------|------------|
+| A catalog slug, e.g. `qwen/qwen3-235b-instruct` | A **model, called directly** through the LLM gateway. Stateless: an ordinary completion with nothing but what you send, billed against prepaid [credits](/billing/credits). |
+| `zwrm/auto` | **Automatic model selection** — the platform picks a catalog model per request, [deterministically](#automatic-model-selection-zwrmauto). |
+| `agent/<name>` | One of your **agents**. Stateful: the conversation lives in the agent's workspace, and the agent brings its own tools, skills, and connectors. |
+
+<Warning>
+Agents must be addressed as `agent/<name>` — a bare agent name is no longer accepted and returns `404 model_not_found`. The prefix keeps agent names and model slugs from colliding as the catalog grows.
+</Warning>
+
 ## Endpoints
 
 | Endpoint | Description |
 |----------|-------------|
-| `POST /v1/openai/chat/completions` | One conversation turn with an agent |
-| `GET /v1/openai/models` | Your agents, presented as models |
+| `POST /v1/openai/chat/completions` | A completion — catalog model, `zwrm/auto`, or one agent conversation turn |
+| `GET /v1/openai/models` | Everything you can put in `model`: `zwrm/auto` first, then the catalog, then your agents |
+| `GET /v1/openai/models/{id}` | Single-model lookup (`client.models.retrieve` — the id is the model string as you'd send it, slashes included) |
 
-Streaming works the usual way (`stream: true`) — text arrives as `chat.completion.chunk` frames, and token usage is reported from the underlying session.
+Catalog entries carry OpenRouter-style discovery metadata on top of the standard OpenAI model object — stock clients ignore the extra fields:
 
-## Conversation continuity
+```json
+{
+  "id": "qwen/qwen3-235b-instruct",
+  "object": "model",
+  "created": 1785283200,
+  "owned_by": "nebius",
+  "context_length": 262144,
+  "max_output_tokens": 32768,
+  "pricing": { "prompt": "0.30", "completion": "0.90",
+               "currency": "EUR", "unit": "per_million_tokens" },
+  "capabilities": { "tools": true, "vision": false, "reasoning": false },
+  "eu_resident": true
+}
+```
 
-The conversation is **server-side state** — the workspace transcript. The caller never manages history:
+`pricing` is what your organization actually pays in credits, per million tokens — not the provider's list price (omitted on deployments that run the gateway unmetered). Agent entries stay bare (`id`/`object`/`created`/`owned_by`): an agent's spend is session-metered and its abilities are its configuration, not a model property.
+
+The leading segment of a catalog slug names the model's **author**, not the company serving it — `openai/gpt-oss-120b` is an open-weights model that does not run on OpenAI's infrastructure. Which provider serves a model is a platform detail; slugs are stable regardless. Slug matching is case-insensitive; the [zwrm-runtime aliases](/agents/models#the-zwrm-runtime-pi) (`qwen-235b`, …) are *not* accepted here — the gateway namespace is slugs only.
+
+## Catalog models
+
+Ordinary stateless completions. The full `messages` array is used, and `tools`, `response_format`, `n`, and sampling parameters pass through to the provider. Two model families come with wire quirks the gateway absorbs or surfaces:
+
+- **OpenAI models** (`openai/gpt-5.6-sol`, `-terra`, `-luna`) are a native passthrough. `max_tokens` is transparently renamed to `max_completion_tokens` (either spelling works), and `temperature`/`top_p` are dropped — the gpt-5 line rejects them.
+- **Anthropic models** (`anthropic/claude-opus-5`, `anthropic/claude-sonnet-5`, `anthropic/claude-haiku-4-5`) are served through a wire translation to the Messages API, not a passthrough: unknown request fields are dropped, `n > 1` and non-text `response_format` are refused with `400`, `temperature`/`top_p` are dropped on models whose API rejects them, and a model refusal returns a completed response with `finish_reason: "content_filter"`.
+
+<Note>
+Catalog models are served only where the deployment has the gateway enabled and a platform key for that model's provider — otherwise their slugs behave as unknown models and the listing shows agents only.
+</Note>
+
+### EU residency
+
+`eu_resident: true` means inference for that model runs entirely on EU infrastructure — true for the open-weights catalog, `false` for the Anthropic and OpenAI models, whose calls leave the EU. The flag is about **where inference runs**, not storage: the control plane logs token counts and model names only, never prompt or completion content, for any model.
+
+Organizations can enforce it with the **`require_eu_models`** org setting (dashboard → **Settings → Defaults**, or `PUT /v1/org/settings`; changing it takes an org admin or owner). When on, non-EU models disappear from the model listing and a completion naming one is refused with an explanatory `403 permission_error`. `zwrm/auto` respects the setting too — it routes only to EU-resident models, and a request only a non-EU model could serve gets the same explanatory `403`.
+
+### Automatic model selection (`zwrm/auto`)
+
+`zwrm/auto` asks the platform to pick the catalog model. Selection is a deterministic two-stage heuristic — no LLM is consulted, so it adds no latency:
+
+1. **Capability filter.** Models that cannot serve the request are dropped: no vision for an image, `max_tokens` beyond the model's output cap, a prompt that does not fit the context window.
+2. **Cost tier.** The remaining features — prompt size, code content, tools, requested output length, `reasoning_effort` — classify the request into a cost tier (small / mid / frontier), and the platform's preferred model in that tier serves it. EU-resident models are preferred within each tier.
+
+What a caller observes:
+
+- **The response's `model` field carries the model that served it** (on stream chunks too), never `zwrm/auto`. To pin the choice, send that slug directly on the next request.
+- **A conversation keeps its model as it grows.** The tier decision reads only the conversation's opening, so appending messages re-selects the same model — until a hard capability boundary is crossed (an image appears mid-conversation, the transcript outgrows the context window), at which point auto re-routes rather than fail.
+- **Its model object carries no pricing or context length** — both depend on what a request resolves to. You are billed at the selected model's rates, and usage attributes to that model in the dashboard.
+- A request **no available model** can serve is refused with a `400` naming the gap (code `no_capable_model`).
+
+### Billing
+
+Catalog completions run on the platform's provider account and bill against your org's prepaid [credits](/billing/credits) — no provider key of your own is involved, and there is no way to supply one on this endpoint.
+
+- **What you're charged**: prompt and completion tokens as the provider reported them, at the model's published per-million EUR rates. Cached prompt tokens are part of `prompt_tokens` and are priced at their own cache rate, not charged twice. A `zwrm/auto` request bills at the **selected** model's rates — there is no separate auto rate.
+- **Fractions of a cent are never lost or rounded up** — they accumulate and are charged once they reach a whole cent.
+- **A request that fails partway is still charged** for the tokens the provider produced — including one you disconnect from mid-stream.
+- **Running out mid-request never truncates a reply**: the balance is checked before a completion starts (`402` below); one already in flight always finishes, even if it takes the balance below zero.
+- Deployments can cap an org's gateway spend per UTC day; over the cap, requests get `429` until 00:00 UTC.
+
+The dashboard's **Models** page shows the catalog with live EUR pricing, your org's gateway usage over time, and copy-pasteable connection snippets.
+
+## Agents (`agent/<name>`)
+
+The agent surface trades OpenAI's statelessness for an agent that remembers. The conversation is **server-side state** — the workspace transcript. The caller never manages history:
 
 - Continuity is keyed by the `X-Session-Key` header, or the request's `user` field if no header is set.
 - No key means the agent's **default workspace** — the same conversation the dashboard chat uses.
@@ -41,11 +118,30 @@ The conversation is **server-side state** — the workspace transcript. The call
 
 Session and VM lifecycle (boot, wake-on-message, idle-suspend) stay invisible — a request to a suspended workspace just takes a moment longer while the VM wakes.
 
-## Semantics and limits
+### Semantics and limits
 
 - **One reply per turn.** `n`, `tools`, and `functions` are rejected — an agent brings its own tools and produces a single reply.
 - **Sampling params are ignored.** `temperature`, `top_p`, etc. are accepted but the agent's own configuration governs the model call.
 - **Turns serialize per conversation.** Concurrent completions on the same session key queue behind each other.
 - **Busy conversations return `409`** — e.g. while a [run](/agents/runs) is executing on the workspace, or while the session waits on an [escalation](/agents/messaging#escalations). Retry when it finishes.
 - **Turn deadline.** A completion request is bounded at 30 minutes; on timeout the HTTP request fails but the turn itself finishes into the transcript.
-- Errors use the OpenAI wire shape (`invalid_request_error`, `authentication_error`, `rate_limit_error`, `server_error`).
+
+## Streaming
+
+`stream: true` works on all three model kinds — text arrives as ordinary `chat.completion.chunk` SSE frames terminated by `data: [DONE]`. `stream_options: {"include_usage": true}` adds the usage chunk. Keepalive comments (`: ping`) are sent while a response is being produced; every OpenAI-compatible parser ignores them.
+
+## Errors
+
+Errors use the OpenAI envelope (`{"error": {"message", "type", "code"}}`). Beyond the usual statuses:
+
+| Status | Meaning |
+|--------|---------|
+| `400` | Malformed request — or, on `zwrm/auto`, no available model can serve it (code `no_capable_model`, the message names the gap) |
+| `402` `insufficient_quota` | The org's prepaid credit balance is exhausted — buy credits under Settings → Credits |
+| `403` `permission_error` | `require_eu_models` blocks the requested model |
+| `404` `model_not_found` | No such agent or model — or you cannot access it |
+| `409` | The agent conversation is busy (a reply in flight, a pending approval, or an executing run) |
+| `413` | Request body too large |
+| `429` | Rate limited — by the org's daily spend cap, by ZWRM, or by the model provider |
+| `502` | The model provider could not be reached or failed the request |
+| `504` | The model provider did not respond in time |

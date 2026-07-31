@@ -8,7 +8,7 @@ Every agent VM carries a platform token so the agent can run `zwrm` commands —
 
 ## Default
 
-An agent gets every capability except `destroy`. It can build, ship, and manage; it cannot irreversibly delete an app, machine, database, or volume.
+An agent gets every capability except `destroy` and `mcp:write`. It can build, ship, and manage; it cannot irreversibly delete an app, machine, database, or volume, and it cannot rewire the org's [MCP gateway](/context/mcp-gateway).
 
 ```bash
 zwrm agent update my-project --allowed-scopes apps:read,deploy,logs:read
@@ -29,14 +29,17 @@ Scopes are `resource:action` pairs, plus a few atomic verbs:
 | Volumes | `volumes:read`, `volumes:write` |
 | Networking | `routes:write` |
 | Observability | `logs:read` |
-| Agent library | `skills:read`, `skills:write`, `memories:read`, `memories:write` |
+| Agent library | `agents:read`, `skills:read`, `skills:write`, `memories:read`, `memories:write` |
 | Automation | `schedules:read`, `schedules:write`, `triggers:read`, `triggers:write` |
+| MCP gateway | `mcp:read`, `mcp:write` |
 | Account | `ssh`, `identity` |
 | Teardown | `destroy` |
 
 <Warning>
-`destroy` covers permanently deleting apps, machines, databases, and volumes. It is off by default — grant it only to agents that genuinely need to tear things down.
+Two capabilities are off by default. `destroy` covers permanently deleting apps, machines, databases, and volumes. `mcp:write` lets an agent add, edit, sync, and delete MCP upstreams and virtual servers — adding an upstream opens a new outbound channel through the gateway, and editing one can repoint its URL, sending the stored credential to the new destination. Grant either only to agents that genuinely need it.
 </Warning>
+
+`mcp:read` covers viewing upstreams, their tool catalogs, and virtual servers. OAuth grant management (connecting accounts on a per-user upstream) and scope discovery are never reachable with an agent token, whatever its scopes — consent stays a human step.
 
 Transferring an app to another organization is not grantable at all: no agent or scoped token can move an app out of your org.
 
@@ -47,7 +50,7 @@ A call outside an agent's capabilities fails with `403 token is not authorized f
 Agent tokens are also **pinned to their agent and organization**: an agent's token only acts as that agent, inside its org.
 
 <Note>
-The pin confines agent-addressed routes. Org-level resources — the skill library, schedules, triggers — resolve their target from the request rather than the URL, so an agent granted `skills:write` or `schedules:write` can manage those across its own organization, not just its own agent.
+The pin confines agent-addressed routes. Org-level resources — the skill library, schedules, triggers, the MCP gateway — resolve their target from the request rather than the URL, so an agent granted `skills:write`, `schedules:write`, or `mcp:write` can manage those across its own organization, not just its own agent.
 </Note>
 
 ## Scoped API tokens
