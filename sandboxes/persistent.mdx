@@ -32,6 +32,11 @@ Persistent sandboxes are long-lived environments designed for development worklo
     - `--egress-allow-cidr CIDR` — Allow outbound to this CIDR (repeatable; implies `deny_all`)
     - `--egress-deny-cidr CIDR` — Explicitly deny outbound to this CIDR (repeatable)
     - `--egress-allow-port PORT` — Restrict allowed CIDRs to this TCP port (repeatable)
+    - `--disk-size-mb MIB` — Override the template's writable disk quota (MiB)
+    - `--bandwidth-mbps N` — Override the per-drive bandwidth cap (MiB/s)
+    - `--ops-per-sec N` — Override the per-drive IOPS cap
+    - `--burst-mbps N` — Override the one-time bandwidth burst (MiB)
+    - `--burst-ops N` — Override the one-time ops burst
   </Tab>
   <Tab title="API">
     ```bash
@@ -113,10 +118,10 @@ zwrm sandbox exec sbx_def456 -- echo "I'm back!"
 
 1. An atomic status transition (`suspended` → `restoring`) prevents concurrent restore attempts
 2. A new TAP device is created with the original network configuration
-3. The Firecracker VM is restored from the snapshot files
+3. The Firecracker VM is restored from the snapshot files, deliberately reusing the sandbox's **original machine ID** — the on-disk overlay, IPAM reservation, and other state are keyed to it, so it stays stable across suspend/wake cycles (only the IP may change)
 4. The VM resumes execution from the exact point it was suspended
 5. Snapshot files are cleaned up after successful restore
-6. The database is updated with the new machine ID and IP
+6. The database is updated with the machine ID and current IP
 
 <Info>
 Restore typically completes in under 500 milliseconds. The VM resumes with all processes, open files, and in-memory state intact.
@@ -124,11 +129,11 @@ Restore typically completes in under 500 milliseconds. The VM resumes with all p
 
 ## Concurrent access safety
 
-ZWRM uses an atomic compare-and-swap operation for sandbox status transitions. If two requests try to wake the same suspended sandbox simultaneously, only one will succeed — the other receives a conflict error. This prevents duplicate VMs from being created for the same sandbox.
+ZWRM uses an atomic compare-and-swap operation for sandbox status transitions. If two requests try to wake the same suspended sandbox simultaneously, only one will succeed — the other fails with an error ("sandbox is already being restored") and should simply be retried. This prevents duplicate VMs from being created for the same sandbox.
 
 ```
 Request A: suspended → restoring ✓ (proceeds with restore)
-Request B: suspended → restoring ✗ (sandbox already restoring, returns 409)
+Request B: suspended → restoring ✗ (sandbox already being restored — retry)
 ```
 
 ## Destroy
@@ -139,4 +144,4 @@ Destroying a persistent sandbox cleans up all resources:
 zwrm sandbox destroy sbx_def456
 ```
 
-For suspended sandboxes, this cleans up snapshot files, releases the IPAM allocation, and removes the database record. For running sandboxes, the VM is stopped first.
+For suspended sandboxes, this cleans up snapshot files and releases the IPAM allocation. For running sandboxes, the VM is stopped first. The database row is retained with status `destroyed` — destroyed sandboxes no longer appear in list responses.

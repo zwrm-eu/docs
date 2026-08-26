@@ -16,8 +16,11 @@ PUT    /v1/org/webhooks/{id}
 DELETE /v1/org/webhooks/{id}
 POST   /v1/org/webhooks/{id}/test
 GET    /v1/org/webhooks/{id}/deliveries
+GET    /v1/org/webhooks/deliveries/{delivery_id}
 POST   /v1/org/webhooks/deliveries/{delivery_id}/retry
 ```
+
+`POST .../test` sends a `webhook.test` event to the endpoint regardless of its event subscriptions (`webhook.test` itself is not a subscribable event type).
 
 ## Events
 
@@ -30,7 +33,6 @@ POST   /v1/org/webhooks/deliveries/{delivery_id}/retry
 | Secrets | `secret.created`, `secret.updated`, `secret.deleted` |
 | PostgreSQL | `postgres.health_failed`, `postgres.health_recovered`, `postgres.failover_started`, `postgres.failover_completed`, `postgres.failover_failed` |
 | Agents | `agent_run.completed`, `agent_run.failed`, `agent_run.needs_attention` |
-| Testing | `webhook.test` |
 
 The agent events are the machine-readable way to follow runs: `agent_run.completed` and `agent_run.failed` fire at terminal states, and `agent_run.needs_attention` fires when a run pauses on an [escalation](/agents/messaging#escalations). (There is no message event — the platform has no built-in messaging; agents reach out through [connectors](/context/connectors).)
 
@@ -48,6 +50,6 @@ Verify by computing the HMAC of the raw request body with your secret and compar
 
 ## Delivery semantics
 
-- Non-2xx responses (and transport errors) are retried up to **8 attempts** with growing backoff (30s → 2m → 10m → 1h → 6h).
+- Non-2xx responses (and transport errors) are retried up to **8 attempts** with growing backoff: the first retry comes after ~2 minutes (2m → 10m → 1h → 6h → 6h → 6h → 6h).
 - Delivery history is retained for 14 days and can be inspected — and individual deliveries re-sent — via the API.
 - Endpoint URLs must be public `http(s)` on ports 80/443; private and internal addresses are rejected.

@@ -4,7 +4,7 @@ description: "Back up and restore PostgreSQL databases with WAL archiving and po
 icon: "clock-rotate-left"
 ---
 
-ZWRM supports full backups and point-in-time recovery (PITR) for PostgreSQL databases. Backups are stored externally and can be used to restore into a new database instance.
+ZWRM supports full backups and point-in-time recovery (PITR) for PostgreSQL databases. Backups are stored externally and can be used to restore a database in place or into a new database instance.
 
 ## Enable WAL archiving
 
@@ -62,22 +62,30 @@ zwrm postgres backup delete <backup-id>
 
 ## Restore a database
 
-Restore creates a new database from a backup. The original database is not modified.
+By default, restore is an **in-place** operation: it replaces the database's VM with the backup data while keeping the original database ID, credentials, and external domain. Pass `--name` to create a new database from the backup instead, leaving the original untouched.
 
 ```bash
-zwrm postgres restore <name> --name <new-name>
+zwrm postgres restore <name>
 ```
 
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
-| `--name` | string | — | Name for the restored database (required) |
+| `--name` | string | — | Name for the restored database (omit for an in-place restore) |
 | `--backup` | string | latest | Specific backup ID to restore from |
 | `--pitr` | string | — | Point-in-time recovery target (RFC 3339 timestamp) |
 | `--size` | string | same as source | Size preset override: `small`, `medium`, `large` |
 
+<Warning>Without `--name`, restore is **destructive**: the source database's current data is replaced by the backup. The old data volume is kept for 24 hours before cleanup, but treat an in-place restore as overwriting the database. Use `--name` to restore into a new database instead.</Warning>
+
 ### Examples
 
-Restore from the latest backup:
+In-place restore from the latest backup (replaces the current data):
+
+```bash
+zwrm postgres restore my-db
+```
+
+Restore into a new database, leaving `my-db` untouched:
 
 ```bash
 zwrm postgres restore my-db --name my-db-restored
@@ -86,21 +94,20 @@ zwrm postgres restore my-db --name my-db-restored
 Restore from a specific backup:
 
 ```bash
-zwrm postgres restore my-db --name my-db-restored --backup abc12345
+zwrm postgres restore my-db --backup abc12345
 ```
 
 Point-in-time recovery to a specific moment:
 
 ```bash
-zwrm postgres restore my-db --name my-db-restored --pitr "2026-03-10T14:30:00Z"
+zwrm postgres restore my-db --pitr "2026-03-10T14:30:00Z"
 ```
 
 <Tip>PITR requires WAL archiving to be enabled. The target time must fall within the range covered by available WAL segments.</Tip>
 
-## Check restore status
+## Check restore progress
 
-```bash
-zwrm postgres restore status <restore-id>
-```
+`zwrm postgres restore` prints the restore ID, mode (in-place or new database), and initial status when it starts. To follow progress from there:
 
-Shows the restore type, status, target database ID, and any error details.
+- **`zwrm postgres list`** — during an in-place restore, a temporary `<name>-restore-tmp` database appears while the backup is brought up and disappears once it is swapped in. A `--name` restore shows the new database moving from `creating` to `running`.
+- **`GET /v1/postgres/restores/{restore_id}`** — returns the restore's status (`pending`, `restoring`, `completed`, or `failed`), the target database ID, and any error details.
