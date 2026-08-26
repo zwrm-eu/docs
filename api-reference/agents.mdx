@@ -35,9 +35,10 @@ An agent is [pure configuration](/agents/overview); these endpoints manage the d
 | `instructions` | Per-agent system-prompt append. On connect, an absent field leaves the stored value untouched |
 | `secrets` | Initial secrets (string map) set on the agent's backing app |
 | `allowed_scopes` | Create only — the agent's boot-token capability set. Each value must be a configurable scope (an unknown one is a `400` listing the valid set); absent or empty = the platform default set |
+| `boot_token_disabled` | Create only — `true` creates the agent with no boot token: its VMs boot without an in-VM `zwrm` credential. Distinct from empty `allowed_scopes`, which means the platform default set |
 | `cmd` | Connect only — override the login command for this boot (e.g. `aider`) |
 
-`PATCH /v1/agents/{agent_id}` also accepts `allowed_scopes`: omitted leaves the set unchanged, an empty array (`[]`) resets it to the platform default, and each value must be a configurable scope.
+`PATCH /v1/agents/{agent_id}` also accepts `allowed_scopes`: omitted leaves the set unchanged, an empty array (`[]`) resets it to the platform default, and each value must be a configurable scope. It likewise accepts `boot_token_disabled`: `true` stops minting the boot token (applies at the next boot; the stored scope set is preserved), `false` restores it. Both fields surface on the agent response.
 
 ## Workspaces
 
