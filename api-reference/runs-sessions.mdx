@@ -35,6 +35,24 @@ A session is one live conversation — a run's headless session or an interactiv
 
 Session statuses: `creating`, `idle`, `working`, `blocked` (waiting on a permission decision), `ended`, `error`.
 
+### Start a session
+
+`POST /v1/agents/{agent_id}/sessions` — all request fields are optional; empty means the agent/harness default.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `session_key` | string | Selects the workspace the session runs in, like a run's `--session` key. Same key = same workspace, conversation continues; a new key creates its workspace on first use. Empty = the agent's `default` workspace (the one dashboard chat and SSH use) — unlike runs, sessions never create anonymous workspaces. |
+| `model` | string | Harness-specific alias or ID — see [Models](/agents/models) |
+| `effort` | string | `low`, `medium`, `high`, `xhigh`, `max` |
+| `permission_mode` | string | Initial tool-permission mode |
+| `cwd` | string | Working directory for the session |
+| `append_system_prompt` | string | Extra system-prompt text for this session |
+| `resume_session_id` | string | A prior session of this agent to resume explicitly. It must belong to the workspace the `session_key` resolves to — transcripts live on the workspace volume and cannot be resumed elsewhere (`400`). |
+
+- Sessions on **different** keys run in parallel, each in its own workspace. One live session per workspace: starting a session on a key whose workspace already has one returns `409`.
+- A keyed workspace resumes its own last conversation automatically (when it was recorded by the same harness); `resume_session_id` is only needed to pick an older session.
+- The response includes the resolved `workspace_id`.
+
 ## Session events
 
 ```

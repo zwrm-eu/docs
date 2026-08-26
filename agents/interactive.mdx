@@ -27,6 +27,8 @@ Runs and chat can share a live SSH VM — an execution's teardown never kills a 
 
 The dashboard's chat opens a session on the agent's `default` workspace — it boots its own VM and resumes the workspace conversation. Ending the chat releases the VM; the conversation stays resumable.
 
+Over the API, `POST /v1/agents/{agent_id}/sessions` accepts a `session_key` that selects the workspace, exactly like a run's `--session` key: distinct keys give you parallel sessions in separate workspaces, and the same key continues that workspace's conversation. No key means the `default` workspace. See [Runs & sessions](/api-reference/runs-sessions#start-a-session) for the full request body.
+
 ## Managing agents
 
 ### List
