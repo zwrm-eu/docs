@@ -69,7 +69,7 @@ The leading segment of a catalog slug names the model's **author**, not the comp
 
 Ordinary stateless completions. The full `messages` array is used, and `tools`, `response_format`, `n`, and sampling parameters pass through to the provider. Two model families come with wire quirks the gateway absorbs or surfaces:
 
-- **OpenAI models** (`openai/gpt-5.6-sol`, `-terra`, `-luna`) are a native passthrough. `max_tokens` is transparently renamed to `max_completion_tokens` (either spelling works), and `temperature`/`top_p` are dropped — the gpt-5 line rejects them.
+- **OpenAI models** (`openai/gpt-5.6-sol`, `-terra`, `-luna`) are a native passthrough. `max_tokens` is transparently renamed to `max_completion_tokens` (either spelling works), and `temperature`/`top_p` are dropped — the gpt-5 line rejects them. Any request that carries `tools` has `reasoning_effort` forced to `"none"` — a client-sent value is silently overridden, because the gpt-5.6 family refuses function tools with any other effort value; toolless requests keep whatever you sent, so reasoning stays available there.
 - **Anthropic models** (`anthropic/claude-opus-5`, `anthropic/claude-sonnet-5`, `anthropic/claude-haiku-4-5`) are served through a wire translation to the Messages API, not a passthrough: unknown request fields are dropped, `n > 1` and non-text `response_format` are refused with `400`, `temperature`/`top_p` are dropped on models whose API rejects them, and a model refusal returns a completed response with `finish_reason: "content_filter"`.
 
 <Note>
@@ -84,10 +84,11 @@ Organizations can enforce it with the **`require_eu_models`** org setting (dashb
 
 ### Automatic model selection (`zwrm/auto`)
 
-`zwrm/auto` asks the platform to pick the catalog model. Selection is a deterministic two-stage heuristic — no LLM is consulted, so it adds no latency:
+`zwrm/auto` asks the platform to pick the catalog model. Selection is a deterministic three-stage heuristic — no LLM is consulted, so it adds no latency:
 
 1. **Capability filter.** Models that cannot serve the request are dropped: no vision for an image, `max_tokens` beyond the model's output cap, a prompt that does not fit the context window.
 2. **Cost tier.** The remaining features — prompt size, code content, tools, requested output length, `reasoning_effort` — classify the request into a cost tier (small / mid / frontier), and the platform's preferred model in that tier serves it. EU-resident models are preferred within each tier.
+3. **Provider health.** Routing then happens on the set of models whose providers are currently healthy (capability errors are always judged against the full set, so an outage is never misreported as a bad request). If the chosen provider fails mid-request, auto fails over to another healthy provider's model when one can serve the request; if no healthy provider can serve it at all, the request is refused with `503` (code `service_unavailable`).
 
 What a caller observes:
 
@@ -122,13 +123,13 @@ Session and VM lifecycle (boot, wake-on-message, idle-suspend) stay invisible �
 
 - **One reply per turn.** `n`, `tools`, and `functions` are rejected — an agent brings its own tools and produces a single reply.
 - **Sampling params are ignored.** `temperature`, `top_p`, etc. are accepted but the agent's own configuration governs the model call.
-- **Turns serialize per conversation.** Concurrent completions on the same session key queue behind each other.
+- **One turn at a time per conversation.** Concurrent completions on the same session key do not queue — the second returns `409` immediately; retry when the in-flight turn finishes.
 - **Busy conversations return `409`** — e.g. while a [run](/agents/runs) is executing on the workspace, or while the session waits on an [escalation](/agents/messaging#escalations). Retry when it finishes.
 - **Turn deadline.** A completion request is bounded at 30 minutes; on timeout the HTTP request fails but the turn itself finishes into the transcript.
 
 ## Streaming
 
-`stream: true` works on all three model kinds — text arrives as ordinary `chat.completion.chunk` SSE frames terminated by `data: [DONE]`. `stream_options: {"include_usage": true}` adds the usage chunk. Keepalive comments (`: ping`) are sent while a response is being produced; every OpenAI-compatible parser ignores them.
+`stream: true` works on all three model kinds — text arrives as ordinary `chat.completion.chunk` SSE frames terminated by `data: [DONE]`. Usage reporting differs by path: catalog models and `zwrm/auto` follow OpenAI's opt-in semantics — the usage chunk is sent only when you ask with `stream_options: {"include_usage": true}` — while `agent/<name>` includes usage on the final chunk by default, omitting it only if you send `stream_options: {"include_usage": false}`. Keepalive comments (`: ping`) are sent while a response is being produced; every OpenAI-compatible parser ignores them.
 
 ## Errors
 
@@ -144,4 +145,5 @@ Errors use the OpenAI envelope (`{"error": {"message", "type", "code"}}`). Beyon
 | `413` | Request body too large |
 | `429` | Rate limited — by the org's daily spend cap, by ZWRM, or by the model provider |
 | `502` | The model provider could not be reached or failed the request |
+| `503` `service_unavailable` | On `zwrm/auto`: no healthy model provider can currently serve the request — retry shortly |
 | `504` | The model provider did not respond in time |

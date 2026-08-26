@@ -20,10 +20,10 @@ Sandboxes are lightweight, isolated virtual machines built on [Firecracker](http
     Long-lived environments that auto-suspend after idle periods using Firecracker snapshots, and wake on demand in under 500ms. Ideal for development environments and AI coding agents.
   </Card>
   <Card title="Templates" icon="layer-group" href="/sandboxes/templates">
-    Pre-built VM images (Python, Node.js, Go, or custom) that define the base environment for sandboxes. Templates use Docker-to-ext4 conversion for maximum compatibility.
+    Pre-built VM images (Python, Node.js, or custom) that define the base environment for sandboxes. Templates use Docker-to-ext4 conversion for maximum compatibility.
   </Card>
-  <Card title="Warm pool" icon="bolt" href="/sandboxes/warm-pool">
-    A configurable pool of pre-booted VMs per template for sub-200ms sandbox creation. Eliminates cold boot latency for latency-sensitive workloads.
+  <Card title="Fast creation" icon="bolt" href="/sandboxes/warm-pool">
+    Per-template base snapshots let new sandboxes resume from a pre-captured VM state instead of cold-booting, targeting sub-500ms creation.
   </Card>
 </CardGroup>
 
@@ -33,15 +33,15 @@ Sandboxes are lightweight, isolated virtual machines built on [Firecracker](http
 |---|---|---|---|
 | **Purpose** | Deployed services | AI agent workspaces | Ephemeral code execution |
 | **Lifetime** | Permanent | Hours to days | Seconds to hours |
-| **Created by** | Developer via CLI | Developer via CLI/API | AI agent via SDK/API |
+| **Created by** | Developer via CLI | Developer via CLI/API | AI agent via API/CLI |
 | **Interface** | HTTP routes, proxy | SSH, terminal, git | Execute API, file API |
-| **Boot speed** | Rolling deploy (minutes) | Template launch (seconds) | Instant from warm pool (< 200ms) |
+| **Boot speed** | Rolling deploy (minutes) | Template launch (seconds) | Base-snapshot resume (< 500ms) |
 
 ## Lifecycle
 
 Every sandbox is a Firecracker microVM running on a Linux host with KVM support:
 
-1. **Create** — A sandbox is created from a template. If a warm pool VM is available, it's claimed instantly. Otherwise, a new VM cold-boots (~2-3 seconds).
+1. **Create** — A sandbox is created from a template. If the template has a current base snapshot, the new VM resumes from it (sub-500ms target). Otherwise — or if the resume fails — a new VM cold-boots (~2-3 seconds).
 
 2. **Run** — The sandbox is a fully functional Linux VM. Execute commands, upload/download files, and interact via the REST API or CLI.
 
@@ -65,9 +65,9 @@ Each sandbox gets a sparse 2GB writable ext4 overlay on top of the shared, read-
 
 Persistent sandboxes use Firecracker's snapshot/restore capability to freeze and thaw VM state. A full snapshot includes the VM's memory contents and CPU register state, enabling sub-500ms restore times. Snapshot files are stored with restricted permissions (0600) since they contain memory contents.
 
-### Warm pool
+### Base-snapshot resume
 
-Pre-booted VMs sit ready in a pool, already past the kernel boot sequence. When a sandbox is created, ZWRM atomically claims a warm VM (using `FOR UPDATE SKIP LOCKED` for safe concurrency) and transfers ownership. A background replenisher keeps the pool at target sizes.
+After a template builds, ZWRM captures a base snapshot of one clean, booted VM for that template in the background. New sandboxes resume from this snapshot — skipping the kernel boot sequence entirely — and receive a fresh identity (IP, machine ID, daemon token) before the in-VM daemon starts. Resume is best-effort: any failure falls back to a cold boot. Rebuilding a template invalidates its snapshot, and a fresh one is captured after the rebuild. See [Fast creation](/sandboxes/warm-pool).
 
 ## VM sizes
 
@@ -85,29 +85,18 @@ Sandboxes can be created with any of these VM presets:
 
 The default size is `shared-cpu-1x`.
 
-## SDK support
+## Clients
 
-Python and TypeScript SDKs wrap the sandbox API for programmatic use:
+Sandboxes are driven through the [REST API](/sandboxes/api-reference) or the `zwrm` CLI:
 
-```python
-from zwrmd import Sandbox
-
-with Sandbox.create(template="python", timeout="10m") as sbx:
-    sbx.upload("./data.csv", "/home/user/data.csv")
-    result = sbx.execute("python3 analyze.py")
-    print(result.stdout)
-    sbx.download("/home/user/report.pdf", "./report.pdf")
+```bash
+# Create, run a command, and destroy — all from the CLI
+zwrm sandbox create --template python --timeout 10m
+zwrm sandbox exec sbx_abc123 -- python3 analyze.py
+zwrm sandbox destroy sbx_abc123
 ```
 
-```typescript
-import { Sandbox } from '@zwrmd/sdk';
-
-const sbx = await Sandbox.create({ template: 'node', timeout: '10m' });
-await sbx.upload('./data.json', '/home/user/data.json');
-const result = await sbx.execute('node process.js');
-console.log(result.stdout);
-await sbx.destroy();
-```
+Every CLI command maps to a REST endpoint, so anything the CLI does can also be automated with plain HTTP calls. Dedicated Python and TypeScript SDKs are planned but not yet available.
 
 ## Next steps
 

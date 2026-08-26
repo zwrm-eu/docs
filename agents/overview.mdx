@@ -11,18 +11,21 @@ Agents have full access to the ZWRM platform — the `zwrm` CLI is pre-installed
 ## Quick start
 
 ```bash
-# Boot into an interactive SSH workspace
-zwrm agent claude
+# Create the agent — the runtime is stored on it (--runtime is required)
+zwrm agent create my-project --runtime claude
+
+# Boot into an interactive workspace session
+zwrm agent connect my-project
 
 # Dispatch an autonomous run (returns immediately)
-zwrm agent run --agent default --prompt "Summarize the open PRs in acme/api"
+zwrm agent run --agent my-project --prompt "Summarize the open PRs in acme/api"
 zwrm agent run status <run-id>
 
 # Continue that exact conversation later
 zwrm agent run continue <run-id> --prompt "Now address the review feedback"
 ```
 
-On first use, the CLI prompts for required credentials (Claude/Codex auth, GitHub token, git config). They are stored as agent secrets and injected into every VM at boot; `gh` is authenticated automatically.
+The CLI never prompts for credentials. A claude or codex agent needs its harness credential set as an [agent secret](/agents/secrets) (`zwrm agent secrets set`, or the dashboard's ready-checklist) before its first session; the zwrm runtime needs none. Secrets are injected into every VM at boot, and `gh` authenticates automatically when a `GITHUB_TOKEN` secret is set.
 
 ## The model
 
@@ -37,17 +40,17 @@ There is no built-in repo concept: a repo is whatever the prompt (or a skill) cl
 
 ## Agent types
 
-The type is set once, at creation (`zwrm agent <type>`), and picks the harness the agent runs on:
+The runtime is set once, at creation (`zwrm agent create <name> --runtime <zwrm|claude|codex>`), and picks the harness the agent runs on:
 
 | Type | Harness | Billing |
 |------|---------|---------|
 | `claude` | Claude Code | Your org's Anthropic credentials |
 | `codex` | OpenAI Codex | Your org's OpenAI credentials (API key or ChatGPT subscription) |
-| `pi` | The **zwrm runtime** (shown as **zwrm** in the dashboard; EU-hosted open models) | Prepaid [credits](/billing/credits) |
+| `pi` | The **zwrm runtime** (spelled `zwrm` on the CLI and in the dashboard; EU-hosted open models) | Prepaid [credits](/billing/credits) |
 
 Each harness exposes its own model catalog and reasoning-effort ladder — see [Models](/agents/models). claude and codex run on credentials you bring; the zwrm runtime is metered against prepaid credits with no key to manage.
 
-Agent names are **unique per organization, across types**: `default` can name a claude agent *or* a codex agent in an org, not both. Connecting with the wrong type for an existing name is rejected. Connecting to a name that doesn't exist creates it.
+Agent names are **unique per organization, across runtimes**: `default` can name a claude agent *or* a codex agent in an org, not both. `zwrm agent connect` resolves the stored agent by name or ID — you never repeat the runtime. Connecting to a name that doesn't exist offers to create it (asking for the runtime) in an interactive terminal; non-interactive use never creates implicitly.
 
 ## Configuring an agent
 

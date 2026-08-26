@@ -18,6 +18,7 @@ icon: "database"
 | `POST` | `/v1/postgres/{postgres_id}/start` | Start |
 | `GET` | `/v1/postgres/{postgres_id}/connection` | Connection string |
 | `POST` | `/v1/postgres/{postgres_id}/scale` | Scale replicas |
+| `POST` | `/v1/postgres/{postgres_id}/studio-session` | Open a Database Studio browser session (requires an interactive dashboard session) |
 
 ## Backups & restore
 
@@ -34,7 +35,7 @@ icon: "database"
 
 ## App links
 
-Linking injects the database's connection string into an app as a secret. See [Linking](/postgres/linking).
+Linking records the app–database link and opens firewall rules so the app's VMs can reach the database over the private network. No secret is injected into the app — you manage the connection string yourself. The app must have private networking enabled (`[network] private = true` in `zwrm.toml`), or the link is refused with `400`. See [Linking](/postgres/linking).
 
 | Method | Path | Description |
 |--------|------|-------------|

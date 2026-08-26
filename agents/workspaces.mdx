@@ -24,7 +24,7 @@ When a workspace expires, its volume is reclaimed with it. Continuing or running
 
 ## Concurrency
 
-One live session per workspace: runs on the same session key queue and execute in order, while runs on different workspaces execute in parallel. This makes a session key a safe serialization point — a schedule that updates the same report every morning can never trample itself.
+One live session per workspace: runs on the same session key **serialize** — a run that arrives while the workspace is busy is requeued and retried until the slot frees — while runs on different workspaces execute in parallel. This makes a session key a safe serialization point: a schedule that updates the same report every morning can never trample itself. Strict submission order is not guaranteed, though: after you interrupt a run, a run submitted *after* the interrupt counts as your newest instruction and takes the slot ahead of runs that were already queued.
 
 ## Repos
 
@@ -32,7 +32,7 @@ There is no built-in repo concept. A repo is whatever the prompt (or a skill) cl
 
 ## Home volume
 
-Each workspace gets a persistent home volume — **5 GB by default**, and **grow-only**. Resize it from the CLI (the workspace must be stopped and cold first — disconnect and let it settle):
+Each workspace gets a persistent home volume — **5 GB by default**, and **grow-only**. Resize it from the CLI — `zwrm agent resize --volume` targets only the agent's **default** workspace volume, and the workspace must be stopped and cold first (disconnect and let it settle):
 
 ```bash
 zwrm agent resize my-project --volume 20GB

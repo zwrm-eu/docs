@@ -1,103 +1,54 @@
 ---
-title: "Warm pool"
-description: "Pre-booted VMs for instant sandbox creation"
+title: "Fast creation"
+description: "Sub-500ms sandbox creation by resuming per-template base snapshots"
 icon: "bolt"
 ---
 
-The warm pool maintains a set of pre-booted VMs per template, ready for immediate claim. When a sandbox is created, ZWRM first checks the warm pool — if a matching VM is available, it's claimed atomically and the sandbox is ready in under 200ms instead of the 2-3 second cold boot time.
+ZWRM accelerates sandbox creation with **per-template base snapshots**. The first sandbox created from a template cold-boots a fresh VM (~2-3 seconds). In the background, the control plane captures a base snapshot of a clean, booted VM for that template — later creates resume from that snapshot instead of booting from scratch, targeting sub-500ms creation.
+
+<Note>
+Earlier versions of ZWRM used a warm pool of pre-booted VMs. The warm pool has been removed: the `[sandboxes.warm_pool]` config keys are silently ignored, and the `zwrm sandbox pool` command and `GET /v1/sandboxes/pool` endpoint no longer exist. Base-snapshot resume replaces it without holding idle VMs.
+</Note>
 
 ## How it works
 
-1. **Boot** — VMs are pre-booted from template images with CoW overlays, with a system app placeholder (`warmpool-{uuid}`)
-2. **Ready** — The VM has completed kernel boot and is waiting in the pool
-3. **Claim** — When a sandbox is created, a matching VM is atomically claimed using `FOR UPDATE SKIP LOCKED`
-4. **Transfer** — The claimed VM's app ownership is transferred to the new sandbox
-5. **Replenish** — A background loop detects pools below target and boots replacement VMs (one at a time to avoid burst load)
+1. **Capture** — After a template build completes, the control plane boots one throwaway VM from the template image in the background. The producer VM always uses the smallest preset (`shared-cpu-1x`) — the snapshot only needs to capture a clean, quiesced VM. The guest is parked at a pre-daemon barrier, then suspended into a self-contained snapshot (VM state + memory + writable overlay).
 
-## Configuration
+2. **Store** — The snapshot is stored on the host that produced it, under `/var/lib/zwrm/template-snapshots/<template-id>`, and recorded against the template together with a fingerprint of the template version, image reference, and baked init script.
 
-Enable and configure the warm pool in your server config:
+3. **Resume** — When a sandbox is created and the template has a current base snapshot, the new VM resumes from it on the snapshot's host. The sandbox gets a fresh identity — IP address, machine ID, and daemon token — applied before the in-VM daemon starts.
 
-```toml
-[sandboxes.warm_pool]
-enabled = true                    # Master switch (default: false)
-replenish_interval = "5s"         # How often to check and replenish
-default_size = "shared-cpu-1x"    # VM preset for pool VMs
+4. **Fallback** — Resume is strictly best-effort. If it fails for any reason (for example, the snapshot's host is unreachable), sandbox creation transparently falls back to a cold boot.
 
-[sandboxes.warm_pool.sizes]       # Per-template target pool sizes
-python = 3                        # Keep 3 python VMs warm
-node = 2                          # Keep 2 node VMs warm
-go = 2                            # Keep 2 go VMs warm
-base = 0                          # Disabled for this template
-```
-
-<Info>
-Setting a template's pool size to `0` disables warm pooling for that template. Sandboxes for that template will always cold-boot.
-</Info>
-
-## Checking pool status
-
-View the current state of the warm pool:
-
-<Tabs>
-  <Tab title="CLI">
-    ```bash
-    zwrm sandbox pool
-    ```
-
-    ```
-    TEMPLATE   READY  CLAIMED  TARGET
-    python     3      0        3
-    node       1      1        2
-    go         2      0        2
-    ```
-  </Tab>
-  <Tab title="API">
-    ```bash
-    curl http://localhost:8080/v1/sandboxes/pool
-    ```
-
-    ```json
-    {
-      "enabled": true,
-      "templates": [
-        {"template_name": "python", "ready_count": 3, "claimed_count": 0, "target": 3},
-        {"template_name": "node", "ready_count": 1, "claimed_count": 1, "target": 2},
-        {"template_name": "go", "ready_count": 2, "claimed_count": 0, "target": 2}
-      ]
-    }
-    ```
-  </Tab>
-</Tabs>
-
-<Note>
-The pool status endpoint is admin-only.
-</Note>
-
-## Graceful fallback
-
-If the warm pool is empty or disabled, sandbox creation falls back to cold booting a new VM. This is transparent to the caller — the only difference is latency:
+## Latency
 
 | Path | Typical latency |
 |------|----------------|
-| Warm pool claim | < 200ms |
+| Base-snapshot resume | < 500ms |
 | Cold boot | 2-3 seconds |
 
-Warm pool errors (e.g., a claimed VM that fails to start) are also handled gracefully — the system falls back to cold boot and logs the error.
+## Snapshot invalidation
 
-## Concurrency safety
+Each base snapshot is keyed to a fingerprint of the template version and image reference. Rebuilding a template bumps its version, so the existing snapshot no longer matches — sandboxes cold-boot until a fresh base snapshot is captured after the rebuild finishes. Capture is automatic; no operator action is required.
 
-The claim operation uses PostgreSQL's `FOR UPDATE SKIP LOCKED` to safely handle concurrent sandbox creation:
+## When creates cold-boot
 
-- Multiple requests arriving simultaneously each get a different VM
-- If no VMs are available, the query returns no rows (no blocking, no contention)
-- The replenisher only boots one VM per cycle to avoid overloading the host
+A sandbox creation falls back to a cold boot when:
 
-## Resource considerations
+- The template has no base snapshot yet — the first build's capture is still running, capture failed, or no sandbox-capable host was available to produce one
+- The snapshot is stale (the template was rebuilt since it was captured)
+- The create requests a custom `disk_size_mb` — a resumed sandbox inherits the base snapshot's fixed-size overlay, so disk-size overrides always cold-boot (which sizes the writable overlay correctly)
+- The resume itself fails at runtime (the fallback path)
 
-Warm pool VMs consume host resources (CPU, memory, TAP devices, IP allocations) even when idle. Size your pool targets based on:
+Cold-boot fallback is transparent to the caller — the only difference is latency.
 
-- **Expected sandbox creation rate** — Higher rates benefit more from warm pooling
-- **Available host resources** — Each warm VM uses its configured preset's CPU and memory
-- **Template popularity** — Allocate more warm VMs to frequently-used templates
-- **Acceptable cold-boot rate** — A smaller pool means more cold boots during traffic spikes
+## Configuration
+
+Base snapshots are captured automatically after every template build. Whether sandbox creation *resumes* from them is controlled by a server config flag:
+
+```toml
+[sandboxes]
+  resume_from_base_snapshot = true
+```
+
+When disabled, sandboxes always cold-boot. Unlike the former warm pool, base snapshots consume only disk space on the producing host — no idle VMs, CPU, memory, or IP allocations are held in reserve.

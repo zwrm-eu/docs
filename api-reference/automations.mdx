@@ -20,18 +20,33 @@ External events → agent runs. See the [Triggers guide](/automations/triggers) 
 
 A trigger's `provider` is one of `webhook` (default; any system POSTing JSON, with provider-header recognition for GitHub/GitLab/Linear/Shopify/Sentry and more) or `msteams` (a Microsoft Graph chat-message subscription — API/dashboard only, no CLI).
 
+Create and `PATCH` bodies share these fields (on `PATCH`, omitted fields are unchanged):
+
+| Field | Description |
+|-------|-------------|
+| `name` | Trigger name |
+| `default_agent` | Catch-all agent (ID or instance name) when no route matches; omit to drop unrouted events. `PATCH` takes a JSON `null` to clear it |
+| `instruction` | Standing text that opens every fired run's prompt |
+| `message_template` | Renders the event into the prompt via `{dot.path}` tokens (an unresolved token renders empty); without it, the raw body is appended |
+| `session_key_path` | Dot-path into the payload whose value becomes the fired run's workspace key; empty = a fresh one-shot workspace per delivery |
+| `match_conditions` / `routes` | Payload match gate and per-route agent dispatch (shared condition grammar — see the [guide](/automations/triggers)) |
+| `rate_per_day` | Daily firing cap; over-cap deliveries are dropped and logged |
+| `with_secret` / `secret` | Create only: `with_secret` (default `true`) generates the shared secret, returned once; `secret` imports a provider-minted one instead (never echoed; conflicts with `with_secret: false`) |
+
 ## Schedules
 
 Cron → agent runs. See the [Schedules guide](/automations/schedules).
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `POST` | `/v1/schedules` | Create a schedule (optional `metadata` map) |
+| `POST` | `/v1/schedules` | Create a schedule (optional `session_key` and `metadata`) |
 | `GET` | `/v1/schedules` | List schedules (`?agent=` ID or name; `?metadata.<key>=<value>` to filter, ANDed) |
 | `GET` | `/v1/schedules/{schedule_id}` | Get a schedule (next/last run) |
-| `PATCH` | `/v1/schedules/{schedule_id}` | Update (pause/resume, cron, prompt — the agent binding is immutable) |
+| `PATCH` | `/v1/schedules/{schedule_id}` | Update (pause/resume, cron, prompt, `session_key` — the agent binding is immutable) |
 | `DELETE` | `/v1/schedules/{schedule_id}` | Delete (with its firing log) |
 | `GET` | `/v1/schedules/{schedule_id}/firings` | Firing log (`?limit=`, default 100) |
+
+`session_key` (create and update, max 256 characters) is the workspace-continuity key for the runs the schedule fires — same key = same workspace, so state carries across firings, like a run's session key.
 
 `metadata` is an opaque string map (max 20 entries, 64-character keys, 256-character values) accepted on create and update. A malformed `metadata.` filter returns `400` rather than silently widening the listing.
 

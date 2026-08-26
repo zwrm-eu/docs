@@ -42,4 +42,4 @@ Agent VMs run model-driven tool calls and arbitrary shell commands, so ZWRM neve
 
 ## Which account the agent acts as
 
-For upstreams using per-user OAuth, an agent acts as **its own connected account** — never its owner's. Authorize the agent once (from its dashboard page, or `zwrm mcp connect <upstream> --agent <id>`) and it has an identity. Alternatively, bind one pre-consented account for every caller. See [Connector identity](/context/credentials).
+For upstreams using per-user OAuth, an agent acts as **its own connected account** — never its owner's. Authorize the agent once (from its dashboard page, or `zwrm mcp connect <upstream> --agent <id>`) and it has an identity. Which credential a call carries follows purely from the upstream's auth type — per-user OAuth upstreams always resolve the caller's own grant, other upstreams use the org-shared credential; there is nothing to configure per attachment. See [Connector identity](/context/credentials).

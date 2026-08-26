@@ -33,7 +33,7 @@ VAT is handled by Stripe Tax where the deployment enables it: prices are tax-exc
 
 ### Running low and running out
 
-- **Low-balance warning** — when the balance falls under a configured threshold, the dashboard shows a banner and ZWRM emails the org's owners/admins (at most once per 24h). `zwrm credits` reports status `low`.
+- **Low-balance warning** — when the balance falls under a configured threshold, the dashboard shows a banner and ZWRM emails the org's owners/admins — at most once per below-threshold episode: the warning re-arms only after the balance recovers to the threshold, so you aren't re-emailed while it stays low. `zwrm credits` reports status `low`.
 - **Exhaustion** — once the balance reaches zero, **new credit-metered work is refused with `402 Payment Required`** — checked per turn for sessions, at dispatch for runs, and before each catalog completion on the OpenAI-compatible API (OpenAI error code `insufficient_quota`); a turn or completion already in flight is never killed. This is surfaced **per agent**: each zwrm-runtime agent shows the warning and the new-agent dialog disables the zwrm-runtime option. Claude and Codex agents are unaffected — they don't use credits.
 
 <Note>
@@ -48,7 +48,7 @@ Live per-token prices for the credit-metered catalog are shown in EUR in the das
 GET /v1/credits/pricing
 ```
 
-The response carries each model's `input_per_m_eur` / `output_per_m_eur` (per million tokens), context window, and reasoning flag — converted server-side at the deployment rate so clients never do the arithmetic. The same EUR prices ride [`GET /v1/openai/models`](/agents/openai-api) as discovery metadata.
+The response carries each model's `input_per_m_eur` / `output_per_m_eur` (per million tokens), context window, and reasoning flag — converted server-side at the deployment rate so clients never do the arithmetic. It covers the **agent-selectable catalog** only; catalog models agents cannot select (the Anthropic entries) are priced solely on [`GET /v1/openai/models`](/agents/openai-api), which carries the same EUR pricing as discovery metadata.
 
 ### Ledger API
 
@@ -59,7 +59,7 @@ Reads are org-scoped (session/user auth) and deliberately outside the agent-toke
 | `GET` | `/v1/credits` | Balance, currency (`eur`), metering flag, low-balance flag |
 | `GET` | `/v1/credits/ledger` | Ledger history, newest-first (`?before_id=`, `?limit=` 1–200) |
 | `GET` | `/v1/credits/usage` | Per-agent EUR consumption (today + 7 days), plus deleted-agent charge |
-| `GET` | `/v1/credits/pricing` | Credit-metered model prices in EUR |
+| `GET` | `/v1/credits/pricing` | Agent-selectable model prices in EUR |
 | `GET` | `/v1/org/gateway-usage` | Per-model gateway consumption over the last N days (`?days=`) — the dashboard Models page's data |
 
 ## Subscriptions & invoices

@@ -8,7 +8,7 @@ icon: "rocket"
 
 - A running ZWRM control plane (`zwrmd`)
 - The `zwrm` CLI installed and configured
-- At least one built template (built-in templates are registered on startup)
+- At least one built template (built-in templates are registered on startup and built on first use)
 
 ## Create an ephemeral sandbox
 
@@ -19,13 +19,11 @@ zwrm sandbox create --template python --timeout 10m
 ```
 
 ```
-Sandbox created:
-  ID:       sbx_abc123
-  Mode:     ephemeral
-  Status:   running
-  Template: python
-  IP:       172.16.0.2
-  Expires:  2026-04-05T15:10:00Z
+Sandbox created: sbx_abc123
+  Mode:      ephemeral
+  Status:    running
+  IP:        172.16.0.2
+  Expires:   2026-04-05T15:10:00Z
 ```
 
 ## Execute a command
@@ -85,13 +83,10 @@ zwrm sandbox create --template python --persistent --idle-timeout 10m
 ```
 
 ```
-Sandbox created:
-  ID:       sbx_def456
-  Mode:     persistent
-  Status:   running
-  Template: python
-  IP:       172.16.0.6
-  Idle:     10m (suspends after inactivity)
+Sandbox created: sbx_def456
+  Mode:      persistent
+  Status:    running
+  IP:        172.16.0.6
 ```
 
 When the sandbox goes idle, it's automatically suspended. Wake it with:

@@ -8,13 +8,13 @@ Templates are the base images that sandboxes boot from. Each template is a Docke
 
 ## Built-in templates
 
-These templates are automatically registered and built when the control plane starts:
+These templates are registered automatically when the control plane starts, from Dockerfiles embedded in the `zwrmd` binary. They are registered with status `pending` — the actual image build is triggered on first use or via `zwrm templates rebuild`:
 
-| Template | Description | Source |
-|----------|-------------|--------|
-| `python` | Python 3.12 with pip and common packages | `github.com/zwrm-eu/templates/python-api` |
-| `node` | Node.js 22 with npm | `github.com/zwrm-eu/templates/web` |
-| `go` | Go toolchain | `github.com/zwrm-eu/templates/go` |
+| Template | Description |
+|----------|-------------|
+| `base` | Ubuntu with git, curl, build-essential, and common dev utilities |
+| `python` | Python 3.12 + pip + venv on the base image |
+| `node` | Node.js 22 + npm + yarn + pnpm on the base image |
 
 ## Template lifecycle
 
@@ -33,11 +33,11 @@ These templates are automatically registered and built when the control plane st
 
     Output shows both built-in and custom templates with their status:
     ```
-    NAME      STATUS   VERSION  BUILT-IN  DESCRIPTION
-    python    ready    1        yes       Python 3.12 environment
-    node      ready    1        yes       Node.js 22 environment
-    go        ready    1        yes       Go development environment
-    my-ml     ready    2        no        Custom ML template
+    NAME    STATUS   VERSION  BUILT-IN  DESCRIPTION
+    base    pending  1        yes       Ubuntu with git, curl, build-essential, and common dev utilities
+    python  ready    1        yes       Python 3.12 + pip + venv on the base image
+    node    ready    1        yes       Node.js 22 + npm + yarn + pnpm on the base image
+    my-ml   ready    2        no        Custom ML template
     ```
   </Tab>
   <Tab title="API">
@@ -66,8 +66,8 @@ Custom templates are built from a Dockerfile. The Dockerfile defines the complet
     ```bash
     zwrm templates create my-ml --dockerfile ./Dockerfile \
       --egress-mode deny_all \
-      --egress-allow-cidr 0.0.0.0/0 \
-      --egress-deny-cidr 10.0.0.0/8
+      --egress-allow-cidr 140.82.112.0/20 \
+      --egress-allow-port 443
     ```
 
     Egress flags:
@@ -75,6 +75,17 @@ Custom templates are built from a Dockerfile. The Dockerfile defines the complet
     - `--egress-allow-cidr CIDR` — Default allowed outbound CIDR (repeatable; implies `deny_all`)
     - `--egress-deny-cidr CIDR` — Default denied outbound CIDR (repeatable)
     - `--egress-allow-port PORT` — Default TCP port restriction for `--egress-allow-cidr` (repeatable)
+
+    <Warning>
+    In `deny_all` mode, allowed destinations must be enumerated explicitly. An `allow_cidr` that overlaps the VM subnet — including `0.0.0.0/0` — is rejected when a sandbox is created, because it would punch a hole in cross-app isolation. See [Egress controls](/sandboxes/egress).
+    </Warning>
+
+    Quota flags:
+    - `--disk-size-mb MIB` — Writable disk quota for sandboxes from this template (256–65536 MiB; default 2048)
+    - `--bandwidth-mbps N` — Default per-drive bandwidth cap (MiB/s)
+    - `--ops-per-sec N` — Default per-drive IOPS cap
+    - `--burst-mbps N` — Default one-time bandwidth burst (MiB)
+    - `--burst-ops N` — Default one-time ops burst
   </Tab>
   <Tab title="API">
     ```bash
@@ -89,19 +100,62 @@ Custom templates are built from a Dockerfile. The Dockerfile defines the complet
         },
         "egress": {
           "mode": "deny_all",
-          "allow_cidrs": ["0.0.0.0/0"],
-          "deny_cidrs": ["10.0.0.0/8"]
+          "allow_cidrs": ["140.82.112.0/20"],
+          "allow_ports": [443]
+        },
+        "disk_size_mb": 8192,
+        "rate_limit": {
+          "bandwidth_mbps": 200,
+          "ops_per_sec": 8000
         }
       }'
     ```
+
+    Body fields beyond `name` and `dockerfile`:
+    - `description` (string) — Human-readable description
+    - `env` (object) — Default environment variables for sandboxes from this template
+    - `egress` (object) — Default egress policy (see [Egress controls](/sandboxes/egress))
+    - `disk_size_mb` (integer) — Writable disk quota in MiB for sandboxes from this template (256–65536; unset uses the server default of 2048)
+    - `rate_limit` (object) — Default Firecracker drive caps: `bandwidth_mbps`, `ops_per_sec`, `burst_mbps`, `burst_ops` (all optional; zero means unlimited for that dimension)
   </Tab>
 </Tabs>
 
+### Updating disk and rate-limit quotas
+
+A template's disk quota and drive rate limit can be changed without rebuilding the image:
+
+<Tabs>
+  <Tab title="CLI">
+    ```bash
+    zwrm templates update-quota my-ml --disk-size-mb 8192
+    zwrm templates update-quota my-ml --bandwidth-mbps 200 --ops-per-sec 8000
+    zwrm templates update-quota my-ml --clear-rate-limit
+    ```
+
+    `--clear-rate-limit` drops the per-template rate limit and falls back to the size preset's default.
+  </Tab>
+  <Tab title="API">
+    ```bash
+    curl -X PATCH http://localhost:8080/v1/templates/my-ml/quota \
+      -H "Content-Type: application/json" \
+      -d '{
+        "disk_size_mb": 8192,
+        "rate_limit": {"bandwidth_mbps": 200, "ops_per_sec": 8000}
+      }'
+    ```
+
+    Send `"clear_rate_limit": true` to delete the per-template rate limit (falling back to preset defaults) — a JSON `null` for `rate_limit` is indistinguishable from omitting the field.
+  </Tab>
+</Tabs>
+
+Changes apply to sandboxes created after the update; a per-sandbox `disk_size_mb` or `rate_limit` on the create request still overrides the template default.
+
 ### Template metadata
 
-Templates can include a `zwrm-template.toml` file in their repository root with metadata:
+Templates can include a `zwrm-template.toml` file in their repository root with metadata. All fields must live under the `[template]` table — top-level keys are ignored:
 
 ```toml
+[template]
 name = "my-ml"
 description = "Machine learning environment"
 author = "your-org"
@@ -110,7 +164,7 @@ tags = ["python", "ml", "data-science"]
 default_size = "performance-2x"
 min_size = "shared-cpu-4x"
 
-[env]
+[template.env]
 PYTHONUNBUFFERED = "1"
 OMP_NUM_THREADS = "2"
 ```
@@ -127,7 +181,7 @@ The template build pipeline converts a Dockerfile into a Firecracker-bootable ex
 6. **Agent skeleton** — Copy `/home/agent` to `/etc/skel/agent-skel/` for user provisioning
 7. **Cache** — Store the result with a content-addressed cache key
 
-After a template image is built, the control plane creates a **golden snapshot** in the background: a pre-taken Firecracker memory+state snapshot for each VM size. When a warm-pool slot isn't available, cold-starting from a golden snapshot is faster than a full kernel boot.
+After a template image is built, the control plane captures a **base snapshot** in the background: a self-contained Firecracker snapshot of one clean, booted VM from the template. Subsequent sandbox creates resume from it instead of cold-booting. Capture is best-effort — if it fails, sandboxes from the template simply cold-boot until the next build refreshes the snapshot. See [Fast creation](/sandboxes/warm-pool).
 
 <Info>
 Build caching is content-addressed. The cache key includes the repository URL and commit hash. Rebuilding with no upstream changes is a no-op.
@@ -150,7 +204,7 @@ When you update a template's Dockerfile, rebuild it to create a new version:
   </Tab>
 </Tabs>
 
-Rebuilding increments the template version, invalidates any existing golden snapshots, and triggers a new build. Existing sandboxes continue using their current image — only new sandboxes use the updated template.
+Rebuilding increments the template version and triggers a new build. The version bump invalidates the template's base snapshot (its fingerprint no longer matches), so new sandboxes cold-boot until a fresh base snapshot is captured after the rebuild completes. Existing sandboxes continue using their current image — only new sandboxes use the updated template.
 
 ## Deleting custom templates
 

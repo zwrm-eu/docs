@@ -12,7 +12,7 @@ zwrm auth login
 
 Opens your browser to complete the authentication flow. Your token is saved to `~/.zwrm/credentials.json`.
 
-For headless environments (SSH sessions, CI pipelines), pass a token directly:
+For headless environments (SSH sessions, CI pipelines), create a long-lived token with [`zwrm auth tokens create`](#api-tokens) and pass it directly:
 
 ```bash
 zwrm auth login --token <your-api-token>
@@ -42,6 +42,32 @@ zwrm auth token
 
 Displays your current token in masked format and shows where it was loaded from (environment variable or credentials file).
 
+## API tokens
+
+Create long-lived API tokens for CI/CD pipelines and headless environments:
+
+```bash
+zwrm auth tokens create --name github-actions --expiry 8760h
+```
+
+The token is displayed only once — store it securely (e.g. as a GitHub Actions secret), then use it via `ZWRM_API_TOKEN` or `zwrm auth login --token`.
+
+| Flag | Description |
+|------|-------------|
+| `--name` | Token name, e.g. `github-actions` (required) |
+| `--expiry` | Expiry duration, e.g. `8760h` for 1 year (empty = never expires) |
+| `--scopes` | Comma-separated capabilities, e.g. `apps:read,deploy` (empty = unrestricted token) |
+| `--org` | Organization ID or slug a scoped token is bound to (default: your target org) |
+
+With `--scopes` the token becomes a capability-scoped credential, confined to one organization and the capabilities you grant.
+
+List your tokens or revoke one by ID:
+
+```bash
+zwrm auth tokens list
+zwrm auth tokens revoke <token-id>
+```
+
 ## Token resolution
 
 ZWRM looks for your API token in this order:
@@ -49,7 +75,7 @@ ZWRM looks for your API token in this order:
 1. `ZWRM_API_TOKEN` environment variable
 2. `~/.zwrm/credentials.json` file
 
-Setting `ZWRM_API_TOKEN` is useful for CI/CD pipelines and automation:
+Setting `ZWRM_API_TOKEN` to a token minted with [`zwrm auth tokens create`](#api-tokens) is useful for CI/CD pipelines and automation:
 
 ```bash
 export ZWRM_API_TOKEN="your-token-here"

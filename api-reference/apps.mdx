@@ -9,7 +9,7 @@ icon: "cloud-arrow-up"
 | Method | Path | Description |
 |--------|------|-------------|
 | `POST` | `/v1/apps` | Create an app |
-| `GET` | `/v1/apps` | List apps (`?include_system=true` includes platform-managed apps) |
+| `GET` | `/v1/apps` | List apps (`?include_system=true` includes platform-managed apps — honored only for host-admin callers; the parameter is ignored for everyone else) |
 | `GET` | `/v1/apps/by-name/{app_name}` | Get an app by name |
 | `GET` | `/v1/apps/{app_id}` | Get an app |
 | `DELETE` | `/v1/apps/{app_id}` | Delete an app (`?force=true` skips safety checks) |

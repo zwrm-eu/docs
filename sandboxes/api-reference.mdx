@@ -37,12 +37,25 @@ All sandbox endpoints are under `/v1/sandboxes`. Requests require authentication
 </ParamField>
 
 <ParamField body="egress" type="object">
-  Outbound firewall policy. If omitted, the template's default egress policy is used (which itself defaults to `allow_all`). See [Egress controls](/sandboxes/egress).
+  Outbound firewall policy. Resolution order: the request's `egress` overrides the template's default policy, which overrides the server's configured default (`default_policy` under `[sandboxes.egress]`, set by the operator; `allow_all` when unset). See [Egress controls](/sandboxes/egress).
 
   - `mode` (string, required) — `allow_all` or `deny_all`
   - `allow_cidrs` (string[]) — CIDRs to allow when mode is `deny_all`
   - `deny_cidrs` (string[]) — CIDRs to explicitly block (evaluated before allows)
   - `allow_ports` (integer[]) — Restrict `allow_cidrs` to these destination TCP ports
+</ParamField>
+
+<ParamField body="disk_size_mb" type="integer">
+  Writable disk quota in MiB. Overrides the template's default (which itself defaults to 2048). Must be between 256 and 65536 when set.
+</ParamField>
+
+<ParamField body="rate_limit" type="object">
+  Firecracker drive rate caps. Overrides the template default. All fields optional; zero means unlimited for that dimension.
+
+  - `bandwidth_mbps` (integer) — Steady-state bandwidth cap (MiB/s)
+  - `ops_per_sec` (integer) — Steady-state IOPS cap
+  - `burst_mbps` (integer) — One-time bandwidth burst allowed at boot (MiB)
+  - `burst_ops` (integer) — One-time ops burst allowed at boot
 </ParamField>
 
 ```bash
@@ -77,6 +90,7 @@ curl -X POST http://localhost:8080/v1/sandboxes \
   "egress": {
     "mode": "allow_all"
   },
+  "daemon_token": "sbd_...",
   "created_at": "2026-04-05T15:00:00Z",
   "updated_at": "2026-04-05T15:00:00Z"
 }
@@ -84,10 +98,12 @@ curl -X POST http://localhost:8080/v1/sandboxes \
 
 </CodeGroup>
 
+The response may also include `metadata`, `volume_id`, `disk_size_mb`, and `rate_limit` when set. `daemon_token` is the in-VM daemon's bearer token, returned on create and on the [get-sandbox](#get-sandbox) detail endpoint (never in list responses) — it lets a client talk directly to the sandbox daemon via the proxy's `/sandboxes/{id}/_api/` path.
+
 | Status | Condition |
 |--------|-----------|
 | `201` | Sandbox created |
-| `400` | Invalid mode, size, timeout, or egress policy |
+| `400` | Invalid mode, size, timeout, egress policy, disk size, or rate limit |
 | `404` | Template not found |
 
 ---
@@ -97,7 +113,7 @@ curl -X POST http://localhost:8080/v1/sandboxes \
 Returns all non-destroyed sandboxes for the caller's organization.
 
 <ParamField query="status" type="string">
-  Filter by status: `creating`, `running`, `suspended`, `destroyed`.
+  Filter by status: `creating`, `running`, `suspended`. Destroyed sandboxes are excluded from all list responses, so `status=destroyed` always returns an empty list.
 </ParamField>
 
 ```bash
@@ -155,12 +171,19 @@ curl http://localhost:8080/v1/sandboxes/sbx_abc123
   "idle_timeout_seconds": 600,
   "last_activity_at": "2026-04-05T15:05:00Z",
   "suspended_at": "2026-04-05T15:15:00Z",
+  "daemon_token": "sbd_...",
   "created_at": "2026-04-05T15:00:00Z",
   "updated_at": "2026-04-05T15:15:00Z"
 }
 ```
 
 </CodeGroup>
+
+Beyond the fields shared with the create response (`metadata`, `volume_id`, `disk_size_mb`, `rate_limit`, `daemon_token`), the detail endpoint also reports current disk usage for a **running** sandbox — these fields are never populated on list responses:
+
+- `disk_capacity_mb` (integer) — Writable overlay capacity in MiB. Zero means unknown (not sampled: VM on a remote agent, overlay missing, or sampling failed)
+- `disk_used_mb` (integer) — MiB currently used
+- `disk_used_percent` (number) — Used percentage (capped at 100)
 
 | Status | Condition |
 |--------|-----------|
@@ -372,23 +395,3 @@ curl "http://localhost:8080/v1/sandboxes/sbx_abc123/files/home/user?list=true"
 ```
 
 </CodeGroup>
-
----
-
-## Warm pool status
-
-Admin-only endpoint showing the current warm pool state.
-
-```bash
-GET /v1/sandboxes/pool
-```
-
-```json
-{
-  "enabled": true,
-  "templates": [
-    {"template_name": "python", "ready_count": 3, "claimed_count": 0, "target": 3},
-    {"template_name": "node", "ready_count": 2, "claimed_count": 0, "target": 2}
-  ]
-}
-```

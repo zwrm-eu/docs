@@ -4,7 +4,7 @@ description: "Agent definitions, workspaces, connectors, memory, and per-agent s
 icon: "robot"
 ---
 
-An agent is [pure configuration](/agents/overview); these endpoints manage the definition and its attached resources. Agents are referenced by ID; most CLI commands resolve instance names for you.
+An agent is [pure configuration](/agents/overview); these endpoints manage the definition and its attached resources. `{agent_id}` path parameters accept the agent's ID or its instance name — the API resolves names server-side, as do the CLI commands.
 
 ## Agents
 
@@ -17,12 +17,27 @@ An agent is [pure configuration](/agents/overview); these endpoints manage the d
 | `DELETE` | `/v1/agents/{agent_id}` | Delete the agent (VM, volume, record) |
 | `POST` | `/v1/agents/connect` | Connect: boot a VM for an interactive session (creates the agent if the name is new) |
 | `POST` | `/v1/agents/{agent_id}/disconnect` | Disconnect: destroy the VM, keep the volume |
-| `PUT` | `/v1/agents/{agent_id}/volume` | Resize the volume (grow-only) |
+| `PUT` | `/v1/agents/{agent_id}/volume` | Resize the volume (grow-only; the workspace must be disconnected — `409` while it is running or suspended) |
 | `DELETE` | `/v1/agents/{agent_id}/volume` | Delete the volume |
 | `PUT` | `/v1/agents/{agent_id}/instructions` | Set the per-agent instructions |
 | `GET` | `/v1/agents/{agent_id}/budget` | Budget caps and today's usage |
 | `PUT` | `/v1/agents/{agent_id}/budget` | Set budget caps |
 | `GET` | `/v1/agents/{agent_id}/logs` | Connect/disconnect activity log |
+
+`POST /v1/agents` and `POST /v1/agents/connect` take the same body shape; every field is optional (an empty body creates a default `claude` agent):
+
+| Field | Description |
+|-------|-------------|
+| `agent_type` | `claude` (default), `codex`, or `pi` |
+| `instance` | Agent name, unique per org (default `default`) |
+| `size` | VM size preset (default `performance-2x`) |
+| `template` | Template name or GitHub repo URL for the workspace image |
+| `instructions` | Per-agent system-prompt append. On connect, an absent field leaves the stored value untouched |
+| `secrets` | Initial secrets (string map) set on the agent's backing app |
+| `allowed_scopes` | Create only — the agent's boot-token capability set. Each value must be a configurable scope (an unknown one is a `400` listing the valid set); absent or empty = the platform default set |
+| `cmd` | Connect only — override the login command for this boot (e.g. `aider`) |
+
+`PATCH /v1/agents/{agent_id}` also accepts `allowed_scopes`: omitted leaves the set unchanged, an empty array (`[]`) resets it to the platform default, and each value must be a configurable scope.
 
 ## Workspaces
 
@@ -31,7 +46,7 @@ An agent is [pure configuration](/agents/overview); these endpoints manage the d
 | `GET` | `/v1/agents/{agent_id}/workspaces` | List the agent's workspaces |
 | `DELETE` | `/v1/agents/{agent_id}/workspaces/{workspace_id}` | Delete a workspace (and its volume) |
 | `PUT` | `/v1/agents/{agent_id}/workspace-ttl` | Set keyed-workspace TTL |
-| `GET` | `/v1/agents/{agent_id}/workspaces/{workspace_ref}/files/{path}` | List (`?list=true`) or download files. Works even when the VM is off — a cold workspace's files are served read-only host-side from the stored volume (`507` under host disk pressure). `workspace_ref` is a workspace ID or key (`default`) |
+| `GET` | `/v1/agents/{agent_id}/workspaces/{workspace_ref}/files/{path}` | List (`?list=true`), search (`?search=`), or download files. Listing and download work even when the VM is off — a cold workspace's files are served read-only host-side from the stored volume (`507` under host disk pressure). Search runs on the in-VM daemon only: it never wakes a parked workspace and returns `409` when the workspace isn't running. `workspace_ref` is a workspace ID or key (`default`) |
 | `PUT` | `/v1/agents/{agent_id}/workspaces/{workspace_ref}/files/{path}` | Upload a file into the workspace (requires a live daemon) |
 
 ## Connectors

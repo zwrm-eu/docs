@@ -7,10 +7,10 @@ icon: "terminal"
 ## Usage
 
 ```bash
-zwrm ssh [machine-id]
+zwrm ssh [machine-id] [flags] [-- command [args...]]
 ```
 
-Open an SSH session to a running VM.
+Open an SSH session to a running VM, or run a single command on it.
 
 ## Arguments
 
@@ -27,6 +27,22 @@ Open an SSH session to a running VM.
 | `--machine` | string | — | Machine ID (alternative to positional argument) |
 | `--direct` | bool | `false` | Connect directly to the VM IP |
 | `--user` | string | — | SSH user override |
+| `--command`, `-C` | string | — | Remote command to run (alternative to `-- command`) |
+| `--tty`, `-t` | bool | `false` | Force PTY allocation (e.g. for `-- top`) |
+| `--no-tty`, `-T` | bool | `false` | Disable PTY allocation |
+
+## Running a remote command
+
+Everything after `--` is executed on the VM instead of opening an interactive shell: stdout/stderr stream back, stdin is forwarded, and the CLI exits with the remote command's exit code (255 means the SSH connection itself failed).
+
+```bash
+zwrm ssh -- uptime                       # run a command, exit with its code
+zwrm ssh --app myapp -- bash -lc 'cd /app && python3 task.py'
+zwrm ssh -C 'cd /app && ls -la'          # command as a single flag value
+echo 'print(1)' | zwrm ssh -- python3 -  # feed a script via stdin
+```
+
+A single token after `--` is passed to the remote shell verbatim, so shell syntax works; with several tokens each one is quoted, so the remote command sees exactly the arguments you typed.
 
 ## Connection modes
 

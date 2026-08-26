@@ -6,6 +6,17 @@ icon: "link"
 
 Linking a database to an application enables private network access between them — your app can connect to the database without going over the public internet.
 
+<Note>
+The app must have private networking enabled before it can be linked — set it in the app's `zwrm.toml`:
+
+```toml
+[network]
+private = true
+```
+
+Linking an app without private networking is refused.
+</Note>
+
 ## Link a database
 
 ```bash
