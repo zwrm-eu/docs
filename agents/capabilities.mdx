@@ -15,7 +15,7 @@ zwrm agent update my-project --allowed-scopes apps:read,deploy,logs:read
 zwrm agent update my-project --allowed-scopes ""   # reset to the platform default
 ```
 
-The dashboard's agent page has the same picker, with a *default* / *custom* toggle. Leaving an agent on the default means it tracks future platform defaults rather than freezing today's list.
+The dashboard's agent page has the same picker, with a *default* / *custom* / *none* toggle. Leaving an agent on the default means it tracks future platform defaults rather than freezing today's list.
 
 ## Available capabilities
 
@@ -49,6 +49,25 @@ Orgs running agents at mixed trust levels should narrow these away with `--allow
 `mcp:read` covers viewing upstreams, their tool catalogs, and virtual servers. OAuth grant management (connecting accounts on a per-user upstream) and scope discovery are never reachable with an agent token, whatever its scopes — consent stays a human step.
 
 Transferring an app to another organization is not grantable at all: no agent or scoped token can move an app out of your org.
+
+## Removing the token entirely
+
+The narrowest setting is no boot token at all:
+
+```bash
+zwrm agent update my-project --disable-boot-token
+zwrm agent update my-project --disable-boot-token=false   # restore it
+```
+
+In the dashboard this is the **None** option on the capabilities card; on the API it is the `boot_token_disabled` field (settable at create and via `PATCH`). With the token disabled, the VM boots without an in-VM `zwrm` login — the agent cannot call the platform at all. The gateway (inference) credential still mints, so the harness keeps its models.
+
+- This is distinct from an empty `--allowed-scopes`, which resets to the platform **default** set — it does not remove the token.
+- A stored custom scope set is preserved while the token is disabled and applies again when it is re-enabled.
+- The change applies at the **next boot**. A credential minted before the change stays valid until the workspace VM is disconnected — run `zwrm agent destroy <name>` to disconnect and revoke the agent's recorded platform credentials immediately (the volume is preserved).
+
+<Note>
+The boot token is the in-VM `zwrm` CLI login. Sessions additionally receive their own short-lived per-session credential for gateway-managed connectors and session tools — disabling the boot token does not detach the agent's [connectors](/context/connectors).
+</Note>
 
 ## What the agent sees
 

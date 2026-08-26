@@ -623,10 +623,10 @@ zwrm agent delete [instance] [-f]    # delete VM, volume, and record
 Update agent configuration (only passed flags change).
 
 ```bash
-zwrm agent update <instance> [--size <preset>] [--model <m>] [--effort <e>] [--instructions <text>] [--workspace-ttl <dur>] [--daily-budget <usd>] [--max-runs-per-day <n>] [--allowed-scopes <list>]
+zwrm agent update <instance> [--size <preset>] [--model <m>] [--effort <e>] [--instructions <text>] [--workspace-ttl <dur>] [--daily-budget <usd>] [--max-runs-per-day <n>] [--allowed-scopes <list>] [--disable-boot-token[=false]]
 ```
 
-`--model` is harness-specific (`opus`/`sonnet` for claude, catalog aliases for codex and the zwrm runtime — see [Models](/agents/models)). `--allowed-scopes` takes a comma-separated `resource:action` list; an empty value resets to the platform default. [Guide →](/agents/capabilities)
+`--model` is harness-specific (`opus`/`sonnet` for claude, catalog aliases for codex and the zwrm runtime — see [Models](/agents/models)). `--allowed-scopes` takes a comma-separated `resource:action` list; an empty value resets to the platform default. `--disable-boot-token` mints no in-VM `zwrm` credential at the next boot (`--disable-boot-token=false` restores it) — distinct from an empty `--allowed-scopes`, which means the default set. [Guide →](/agents/capabilities)
 
 ### `zwrm agent memory`
 
