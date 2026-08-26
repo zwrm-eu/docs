@@ -7,19 +7,22 @@ icon: "terminal"
 ## SSH
 
 ```bash
-zwrm agent claude            # default instance
-zwrm agent claude my-project # named instance = separate agent + volume
-zwrm a claude                # shorthand
+zwrm agent create my-project --runtime claude  # one-time: store the agent definition
+zwrm agent connect my-project                  # boot the workspace VM, open the agent tool
+zwrm agent ssh my-project                      # raw shell in the same workspace VM
 ```
 
-Connecting boots a VM on the agent's default workspace and drops you into the agent tool over SSH. Disconnecting destroys the VM and keeps the volume. Connecting to a name that doesn't exist in your org creates the agent.
+`connect` resolves the agent by exact ID or unambiguous name, boots (or reuses) a VM on its default workspace, and drops you into the agent tool over SSH; `ssh` opens a plain shell in the same VM instead. Disconnecting destroys the VM and keeps the volume. Connecting to a name that doesn't exist offers to create the agent (asking for the runtime) in an interactive terminal; non-interactive use never creates implicitly.
+
+`create` flags:
 
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
-| `--instance` | string | `default` | Named instance (alternative to the positional argument) |
-| `--size` | string | agent's stored size | VM size preset (`performance-2x` for a new agent) |
-| `--cmd` | string | — | Override the default startup command (e.g. `"aider"`) |
+| `--runtime` | string | — | **Required.** Agent runtime: `zwrm`, `claude`, or `codex` |
+| `--size` | string | `performance-2x` | VM size preset |
 | `--template` | string | — | Agent template: registry ID or `github.com/user/repo` |
+
+`connect` and `ssh` take only the agent name or ID — the stored runtime, size, and template carry over. If the same name exists in more than one of your orgs, use an agent ID or the global `--org` flag.
 
 Runs and chat can share a live SSH VM — an execution's teardown never kills a VM you are SSH-ed into.
 

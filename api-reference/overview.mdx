@@ -16,7 +16,7 @@ For ZWRM cloud this is your platform URL.
 
 ## Authentication
 
-All endpoints (except `GET /v1/health` and trigger ingest) require authentication with an API token:
+All endpoints require authentication with an API token, with a few exceptions: `GET /v1/health`, trigger ingest, `GET /v1/mcp/oauth/callback` (the MCP upstream OAuth return leg), and — when one-click launches are enabled — the launch create/status routes under `/v1/launches`.
 
 ```bash
 curl -H "Authorization: Bearer <token>" https://<platform>/v1/apps
@@ -27,7 +27,7 @@ curl -H "Authorization: Bearer <token>" https://<platform>/v1/apps
 
 ## Organization scoping
 
-Every resource is scoped to an organization. Requests run against your default org; pass `X-Org-ID: <org-id>` to target another org you're a member of.
+Every resource is scoped to an organization. Without `X-Org-ID`, list and read requests span every org you're a member of, and create operations fall back to your personal (default) org. Pass `X-Org-ID: <org-id>` to narrow the request to a single org you're a member of.
 
 ## Rate limits
 
@@ -35,11 +35,13 @@ Requests are rate-limited per token. Expensive operations (deploys, run dispatch
 
 ## Errors
 
-Errors return JSON with a message:
+Errors return JSON with a short description and the HTTP status repeated as an integer `code`:
 
 ```json
-{ "error": "Not found", "message": "No app with that ID" }
+{ "error": "Not found", "message": "No app with that ID", "code": 404 }
 ```
+
+`error` and `code` are always present. `message` (extra detail) may be absent, and some errors also carry a machine-readable `error_code` string.
 
 The [OpenAI-compatible endpoints](/agents/openai-api) are the exception — they render errors in the OpenAI wire shape.
 
@@ -88,6 +90,6 @@ The [OpenAI-compatible endpoints](/agents/openai-api) are the exception — they
     Inbound triggers, schedules, outbound webhooks.
   </Card>
   <Card title="Platform & org" icon="building" href="/api-reference/platform">
-    Auth, orgs, domains, audit logs, templates, hosts.
+    Auth, orgs, domains, audit logs, templates.
   </Card>
 </CardGroup>

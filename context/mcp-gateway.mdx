@@ -45,7 +45,9 @@ In the dashboard, the gateway page has a **Quick connect** grid of branded cards
 
 ### Scope-aware tool exposure
 
-On an OAuth upstream, an attachment that selects *all* tools exposes only the tools covered by the scopes you configured — a 320-tool upstream narrowed to the handful your scopes actually permit. Tools needing scopes you didn't request are hidden rather than surfaced only to fail at call time. Explicit tool selections are always exposed, even beyond the configured scopes.
+On a **connector-known** OAuth upstream — one the platform ships per-tool scope data for, currently the [Microsoft 365](/context/shared-connectors) connector — a selection of *all* tools exposes only the tools covered by the scope string you configured: a 320-tool upstream narrowed to the handful your scopes actually permit. Tools needing scopes you didn't request are hidden rather than surfaced only to fail at call time. Explicit tool selections are always exposed, even beyond the configured scopes.
+
+This narrowing requires both the vendored scope data and a configured scope string. Generic OAuth upstreams — and connector-known ones with no scope configured — get no scope-based narrowing: a select-all composition exposes their full catalog.
 
 - Credentials are encrypted at rest and **never returned by the API**.
 - The tool catalog is synced on add, every 5 minutes, on demand (`sync`), and when the upstream signals a tool-list change. The cached catalog keeps serving even when the upstream is down.
@@ -60,13 +62,16 @@ zwrm mcp server create github-tools \
   --description "GitHub issue triage tools"
 zwrm mcp server list
 zwrm mcp server get github-tools
+zwrm mcp server add-upstream github-tools --upstream "linear:list_issues" [--replace]
+zwrm mcp server remove-upstream github-tools linear
 zwrm mcp server rm github-tools
 ```
 
 - `--upstream` is repeatable: `"name"` selects all of that upstream's tools, `"name:tool1,tool2"` selects a subset. Tool allowlists are the composition — build a read-only variant by selecting only read tools.
 - `--description` is served as the MCP `instructions` for connecting clients.
 - On a per-user OAuth upstream, every caller always acts as their own connected account — there is no per-attachment identity setting to configure. See [Connector identity](/context/credentials).
-- Tool names pass through unmodified unless two upstreams collide, in which case they are prefixed `{upstream}_{tool}`.
+- `add-upstream` grows an existing composition (`--upstream` takes the same selection syntax as `create`; adding an upstream already in the composition is an error unless `--replace` overwrites its tool selection). `remove-upstream` drops one or more upstreams and their tools; removing the last upstream is refused — delete the server with `rm` instead.
+- Tool names pass through unmodified unless two upstreams collide, in which case they are prefixed `{upstream}_{tool}`. A composition can also rename individual tools via `exposed_names` (upstream tool → exposed name, per upstream selection in the [API composition body](/api-reference/skills-mcp)) — an explicit exposed name always wins over pass-through and collision prefixing.
 - `get` shows the endpoint, the exposed tool mapping, and any problems.
 
 ## Connecting clients
@@ -112,7 +117,7 @@ For **Custom GPTs** (`zwrm mcp install <server> --client custom-gpt`): fetch the
 
 Agents consume virtual servers as [connectors](/context/connectors). The key property: **upstream credentials never enter the agent VM** — the VM holds only a short-lived, revocable gateway token, and the gateway injects the real credentials upstream. Which identity those calls carry is the [connector identity](/context/credentials) policy.
 
-Agents can also *manage* the gateway when granted the `mcp:read` / `mcp:write` [capabilities](/agents/capabilities): reading upstreams, tool catalogs, and virtual servers, or registering and composing them. `mcp:write` is not in the default scope set — registering or repointing an upstream opens a new outbound channel — and OAuth grant management always stays a human consent step, unreachable with any agent token.
+Agents can also *manage* the gateway when granted the `mcp:read` / `mcp:write` [capabilities](/agents/capabilities): reading upstreams, tool catalogs, and virtual servers, or registering and composing them. `mcp:write` **is in the default scope set**, a deliberate platform decision — which means a default-scoped agent can register or repoint an upstream, opening a new outbound channel. Security-sensitive orgs should narrow `mcp:write` away per agent. OAuth grant management always stays a human consent step, unreachable with any agent token.
 
 ## Security model
 

@@ -39,7 +39,7 @@ zwrm init [--name <name>] [--dockerfile <path>] [--no-prompt] [--no-workflow]
 Build and deploy the application. [Guide →](/apps/deploy)
 
 ```bash
-zwrm deploy [--app <name>] [--context <dir>] [--force-build] [--replicas <n>]
+zwrm deploy [--app <name>] [--context <dir>] [--force-build] [--replicas <n>] [--repo <repo>] [--ref <ref>]
 ```
 
 | Flag | Type | Default | Description |
@@ -48,6 +48,8 @@ zwrm deploy [--app <name>] [--context <dir>] [--force-build] [--replicas <n>]
 | `--context` | string | `.` | Build context directory |
 | `--force-build` | bool | `false` | Bypass build cache |
 | `--replicas` | int | `1` | Number of VM instances |
+| `--repo` | string | — | Deploy from a GitHub repo (`github.com/owner/repo[@ref]`); server-side clone, requires `--app` |
+| `--ref` | string | default branch | Branch, tag, or commit for `--repo` (alternative to an `@ref` suffix; don't use both) |
 
 ---
 
@@ -142,12 +144,12 @@ echo 'print(1)' | zwrm ssh -- python3 -
 Transfer files to/from a running VM through the SSH proxy. Run without a subcommand for an interactive SFTP shell, or use one-shot subcommands:
 
 ```bash
-zwrm sftp get <remote> <local>
-zwrm sftp put <local> <remote>
+zwrm sftp get <remote> <local> [-r]
+zwrm sftp put <local> <remote> [-r]
 zwrm sftp ls <remote-dir>
 ```
 
-All forms accept `--app`, `--app-id`, `--machine`, and `--user`. Modern `scp` (OpenSSH ≥ 9.0) also works against the proxy directly.
+`get` and `put` accept `--recursive` (`-r`) to copy directories. All forms accept `--app`, `--app-id`, `--machine`, and `--user`. Modern `scp` (OpenSSH ≥ 9.0) also works against the proxy directly.
 
 ---
 
@@ -160,7 +162,10 @@ Manage encrypted application secrets. [Guide →](/apps/secrets)
 ```bash
 zwrm secrets set <NAME> <VALUE>
 zwrm secrets set <NAME>=<VALUE>
+printf '%s' "$VALUE" | zwrm secrets set <NAME> --stdin
 ```
+
+Prefer `--stdin`: the value is read from standard input, so it never appears in argv or your shell history.
 
 ### `zwrm secrets list`
 
@@ -263,7 +268,7 @@ zwrm volumes snapshot disable <name> [--app <name>]
 zwrm volumes restore <name> [--app <name>] [--snapshot <id>]
 ```
 
-All subcommands accept `--app` and `--app-id`.
+All subcommands accept `--app` and `--app-id`, except `volumes limits` and `volumes snapshot delete`, which take neither.
 
 ---
 
@@ -315,8 +320,10 @@ zwrm postgres list
 ### `zwrm postgres connect`
 
 ```bash
-zwrm postgres connect <name>
+zwrm postgres connect <name> [--direct]
 ```
+
+`--direct` returns the raw Postgres connection (`:5432`), bypassing the pooler (PgBouncer) when one is enabled for the database.
 
 ### `zwrm postgres destroy`
 
@@ -369,21 +376,17 @@ zwrm postgres backup delete <backup-id>
 ### `zwrm postgres restore`
 
 ```bash
-zwrm postgres restore <name> --name <new-name> [--backup <id>] [--pitr <timestamp>] [--size <preset>]
+zwrm postgres restore <name> [--name <new-name>] [--backup <id>] [--pitr <timestamp>] [--size <preset>]
 ```
+
+By default this is a **destructive in-place restore**: it replaces the database's VM with the backup data, preserving the original ID, credentials, and domain. Pass `--name` to create a new database from the backup instead, leaving the original untouched.
 
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
-| `--name` | string | — | Name for the restored database (omit for in-place restore) |
+| `--name` | string | — | Name for a new restored database (omit for in-place restore) |
 | `--backup` | string | latest | Specific backup ID |
 | `--pitr` | string | — | Point-in-time recovery target (RFC 3339) |
 | `--size` | string | same as source | Size preset override |
-
-### `zwrm postgres restore status`
-
-```bash
-zwrm postgres restore status <restore-id>
-```
 
 ### `zwrm postgres scale`
 
@@ -478,6 +481,7 @@ Organization-wide secrets, inherited by every app and agent. [Guide →](/secret
 
 ```bash
 zwrm org secrets set <NAME>=<VALUE>
+printf '%s' "$VALUE" | zwrm org secrets set <NAME> --stdin   # preferred: keeps the value out of argv/history
 zwrm org secrets list
 zwrm org secrets unset <NAME>
 zwrm org secrets add --from-file <path>
@@ -518,8 +522,8 @@ zwrm transfer --app <name> --to-org <org>
 Manage sandboxes. [Guide →](/sandbox)
 
 ```bash
-zwrm sandbox create --template <name> [--size <preset>] [--timeout <dur>] [--persistent] [--idle-timeout <dur>] [--env KEY=VALUE ...] [--egress-mode allow_all|deny_all] [--egress-allow-cidr <cidr>] [--disk-size-mb <n>]
-zwrm sandbox run --template <name> -- <command>   # create, run, destroy
+zwrm sandbox create --template <name> [--size <preset>] [--timeout <dur>] [--persistent] [--idle-timeout <dur>] [--env KEY=VALUE ...] [--egress-mode allow_all|deny_all] [--egress-allow-cidr <cidr>] [--egress-deny-cidr <cidr>] [--egress-allow-port <port>] [--disk-size-mb <n>] [--bandwidth-mbps <n>] [--ops-per-sec <n>] [--burst-mbps <n>] [--burst-ops <n>]
+zwrm sandbox run --template <name> [--size <preset>] [--timeout <dur>] [--exec-timeout <dur>] [--wait-timeout <dur>] [--workdir <dir>] [--env KEY=VALUE ...] [--egress-mode allow_all|deny_all] [--egress-allow-cidr <cidr>] [--egress-deny-cidr <cidr>] [--egress-allow-port <port>] -- <command>   # create, run, destroy
 zwrm sandbox exec <id> -- <command> [--timeout 30s] [--workdir <dir>]
 zwrm sandbox list [--status running|creating|suspended|destroyed]
 zwrm sandbox status <id>
@@ -529,6 +533,8 @@ zwrm sandbox keepalive <id> [--timeout <dur>]
 zwrm sandbox wake <id>
 zwrm sandbox destroy <id> [-f]
 ```
+
+`--template` (`-t`) is required; `--size` (`-s`) defaults to `shared-cpu-1x`. On `run`, `--exec-timeout` defaults to `30s` and `--wait-timeout` (max wait for sandbox readiness) to `2m`. The disk and drive rate-limit overrides (`--disk-size-mb`, `--bandwidth-mbps`, `--ops-per-sec`, `--burst-mbps`, `--burst-ops`) are available on `create` only; unset values inherit the template defaults.
 
 See the [Sandboxes guides](/sandbox) for egress control, persistence, and template details.
 
@@ -540,10 +546,10 @@ Manage agent and sandbox VM templates. [Guide →](/agents/templates)
 
 ```bash
 zwrm templates list
-zwrm templates create <name> --dockerfile <path> [--description <text>] [--disk-size-mb <n>] [--env KEY=VALUE ...] [--egress-mode allow_all|deny_all]
-zwrm templates rebuild <id>
-zwrm templates update-quota <id> [--disk-size-mb <n>] [--ops-per-sec <n>] [--bandwidth-mbps <n>] [--clear-rate-limit]
-zwrm templates delete <id> [-f]
+zwrm templates create <name> --dockerfile <path> [--description <text>] [--env KEY=VALUE ...] [--egress-mode allow_all|deny_all] [--egress-allow-cidr <cidr>] [--egress-deny-cidr <cidr>] [--egress-allow-port <port>] [--disk-size-mb <n>] [--bandwidth-mbps <n>] [--ops-per-sec <n>] [--burst-mbps <n>] [--burst-ops <n>]
+zwrm templates rebuild <name>
+zwrm templates update-quota <name-or-id> [--disk-size-mb <n>] [--bandwidth-mbps <n>] [--ops-per-sec <n>] [--burst-mbps <n>] [--burst-ops <n>] [--clear-rate-limit]
+zwrm templates delete <name> [-f]
 ```
 
 ---
@@ -552,21 +558,35 @@ zwrm templates delete <id> [-f]
 
 Manage agents. [Guide →](/agents/overview)
 
-Connect interactively (creates the agent if the name is new):
+### `zwrm agent create`
+
+Create a named agent definition without booting its workspace VM. The runtime is stored on the agent and reused by connect, runs, and chat.
 
 ```bash
-zwrm agent <type> [instance]      # type: claude | codex | pi
-zwrm a <type> [instance]
+zwrm agent create <name> --runtime <zwrm|claude|codex> [--size <preset>] [--template <t>]
 ```
-
-The type picks the harness (`pi` = the zwrm runtime). [Models →](/agents/models)
 
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
-| `--instance` | string | `default` | Named instance |
-| `--size` | string | agent's stored size | VM size preset |
-| `--cmd` | string | — | Override default startup command |
+| `--runtime` | string | — (required) | Agent runtime: `zwrm`, `claude`, or `codex` |
+| `--size` | string | `performance-2x` | VM size preset |
 | `--template` | string | — | Registry ID or `github.com/user/repo` |
+
+### `zwrm agent connect`
+
+Resolve an agent by exact ID or unambiguous name, boot or reuse its workspace VM, and open its configured agent process. If the name doesn't exist yet, an interactive terminal offers to create it first (non-interactive use never creates implicitly). On exit, the VM is destroyed and its workspace volume is preserved.
+
+```bash
+zwrm agent connect <agent-ref>
+```
+
+### `zwrm agent ssh`
+
+Same resolution and lifecycle as `connect`, but opens a raw interactive shell in the workspace VM instead of the configured agent process.
+
+```bash
+zwrm agent ssh <agent-ref>
+```
 
 ### `zwrm agent run`
 
@@ -669,6 +689,7 @@ Manage agent secrets. [Guide →](/agents/secrets)
 
 ```bash
 zwrm agent secrets set <NAME>=<VALUE> [--instance <name>]
+printf '%s' "$VALUE" | zwrm agent secrets set <NAME> --stdin [--instance <name>]   # preferred: keeps the value out of argv/history
 zwrm agent secrets list [--instance <name>]
 zwrm agent secrets unset <NAME> [--instance <name>]
 zwrm agent secrets add --from-file <path> [--instance <name>]
@@ -725,8 +746,12 @@ zwrm mcp disconnect <upstream> [--agent <id|instance>]
 zwrm mcp server create <name> --upstream "<name>[:tool1,tool2]" [--upstream ...] [--description <text>]
 zwrm mcp server list
 zwrm mcp server get <name>
+zwrm mcp server add-upstream <server> --upstream "<name>[:tool1,tool2]" [--upstream ...] [--replace]
+zwrm mcp server remove-upstream <server> <upstream>...
 zwrm mcp server rm <name>
 ```
+
+`add-upstream` uses the same selection syntax as `create`; adding an upstream already in the composition is an error unless `--replace` is set, which overwrites that upstream's tool selection. `remove-upstream` refuses to remove the last upstream — delete the server with `rm` instead.
 
 On a per-user OAuth upstream, every caller always acts as their own connected account — there is no per-attachment identity setting. [Guide →](/context/credentials)
 

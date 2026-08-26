@@ -8,7 +8,7 @@ Every agent VM carries a platform token so the agent can run `zwrm` commands —
 
 ## Default
 
-An agent gets every capability except `destroy` and `mcp:write`. It can build, ship, and manage; it cannot irreversibly delete an app, machine, database, or volume, and it cannot rewire the org's [MCP gateway](/context/mcp-gateway).
+An agent gets every capability except `destroy`. It can build, ship, and manage; it cannot irreversibly tear down an app, machine, database, or volume — that stays an explicit per-agent grant.
 
 ```bash
 zwrm agent update my-project --allowed-scopes apps:read,deploy,logs:read
@@ -29,14 +29,21 @@ Scopes are `resource:action` pairs, plus a few atomic verbs:
 | Volumes | `volumes:read`, `volumes:write` |
 | Networking | `routes:write` |
 | Observability | `logs:read` |
-| Agent library | `agents:read`, `skills:read`, `skills:write`, `memories:read`, `memories:write` |
+| Agent library | `agents:read`, `agents:write`, `skills:read`, `skills:write`, `memories:read`, `memories:write` |
 | Automation | `schedules:read`, `schedules:write`, `triggers:read`, `triggers:write` |
 | MCP gateway | `mcp:read`, `mcp:write` |
+| Connectors | `connectors:read`, `connectors:write` |
 | Account | `ssh`, `identity` |
 | Teardown | `destroy` |
 
 <Warning>
-Two capabilities are off by default. `destroy` covers permanently deleting apps, machines, databases, and volumes. `mcp:write` lets an agent add, edit, sync, and delete MCP upstreams and virtual servers — adding an upstream opens a new outbound channel through the gateway, and editing one can repoint its URL, sending the stored credential to the new destination. Grant either only to agents that genuinely need it.
+Only `destroy` — permanently deleting apps, machines, databases, and volumes — is off by default. Three write capabilities that **are** in the default set deserve attention:
+
+- **`agents:write`** is deletion of the org's *other* agents, their workspaces and volumes included — a prompt-injected agent could tear down a colleague's workspace. Only the platform-managed org assistant is protected.
+- **`connectors:write`** attaches [connectors](/context/connectors) to the agent's own sessions, and it can reach every enabled virtual server in the org — including connectors whose upstream credential lives at the gateway and was never meant to back this agent.
+- **`mcp:write`** lets an agent add, edit, sync, and delete MCP upstreams and virtual servers — adding an upstream opens a new outbound channel through the gateway, and editing one can repoint its URL, sending the stored credential to the new destination.
+
+Orgs running agents at mixed trust levels should narrow these away with `--allowed-scopes` on lower-trust agents.
 </Warning>
 
 `mcp:read` covers viewing upstreams, their tool catalogs, and virtual servers. OAuth grant management (connecting accounts on a per-user upstream) and scope discovery are never reachable with an agent token, whatever its scopes — consent stays a human step.
@@ -65,7 +72,7 @@ zwrm auth tokens create --name obs --scopes apps:read,logs:read --org acme
 | Flag | Description |
 |------|-------------|
 | `--scopes` | Comma-separated `resource:action` list; omit for an unrestricted token |
-| `--org` | Organization the token is bound to (required when scoped) |
+| `--org` | Organization a scoped token is bound to (defaults to your target org) |
 | `--expiry` | Duration, e.g. `8760h`; omit for no expiry |
 | `--name` | Token label |
 

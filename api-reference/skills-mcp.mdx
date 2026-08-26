@@ -29,7 +29,7 @@ Org-level upstreams and virtual servers. See the [MCP Gateway guide](/context/mc
 | `PUT` | `/v1/org/mcp/upstreams/{name}` | Update (URL, credentials, transport, enabled) |
 | `DELETE` | `/v1/org/mcp/upstreams/{name}` | Remove (`?force=true` if virtual servers reference it) |
 | `POST` | `/v1/org/mcp/upstreams/{name}/sync` | Re-sync the tool catalog |
-| `GET` | `/v1/org/mcp/upstreams/{name}/tools` | Synced tool catalog; each tool carries `required_scopes` (alternative groups) and `covered` (null when coverage isn't computable) |
+| `GET` | `/v1/org/mcp/upstreams/{name}/tools` | Synced tool catalog. On connector-known upstreams (vendored coverage data — currently Microsoft 365 only), each tool carries `required_scopes` (alternative groups) and `covered` (whether the configured OAuth scope satisfies one; omitted when coverage isn't computable). Both fields are absent for all other upstreams |
 | `GET` | `/v1/org/mcp/discover-scopes?url=<url>` | Probe a server's advertised OAuth scopes before registering it |
 | `POST` | `/v1/org/mcp/servers` | Create a virtual server |
 | `GET` | `/v1/org/mcp/servers` | List virtual servers |
@@ -37,6 +37,8 @@ Org-level upstreams and virtual servers. See the [MCP Gateway guide](/context/mc
 | `PUT` | `/v1/org/mcp/servers/{name}` | Update composition |
 | `DELETE` | `/v1/org/mcp/servers/{name}` | Delete |
 | `GET` | `/v1/org/mcp/servers/{name}/config` | Client install snippet (`?client=`) |
+
+A virtual server's composition (`upstreams` on create/update) is a list of selections: `{"upstream": "<name>", "tools": [...], "exposed_names": {...}}`. Empty `tools` (or `["*"]`) selects all of the upstream's tools; the optional `exposed_names` map renames selected tools (upstream tool → exposed name — an explicit name always wins over pass-through and collision prefixing).
 
 ## Upstream grants
 

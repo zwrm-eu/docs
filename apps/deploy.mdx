@@ -28,6 +28,8 @@ The `deploy` command builds your Docker image, converts it to a Firecracker micr
 | `--context` | string | `.` | Build context directory |
 | `--force-build` | bool | `false` | Force rebuild, bypass cache |
 | `--replicas` | int | `1` | Number of VM instances to deploy |
+| `--repo` | string | — | Deploy from a GitHub repo (`github.com/owner/repo[@ref]`) instead of a local context; the clone happens server-side. Requires `--app` |
+| `--ref` | string | default branch | Branch, tag, or commit for `--repo` (alternative to an `@ref` suffix; don't use both) |
 
 ## Examples
 
@@ -83,3 +85,4 @@ zwrm init --name my-app --no-prompt
 | `--name` | Application name (defaults to current directory name) |
 | `--dockerfile` | Path to Dockerfile (auto-detected) |
 | `--no-prompt` | Use defaults without prompting |
+| `--no-workflow` | Don't create a GitHub Actions deploy workflow in a git repository |

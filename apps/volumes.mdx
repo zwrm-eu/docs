@@ -17,6 +17,9 @@ zwrm volumes create <name>
 | `--size` | int | `1024` | Volume size in MB |
 | `--mount` | string | `/data` | Mount point inside the VM |
 | `--app` | string | from `zwrm.toml` | Application name |
+| `--app-id` | string | — | Application ID |
+| `--host` | string | scheduler picks | Agent host to create the volume on |
+| `--region` | string | — | Constrain scheduler placement to this region (ignored if `--host` is set) |
 | `--no-sync` | bool | `false` | Don't update zwrm.toml |
 
 By default, creating a volume also adds it to your `zwrm.toml` file.
@@ -36,6 +39,20 @@ zwrm volumes list
 ```
 
 Shows volume ID, name, total size, used space, free space, and mount point.
+
+## Resize a volume
+
+```bash
+zwrm volumes resize <name> --size <mb>
+```
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--size` | int | — (required) | New size in MB (must be larger than current) |
+| `--app` | string | from `zwrm.toml` | Application name |
+| `--app-id` | string | — | Application ID |
+
+Resizing is grow-only — shrinking is not supported. The volume must not be attached to any running machines, so stop the app first. If the volume backs an agent workspace, the workspace must be cold: disconnect it first, then prefer `zwrm agent resize` (resizing a suspended workspace is refused).
 
 ## Destroy a volume
 

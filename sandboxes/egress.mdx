@@ -40,7 +40,8 @@ The API validates egress policies on create and returns `400` for:
 - Unknown mode (must be `allow_all` or `deny_all`)
 - `allow_all` combined with `allow_cidrs`, `deny_cidrs`, or `allow_ports`
 - `allow_ports` set without `allow_cidrs`
-- `deny_cidrs` containing the metadata service range (`169.254.0.0/16`)
+- Any `allow_cidrs` entry that overlaps the VM subnet (e.g. `172.16.0.0/16`) — this would punch a hole in cross-app isolation. Note that `0.0.0.0/0` overlaps everything, so it is always rejected: there is no "allow everything except X" pattern in `deny_all` mode; allowed destinations must be enumerated
+- Any `deny_cidrs` entry that covers the metadata service address (`169.254.169.254`) — this would brick the in-VM daemon's token fetch
 - Malformed CIDR notation
 - Port numbers outside 1–65535
 
@@ -58,12 +59,16 @@ Pass an `egress` object when creating a sandbox to override the template default
       --egress-allow-cidr 1.0.0.1/32 \
       --egress-allow-port 443
 
-    # Allow all external traffic but deny a specific subnet
+    # Allow a provider's range, but carve out one subnet from it
     zwrm sandbox create --template python \
       --egress-mode deny_all \
-      --egress-allow-cidr 0.0.0.0/0 \
-      --egress-deny-cidr 10.0.0.0/8
+      --egress-allow-cidr 203.0.113.0/24 \
+      --egress-deny-cidr 203.0.113.128/25
     ```
+
+    <Warning>
+    There is no "allow everything except X" pattern: `--egress-allow-cidr 0.0.0.0/0` is always rejected with `400`, because any allow-CIDR that overlaps the VM subnet would punch a hole in cross-app isolation — and `0.0.0.0/0` overlaps everything. In `deny_all` mode, enumerate the destinations you want to allow.
+    </Warning>
 
     Flags (available on `sandbox create` and `sandbox run`):
 
@@ -116,13 +121,12 @@ Set a default egress policy on a template so every sandbox created from it inher
     zwrm templates create secure-python \
       --dockerfile ./Dockerfile \
       --egress-mode deny_all \
-      --egress-allow-cidr 0.0.0.0/0 \
-      --egress-deny-cidr 10.0.0.0/8 \
-      --egress-deny-cidr 172.16.0.0/12 \
-      --egress-deny-cidr 192.168.0.0/16
+      --egress-allow-cidr 151.101.0.0/16 \
+      --egress-allow-cidr 146.75.0.0/16 \
+      --egress-allow-port 443
     ```
 
-    This template allows all external internet traffic but blocks RFC 1918 private address space.
+    Every sandbox created from this template can only reach PyPI's CDN ranges over HTTPS, unless the create request overrides the policy.
   </Tab>
   <Tab title="API">
     ```bash
@@ -133,13 +137,17 @@ Set a default egress policy on a template so every sandbox created from it inher
         "dockerfile": "FROM python:3.12-slim",
         "egress": {
           "mode": "deny_all",
-          "allow_cidrs": ["0.0.0.0/0"],
-          "deny_cidrs": ["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"]
+          "allow_cidrs": ["151.101.0.0/16", "146.75.0.0/16"],
+          "allow_ports": [443]
         }
       }'
     ```
   </Tab>
 </Tabs>
+
+<Note>
+The subnet-overlap check runs when a sandbox is created, against the cluster's VM subnet. A template policy whose `allow_cidrs` overlap the VM subnet (such as `0.0.0.0/0`) will cause every sandbox create from that template to fail with `400`.
+</Note>
 
 When creating a sandbox, you can override the template's default by passing a different `egress` object. Passing no `egress` field inherits the template default.
 
@@ -151,9 +159,10 @@ Rebuilding a template (`zwrm templates rebuild`) does not change the stored egre
 
 Egress rules are implemented as iptables rules in the `ZWRM` chain on the host. When a sandbox is created with a `deny_all` policy, the manager installs:
 
-1. **Allow rules** — one `ACCEPT` per `allow_cidrs` entry (optionally port-scoped), inserted near the top of the chain
-2. **Deny rule** — a final `DROP` for all traffic from the sandbox IP, appended at the bottom
+1. **Deny rules** — one `DROP` per `deny_cidrs` entry, inserted at the top of the chain
+2. **Allow rules** — one `ACCEPT` per `allow_cidrs` entry (optionally port-scoped), inserted directly below the deny rules
+3. **Catch-all deny** — a final `DROP` for all traffic from the sandbox IP, appended at the bottom of the chain
 
-The metadata service (`169.254.169.254/32`) always has an unconditional `ACCEPT` that sits above per-sandbox rules.
+The always-allow rule for the metadata service (`169.254.169.254/32`) is appended once at startup, so per-sandbox rules are inserted *above* it in the chain. The metadata service nonetheless stays reachable under any policy: the per-sandbox catch-all `DROP` is appended below the metadata `ACCEPT`, and any `deny_cidrs` entry that would cover the metadata address is rejected at validation time.
 
 Rules are cleaned up automatically when the sandbox is destroyed or suspended.

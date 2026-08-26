@@ -186,4 +186,7 @@ Every `zwrm` command accepts these flags:
 |------|-------------|
 | `--config <path>` | Path to CLI config file (default: `~/.zwrm/config.toml`) |
 | `--api-url <url>` | Override the control plane URL |
+| `--org <org>` | Organization slug or ID for this invocation (overrides env/config) |
 | `--verbose`, `-v` | Enable verbose output |
+
+The org scope is resolved per invocation, never persisted: `--org` wins, then the `ZWRM_ORG_ID` environment variable, then the `org` setting in `zwrm.toml`. With no scope, reads span all orgs you belong to and new resources are created in your personal org.
