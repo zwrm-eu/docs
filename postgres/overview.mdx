@@ -19,7 +19,7 @@ zwrm postgres create <name>
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
 | `--size` | string | `small` | Size preset: `small`, `medium`, or `large` |
-| `--database` | string | `postgres` | Initial database name |
+| `--database` | string | instance name | Initial database name — defaults to the instance name, sanitized to a valid Postgres identifier (e.g. `my-db` → `my_db`) |
 
 After creation, you'll see the connection credentials, connection strings (internal and external), and host information.
 
@@ -39,13 +39,19 @@ zwrm postgres connect <name>
 
 Shows connection details and ready-to-use `psql` commands. The database must be running.
 
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--direct` | bool | `false` | Return the raw Postgres connection (`:5432`), bypassing the pooler |
+
+When a connection pooler (PgBouncer) is enabled for the database, the connection string routes through it by default. Use `--direct` for admin tasks that need session-level features the pooler doesn't support in transaction mode.
+
 ## List databases
 
 ```bash
 zwrm postgres list
 ```
 
-Shows all databases with their ID, name, status, host, size, replica count, and creation time.
+Shows all databases with their ID, name, status, host, size, replica count, backup state, and creation time. The `BACKUP` column reads `off` when WAL archiving is disabled, `ok` when archiving is on and the database is recoverable, and `MISSING` when archiving is on but no recoverable backup exists.
 
 ## Stop and start
 

@@ -9,8 +9,8 @@ Agents boot from the standard agent image, optionally customized by a template.
 ## Templates
 
 ```bash
-zwrm agent claude --template python-ml
-zwrm agent claude --template github.com/user/my-template
+zwrm agent create ml-helper --runtime claude --template python-ml
+zwrm agent create coder --runtime claude --template github.com/user/my-template
 ```
 
 A template is either a **registry ID** or a **GitHub repo** containing a Dockerfile that extends `ghcr.io/zwrm-eu/agent-base:latest`. The template is stored on the agent, so reconnects reuse it. GitHub templates are built per repo + commit and cached.

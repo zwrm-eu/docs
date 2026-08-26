@@ -130,6 +130,8 @@ ZWRM manages the Graph subscription for you (create on activate, renew before it
 | `200 {"status":"accepted","run_id":…}` | Run dispatched |
 | `200 {"status":"ignored"}` | Match conditions not met — stop retrying |
 | `200 {"status":"duplicate"}` | Idempotency key already processed |
+| `401` | Invalid or missing secret/signature |
+| `404` | Unknown or inactive slug — also returned when a matched route's agent is unusable (fail-closed) |
 | `409` | Same idempotency key currently in flight — retry shortly |
 | `413` | Body over 1 MiB |
 | `429` | Daily rate cap or [agent budget](/agents/budgets) exceeded — retry later |
@@ -147,4 +149,4 @@ zwrm triggers resume <trigger-id>
 zwrm triggers delete <trigger-id>
 ```
 
-The delivery log records every delivery with its disposition: `accepted`, `duplicate`, `ignored`, `rejected_auth`, `rejected_route`, `rejected_rate`, or `rejected_budget`, plus the dispatched run ID. Ignored deliveries record which condition failed and the actual value seen (e.g. `data.type equals 'order' — actual='refund'`).
+The delivery log records each delivery's disposition: `accepted`, `ignored`, `rejected_auth`, `rejected_route`, `rejected_rate`, or `rejected_budget`, plus the dispatched run ID. Duplicates are **not** logged — that outcome only returns `{"status":"duplicate"}` to the caller — and transient failures (`503`) record nothing, since the event stays retryable. Because the hook endpoint is public, `rejected_auth` rows are capped at 50 per trigger per 24h. Ignored deliveries record which condition failed and the actual value seen (e.g. `data.type equals 'order' — actual='refund'`).

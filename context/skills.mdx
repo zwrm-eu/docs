@@ -53,6 +53,8 @@ Every agent gets Anthropic's built-in skills enabled by default:
 
 They show up in the library with a *built-in* label and are **read-only** — updates come with platform releases. Their content never passes through the platform: at session start, the workspace VM fetches a pinned commit from `github.com/anthropics/skills` into `~/.claude/skills/` (cached on the volume until the pin changes; needs egress to github.com — if the fetch fails, the session starts without them).
 
+The four document skills (`xlsx`, `docx`, `pptx`, `pdf`) are licensed for installation into **Claude Code only**, so they apply only to agents on a Claude Code harness. For any other agent type they are excluded from the effective set — sync removes them from such workspaces — and enabling one via the API returns `400`. Only `skill-creator` (Apache-2.0) is available on every harness.
+
 - Disable per agent with `zwrm agent skills disable <agent> xlsx` or from the agent page.
 - An org skill with the same slug takes precedence over a built-in.
 
@@ -63,7 +65,7 @@ Agents can write skills too. Inside a session an agent has `save_skill`, `update
 Ask an agent to "turn this workflow into a skill and save it" and it can, with the built-in `skill-creator` guiding the authoring, test prompts, and iteration.
 
 <Note>
-The tools only mutate skills the calling agent created. Everything else in the library — including built-ins and skills you uploaded — stays read-only to agents.
+The session tools only mutate skills the calling agent created; built-ins are read-only to everyone. But that is not a library-wide guarantee: the REST skill endpoints have no ownership check, and `skills:write` is in the default boot-token scope set — so an agent's default-scoped credential **can** modify or delete any org skill, including ones humans uploaded. If agents shouldn't have that authority, narrow `skills:write` out of their [allowed scopes](/agents/capabilities).
 </Note>
 
 ## Hand-dropped skills

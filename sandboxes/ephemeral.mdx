@@ -32,6 +32,11 @@ A background reaper loop runs every 10 seconds and destroys any ephemeral sandbo
     - `--egress-allow-cidr CIDR` — Allow outbound to this CIDR (repeatable; implies `deny_all`)
     - `--egress-deny-cidr CIDR` — Explicitly deny outbound to this CIDR (repeatable)
     - `--egress-allow-port PORT` — Restrict allowed CIDRs to this TCP port (repeatable)
+    - `--disk-size-mb MIB` — Override the template's writable disk quota (MiB)
+    - `--bandwidth-mbps N` — Override the per-drive bandwidth cap (MiB/s)
+    - `--ops-per-sec N` — Override the per-drive IOPS cap
+    - `--burst-mbps N` — Override the one-time bandwidth burst (MiB)
+    - `--burst-ops N` — Override the one-time ops burst
   </Tab>
   <Tab title="API">
     ```bash

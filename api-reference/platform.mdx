@@ -66,6 +66,14 @@ Subscriptions and credit-pack purchases run through Stripe in a separate auth se
 | `GET` | `/v1/org/audit-logs` | List audit events (`?page=`, `?per_page=`) |
 | `GET` | `/v1/org/audit-logs/export` | Export (`?format=`) |
 
+## Transcription
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/v1/transcription/token` | Mint a single-use speech-to-text token for browser dictation (`503` if dictation is not configured on the platform) |
+
+Rate-limited as an expensive operation.
+
 ## Templates
 
 VM image templates for agents and sandboxes. See [Templates](/agents/templates).

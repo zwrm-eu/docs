@@ -14,7 +14,7 @@ An agent's **type** — set once at creation — selects the *harness* it runs o
 | `codex` | OpenAI Codex | Your org's OpenAI credentials | Your OpenAI account — **not** metered by ZWRM |
 | `pi` | The **zwrm runtime** | EU-hosted open models, platform-provided key | Prepaid [credits](/billing/credits) (EUR) |
 
-The `pi` harness is presented as **zwrm** in the dashboard and called the *zwrm runtime* in copy; the stored type, the CLI, and the API all keep the engine name `pi`.
+The `pi` harness is presented as **zwrm** in the dashboard and called the *zwrm runtime* in copy; the CLI spells it `zwrm` too (`--runtime zwrm` — `--runtime pi` is rejected). Only the stored type and the API keep the engine name `pi`.
 
 ## Claude
 
@@ -36,7 +36,7 @@ Bring your org's OpenAI credentials as an agent secret, either way:
 
   ```bash
   codex login
-  zwrm agent secrets set --agent my-codex OPENAI_CODEX_AUTH "$(jq -c . ~/.codex/auth.json)"
+  jq -c . ~/.codex/auth.json | zwrm agent secrets set OPENAI_CODEX_AUTH --stdin --instance my-codex
   ```
 
 If both are set, the **subscription wins** so a leftover API key can't quietly start charging.
@@ -57,7 +57,8 @@ The native runtime needs **no credentials from you** — the VM boots with a sho
 
 | Alias | Model |
 |-------|-------|
-| `glm-5.2` (default) | GLM-5.2 |
+| `auto` (default) | **Smart routing** — the gateway picks a healthy catalog model per request (canonical slug `zwrm/auto`) |
+| `glm-5.2` | GLM-5.2 |
 | `deepseek-v4` | DeepSeek V4 Pro |
 | `kimi-code` | Kimi K2.7 Code |
 | `kimi-k3` | Kimi K3 |

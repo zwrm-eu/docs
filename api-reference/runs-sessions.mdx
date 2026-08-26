@@ -11,11 +11,13 @@ One autonomous task on a workspace. See the [Runs guide](/agents/runs).
 | Method | Path | Description |
 |--------|------|-------------|
 | `POST` | `/v1/agents/{agent_id}/runs` | Dispatch a run (prompt, session key, model/effort/size/timeout overrides) |
-| `GET` | `/v1/agents/{agent_id}/runs` | List an agent's runs (`?status=`) |
-| `GET` | `/v1/agent-runs` | List runs across agents (`?status=`) |
+| `GET` | `/v1/agents/{agent_id}/runs` | List an agent's runs (`?status=`, `?open=true`) |
+| `GET` | `/v1/agent-runs` | List runs across agents (`?status=`, `?open=true`) |
 | `GET` | `/v1/agent-runs/{id}` | Get a run (status, summary, error, outputs) |
 | `POST` | `/v1/agent-runs/{id}/cancel` | Cancel |
 | `POST` | `/v1/agent-runs/{id}/continue` | Follow-up run on the finished run's workspace |
+
+`?open=true` returns exactly the non-terminal runs, uncapped. It already selects every non-terminal status, so combining it with `?status=` is a `400`.
 
 ## Sessions
 
@@ -53,25 +55,50 @@ Session statuses: `creating`, `idle`, `working`, `blocked` (waiting on a permiss
 - A keyed workspace resumes its own last conversation automatically (when it was recorded by the same harness); `resume_session_id` is only needed to pick an older session.
 - The response includes the resolved `workspace_id`.
 
+### Messages, permissions, mode
+
+`POST .../messages` queues a user message into the session:
+
+| Field | Description |
+|-------|-------------|
+| `text` | The message text |
+| `attachments` | Optional file references: `{path, source}` objects, `source` = `workspace` (a file already in the session's workspace) or `upload`. Attach only when the session response advertises `supports_attachments` — older control planes silently drop unknown fields |
+
+`POST .../permissions/{request_id}` answers a pending permission request. The `request_id` comes from the `permission.request` event, or from `pending_permission` on a blocked session's single-session `GET`:
+
+| Field | Description |
+|-------|-------------|
+| `behavior` | `allow` or `deny` |
+| `message` | Optional note carried with the decision (e.g. a deny reason) |
+| `updated_input` | Optional replacement tool input, passed through as SDK JSON |
+
+`POST .../mode` switches the permission mode mid-session; the body is `{"mode": "..."}`.
+
+The session-create `permission_mode` and `mode` take the same values: `default`, `acceptEdits`, `plan`, `bypassPermissions`. `pi` and `codex` agents map only `default` and `bypassPermissions` — the other two return `400` rather than being silently downgraded.
+
 ## Session events
 
 ```
 GET /v1/agents/{agent_id}/sessions/{session_id}/events[?after_seq=<n>][&follow=true]
 ```
 
-- Without `follow`, returns the timeline from `after_seq` (default `0`) to the end — long conversations are paged internally, never silently truncated.
+- Without `follow`, returns the timeline from `after_seq` (default `0`) to the end as `{schema_version, session_id, status, events}` — long conversations are paged internally, never silently truncated.
 - With `follow=true`, streams as **SSE**. The server subscribes to the live feed before replaying stored events and dedupes by `seq`, so a follower never misses a durable event. A slow consumer is resynced from its cursor and can only lose ephemeral partials.
 
-Every event carries a per-session monotonic `seq`, a `type`, a `ts`, and a `payload`:
+Every event carries a stable `id` (`<session_id>:<seq>`), a per-session monotonic `seq`, a `type`, a `ts`, a `payload`, and — when it belongs to a turn — a `turn_id`:
 
 | Event type | Durable | Meaning |
 |------------|---------|---------|
 | `session.started` / `session.status` / `session.ended` / `session.error` | yes | Lifecycle and status changes (payload includes permission mode) |
+| `turn.started` / `turn.completed` | yes | Canonical turn boundaries; `turn.completed` carries a `status` (`completed`, `interrupted`, `error`, `ended`) |
+| `message.context` | yes | The user message as accepted into the session (`text` + `attachments`) |
+| `turn.files_changed` | yes | Workspace files the turn has changed (payload lists the paths) |
 | `sdk.system` | yes | Session init metadata |
 | `sdk.assistant` | yes | A complete assistant message |
 | `sdk.user` | yes | Tool results / user-side messages |
 | `sdk.result` | yes | End-of-turn result with usage and cost |
 | `permission.request` / `permission.decision` | yes | Tool-permission round-trips |
+| `park.request` / `park.resolved` | yes | A platform tool (e.g. `sleep`) parked the turn until a deadline; the VM may suspend, and the platform resolves the park to resume it |
 | `sdk.partial` | no | Token-stream deltas (streaming only; superseded by the following `sdk.assistant`) |
 
 <Note>
