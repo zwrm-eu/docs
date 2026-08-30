@@ -257,7 +257,7 @@ Workspace volumes survive image changes. On boot, ZWRM copies files from the ima
 | `shared-cpu-1x/2x/4x/…` | Share host CPU; lower cost and less memory |
 | `performance-*` | Dedicated CPU |
 
-The default agent size is `performance-2x`. Set a per-agent default with `zwrm agent update --size`, or override it per run with `zwrm agent run --size`.
+The default agent size is `performance-2x`. Set a per-agent default with `zwrm agent update <agent> --size <preset>`, or override it per run with `zwrm agent run --agent <agent> --prompt <text> --size <preset>`.
 
 <Warning>
 Build workloads usually need `performance-2x` or larger. A 512 MB VM can run out of memory during a large build.
