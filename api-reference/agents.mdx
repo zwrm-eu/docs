@@ -31,7 +31,7 @@ An agent is [pure configuration](/agents/overview); these endpoints manage the d
 | `agent_type` | `claude` (default), `codex`, or `pi` |
 | `instance` | Agent name, unique per org (default `default`) |
 | `size` | VM size preset (default `performance-2x`) |
-| `template` | Template name or GitHub repo URL for the workspace image |
+| `template` | Stored template name/ID or public GitHub repository for the agent image. Runs and sessions inherit it from the agent |
 | `instructions` | Per-agent system-prompt append. On connect, an absent field leaves the stored value untouched |
 | `secrets` | Initial secrets (string map) set on the agent's backing app |
 | `allowed_scopes` | Create only — the agent's boot-token capability set. Each value must be a configurable scope (an unknown one is a `400` listing the valid set); absent or empty = the platform default set |

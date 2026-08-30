@@ -20,7 +20,7 @@ zwrm agent ssh my-project                      # raw shell in the same workspace
 |------|------|---------|-------------|
 | `--runtime` | string | — | **Required.** Agent runtime: `zwrm`, `claude`, or `codex` |
 | `--size` | string | `performance-2x` | VM size preset |
-| `--template` | string | — | Agent template: registry ID or `github.com/user/repo` |
+| `--template` | string | — | Stored template name/ID or public GitHub repository; see [Custom agent images](/agents/templates) |
 
 `connect` and `ssh` take only the agent name or ID — the stored runtime, size, and template carry over. If the same name exists in more than one of your orgs, use an agent ID or the global `--org` flag.
 

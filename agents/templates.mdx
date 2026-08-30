@@ -1,39 +1,264 @@
 ---
-title: "Templates & sizes"
-description: "Customize the agent VM image and pick the right VM size."
+title: "Custom agent images"
+description: "Preinstall tools and static assets in an agent image, then attach it to an agent."
 icon: "layer-group"
 ---
 
-Agents boot from the standard agent image, optionally customized by a template.
+An agent template selects the root filesystem that an agent VM boots from. Use one to preinstall operating-system packages, language libraries, fonts, scripts, and other static assets instead of uploading them at the start of every workspace.
 
-## Templates
+<Warning>
+Creating a template only builds an image. It does not apply that image to an agent. Set `--template` when you create the agent, or set `template` through the API. Runs and interactive sessions then inherit the template stored on the agent. Without one, the agent boots from the standard `agent-default` image.
+</Warning>
 
-```bash
-zwrm agent create ml-helper --runtime claude --template python-ml
-zwrm agent create coder --runtime claude --template github.com/user/my-template
+## Start from the agent base image
+
+Every custom agent Dockerfile must extend the ZWRM agent base image:
+
+```dockerfile
+FROM ghcr.io/zwrm-eu/agent-base:latest
 ```
 
-A template is either a **registry ID** or a **GitHub repo** containing a Dockerfile that extends `ghcr.io/zwrm-eu/agent-base:latest`. The template is stored on the agent, so reconnects reuse it. GitHub templates are built per repo + commit and cached.
+The base image provides Ubuntu 22.04, Node.js 22, the `agent` user, SSH setup, the in-VM agent daemon, the ZWRM CLI, and the Pi, Claude Code, and Codex runtimes. Starting from a generic image such as `ubuntu`, `node`, or `python` omits that plumbing and can produce an image that builds successfully but cannot run as a ZWRM agent. You can inspect the image and its Dockerfiles in the public [`zwrm-eu/agent-images`](https://github.com/zwrm-eu/agent-images) repository.
 
-Registry templates:
+Do not recreate the `agent` user or install the agent daemon yourself. ZWRM injects runtime configuration and platform credentials when the VM boots. Keep credentials out of the image and configure them as [agent secrets](/agents/secrets).
 
-| Template | Description |
-|----------|-------------|
-| `default` | Full-stack kitchen sink |
-| `python-ml` | Python + ML tooling |
-| `node-fullstack` | Node.js full-stack |
-| `rust` | Rust toolchain |
-| `data-science` | Data-science stack |
+### Migrate from a generic Node image
+
+If your Dockerfile begins like this:
+
+```dockerfile
+FROM node:22-slim
+```
+
+replace that base instead of rebuilding the agent environment from scratch:
+
+```dockerfile
+FROM ghcr.io/zwrm-eu/agent-base:latest
+
+USER root
+# Keep only the packages your workload adds to the ZWRM base.
+RUN apt-get update && apt-get install -y --no-install-recommends YOUR_PACKAGES \
+    && rm -rf /var/lib/apt/lists/*
+
+USER agent
+```
+
+Node.js 22 is already present. Remove Dockerfile steps that create the `agent` user or reinstall Node.js, SSH, Pi, Claude Code, Codex, the ZWRM CLI, or `zwrm-agentd`.
+
+Agent skills and images solve different problems. A skill gives the agent instructions and reusable scripts; the image supplies the operating-system packages and runtime environment those scripts need. Keep using skills for behavior, but bake their stable dependencies and large static assets into the custom image.
+
+## Choose a build source
+
+| Your Dockerfile needs | Use | Build context |
+|---|---|---|
+| Only `RUN`, `ENV`, and files downloaded during the build | A stored template created with `zwrm templates create` | Dockerfile only |
+| `COPY` or `ADD` for scripts, fonts, templates, or other local assets | A public GitHub repository used directly as the agent template | The repository, or a subdirectory of it |
+
+`zwrm templates create --dockerfile` uploads the Dockerfile text, not the directory that contains it. A sibling file therefore is not available to `COPY`. When you need local assets, put the Dockerfile and assets in a public GitHub repository. The build service does not currently support private repositories or SSH clone URLs.
+
+## Build the image
+
+For an image with local assets, arrange the repository like this:
+
+```text
+cowork-agent/
+├── Dockerfile
+└── cowork/
+    ├── .skills/
+    ├── templates/
+    └── scripts/
+```
+
+Then extend the agent base and add only your dependencies and content:
+
+```dockerfile
+FROM ghcr.io/zwrm-eu/agent-base:latest
+
+USER root
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libreoffice-impress \
+    python3 \
+    python3-pip \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN python3 -m pip install --no-cache-dir python-pptx
+
+# Static defaults under /home/agent are seeded into each new workspace.
+COPY --chown=agent:agent cowork/ /home/agent/cowork/
+
+# A rootfs marker makes it easy to confirm which image booted.
+RUN echo "cowork-1" > /etc/cowork-image-version
+
+USER agent
+WORKDIR /home/agent/cowork
+```
+
+Place files according to how they should behave at runtime:
+
+| Content | Location | Behavior |
+|---|---|---|
+| System packages and immutable toolchains | `/usr/local` or `/opt` | Part of the image on every boot; does not enlarge each workspace volume |
+| Editable starter files and per-workspace defaults | `/home/agent` | Seeded into a new workspace; later boots add missing files but preserve existing files |
+| Customer inputs and generated outputs | `/home/agent` at runtime | Persisted in that workspace's volume |
+| API keys and credentials | Agent secrets | Injected at boot; never stored in the image |
+
+Large, read-only bundles generally belong in `/opt`. Put content in `/home/agent` only when the agent must edit it or when each workspace needs its own initial copy.
+
+### Dockerfile-only template
+
+If the Dockerfile does not need local build assets, create a stored template:
+
+```bash
+zwrm templates create cowork-base --dockerfile ./Dockerfile \
+  --description "Cowork document tooling"
+
+zwrm templates list
+```
+
+The build runs asynchronously. Wait until `cowork-base` is `ready` before assigning it to an agent. Use the stored name or ID as the agent's template.
+
+### GitHub repository with assets
+
+Push the repository to public GitHub and use it directly:
+
+```text
+github.com/acme/cowork-agent
+```
+
+You can also point to a subdirectory that contains the Dockerfile:
+
+```text
+github.com/acme/agent-images/cowork
+```
+
+ZWRM clones that repository, uses the selected directory as the Docker build context, and caches the result by repository commit. There is no separate `zwrm templates create` step for this path; the first agent boot builds the image.
+
+## Attach the image to an agent
+
+The template belongs on the agent definition, not on an individual run or session.
+
+<Tabs>
+  <Tab title="CLI">
+    Create an agent from a stored template:
+
+    ```bash
+    zwrm agent create cowork \
+      --runtime zwrm \
+      --template cowork-base
+    ```
+
+    Or use a public GitHub build context directly:
+
+    ```bash
+    zwrm agent create cowork \
+      --runtime zwrm \
+      --template github.com/acme/cowork-agent
+    ```
+  </Tab>
+  <Tab title="API">
+    The REST API calls the ZWRM runtime `pi`:
+
+    ```bash
+    curl --request POST "https://<platform>/v1/agents" \
+      --header "Authorization: Bearer $ZWRM_API_TOKEN" \
+      --header "X-Org-ID: $ZWRM_ORG_ID" \
+      --header "Content-Type: application/json" \
+      --data '{
+        "instance": "cowork",
+        "agent_type": "pi",
+        "size": "performance-2x",
+        "template": "github.com/acme/cowork-agent"
+      }'
+    ```
+
+    Use `claude` or `codex` for the other runtimes. The response contains the agent ID.
+  </Tab>
+</Tabs>
+
+Every subsequent connect, run, dashboard chat, and interactive session uses the stored image. A session request selects a workspace, not an image:
+
+```bash
+curl --request POST "https://<platform>/v1/agents/$AGENT_ID/sessions" \
+  --header "Authorization: Bearer $ZWRM_API_TOKEN" \
+  --header "X-Org-ID: $ZWRM_ORG_ID" \
+  --header "Content-Type: application/json" \
+  --data '{"session_key":"customer-123"}'
+```
+
+The same `session_key` resumes the same workspace. A new key creates an independent volume and seeds it from the agent image. See [Interactive sessions](/agents/interactive#chat) for workspace-key behavior.
+
+### Change an existing agent
+
+Stop the agent VM while preserving its workspace volumes:
+
+```bash
+zwrm agent destroy cowork
+```
+
+The current CLI does not expose a template flag on `zwrm agent update`. Use the connect endpoint once to replace the stored template and boot the agent:
+
+```bash
+curl --request POST "https://<platform>/v1/agents/connect" \
+  --header "Authorization: Bearer $ZWRM_API_TOKEN" \
+  --header "X-Org-ID: $ZWRM_ORG_ID" \
+  --header "Content-Type: application/json" \
+  --data '{
+    "instance": "cowork",
+    "agent_type": "pi",
+    "template": "github.com/acme/cowork-agent"
+  }'
+```
+
+Use the existing agent's `agent_type`; the API rejects a runtime mismatch. Destroying an agent VM keeps its workspace volumes. Deleting the agent removes them.
+
+## Verify the image
+
+First confirm that the agent has a non-empty template:
+
+```bash
+zwrm agent list
+```
+
+Then boot the agent and inspect a marker or installed tool:
+
+```bash
+zwrm agent ssh cowork
+cat /etc/cowork-image-version
+test -d /home/agent/cowork/.skills
+```
+
+For a stored template, `zwrm templates list` must also report `ready`.
+
+## Update the image
+
+- For a stored Dockerfile template, change the Dockerfile and run `zwrm templates rebuild <name>`.
+- For a GitHub template, push a new commit to the referenced repository.
+- Stop the running agent VM before the next boot so it can use the rebuilt root filesystem.
+
+Workspace volumes survive image changes. On boot, ZWRM copies files from the image's `/home/agent` skeleton only when the destination path does not already exist. Use a new `session_key` to test a pristine workspace. If an image update must always replace an asset, keep that asset in `/opt` or `/usr/local` instead of the persistent home directory.
+
+## Troubleshooting
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| The agent still has the standard environment | The template was built but never assigned to the agent | Pass `--template` to `zwrm agent create`, or update the existing agent through `/v1/agents/connect` |
+| `COPY` reports that a file does not exist | `zwrm templates create` received only the Dockerfile text | Use a public GitHub repository as the build context |
+| SSH, chat, or the agent runtime does not start | The Dockerfile started from a generic base image | Start with `ghcr.io/zwrm-eu/agent-base:latest` |
+| A changed file under `/home/agent` still has its old content | The workspace volume preserves existing paths | Test with a new session key, or keep immutable content outside `/home/agent` |
+| Startup performs hundreds of file uploads or receives `429` responses | Static tools and assets are being synchronized at runtime | Bake them into the image and upload only per-session inputs |
+| Agent creation returns `409` | The stored template is still building | Wait for `zwrm templates list` to show `ready` |
+| GitHub clone fails | The repository needs credentials or uses an SSH URL | Use a public repository over HTTPS |
 
 ## VM sizes
 
 | Preset family | Description |
-|---------------|-------------|
-| `shared-cpu-1x/2x/4x/…` | Share host CPU — cheap, small memory |
+|---|---|
+| `shared-cpu-1x/2x/4x/…` | Share host CPU; lower cost and less memory |
 | `performance-*` | Dedicated CPU |
 
-The default agent size is `performance-2x`. Set a per-agent default with `zwrm agent update --size`, or override per run with `zwrm agent run --size`.
+The default agent size is `performance-2x`. Set a per-agent default with `zwrm agent update --size`, or override it per run with `zwrm agent run --size`.
 
 <Warning>
-Builds want `performance-2x` or larger — a 512 MB VM will OOM a `go build`.
+Build workloads usually need `performance-2x` or larger. A 512 MB VM can run out of memory during a large build.
 </Warning>
