@@ -247,7 +247,7 @@ Workspace volumes survive image changes. On boot, ZWRM copies files from the ima
 | SSH, chat, or the agent runtime does not start | The Dockerfile started from a generic base image | Start with `ghcr.io/zwrm-eu/agent-base:latest` |
 | A changed file under `/home/agent` still has its old content | The workspace volume preserves existing paths | Test with a new session key, or keep immutable content outside `/home/agent` |
 | Startup performs hundreds of file uploads or receives `429` responses | Static tools and assets are being synchronized at runtime | Bake them into the image and upload only per-session inputs |
-| Agent creation returns `409` | The stored template is still building | Wait for `zwrm templates list` to show `ready` |
+| Agent creation reports `Template is still building` | The stored template is not ready yet | Wait for `zwrm templates list` to show `ready` |
 | GitHub clone fails | The repository needs credentials or uses an SSH URL | Use a public repository over HTTPS |
 
 ## VM sizes

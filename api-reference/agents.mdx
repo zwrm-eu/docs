@@ -10,7 +10,7 @@ An agent is [pure configuration](/agents/overview); these endpoints manage the d
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `POST` | `/v1/agents` | Create an agent (strict: `409` if the name is taken in the org) |
+| `POST` | `/v1/agents` | Create an agent (strict: `409` if the name is taken or the selected template is still building) |
 | `GET` | `/v1/agents` | List agents |
 | `GET` | `/v1/agents/{agent_id}` | Get an agent (includes required-secrets checklist) |
 | `PATCH` | `/v1/agents/{agent_id}` | Update configuration (only provided fields change) |
