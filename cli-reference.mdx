@@ -544,6 +544,8 @@ See the [Sandboxes guides](/sandbox) for egress control, persistence, and templa
 
 Manage agent and sandbox VM templates. [Guide →](/agents/templates)
 
+`templates create` uploads the Dockerfile text only. It does not upload sibling files as a Docker build context; use a public GitHub repository when the Dockerfile needs `COPY` or `ADD`.
+
 ```bash
 zwrm templates list
 zwrm templates create <name> --dockerfile <path> [--description <text>] [--env KEY=VALUE ...] [--egress-mode allow_all|deny_all] [--egress-allow-cidr <cidr>] [--egress-deny-cidr <cidr>] [--egress-allow-port <port>] [--disk-size-mb <n>] [--bandwidth-mbps <n>] [--ops-per-sec <n>] [--burst-mbps <n>] [--burst-ops <n>]
@@ -570,7 +572,7 @@ zwrm agent create <name> --runtime <zwrm|claude|codex> [--size <preset>] [--temp
 |------|------|---------|-------------|
 | `--runtime` | string | — (required) | Agent runtime: `zwrm`, `claude`, or `codex` |
 | `--size` | string | `performance-2x` | VM size preset |
-| `--template` | string | — | Registry ID or `github.com/user/repo` |
+| `--template` | string | — | Stored template name/ID or public GitHub repository |
 
 ### `zwrm agent connect`
 
