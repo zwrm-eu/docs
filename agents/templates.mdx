@@ -49,20 +49,27 @@ Agent skills and images solve different problems. A skill gives the agent instru
 
 ## Choose a build source
 
-| Your Dockerfile needs | Use | Build context |
-|---|---|---|
-| Only `RUN`, `ENV`, and files downloaded during the build | A stored template created with `zwrm templates create` | Dockerfile only |
-| `COPY` or `ADD` for scripts, fonts, templates, or other local assets | A public GitHub repository used directly as the agent template | The repository, or a subdirectory of it |
+| Your assets are | Use |
+|---|---|
+| Private local files — scripts, fonts, models, and anything else next to your Dockerfile | A stored template created with `zwrm templates create`, which uploads your complete build context |
+| A community template shared publicly | A public GitHub repository used directly as the agent template |
 
-`zwrm templates create --dockerfile` uploads the Dockerfile text, not the directory that contains it. A sibling file therefore is not available to `COPY`. When you need local assets, put the Dockerfile and assets in a public GitHub repository. The build service does not currently support private repositories or SSH clone URLs.
+`zwrm templates create` uploads the complete Docker build context — the current directory by default, or the directory you pass with `--context`. `.dockerignore` is applied with standard Docker semantics, so `COPY` and `ADD` work with your local files exactly as in a local `docker build`. No Git repository is required, and your files stay private: the context is stored in the platform's object storage, scoped to your organization, and reused for every rebuild.
+
+Keep three rules in mind:
+
+- The compressed context may be up to 1 GiB. Individual files may be up to 1 GiB, and the extracted context up to 8 GiB.
+- Without a `.dockerignore`, only `.git` is excluded — everything else below the context directory is uploaded and stored. Exclude secrets and build artifacts explicitly.
+- `--dockerfile` must point to a file inside the context directory.
 
 ## Build the image
 
-For an image with local assets, arrange the repository like this:
+For an image with local assets, arrange a local directory like this:
 
 ```text
 cowork-agent/
 ├── Dockerfile
+├── .dockerignore
 └── cowork/
     ├── .skills/
     ├── templates/
@@ -105,22 +112,28 @@ Place files according to how they should behave at runtime:
 
 Large, read-only bundles generally belong in `/opt`. Put content in `/home/agent` only when the agent must edit it or when each workspace needs its own initial copy.
 
-### Dockerfile-only template
+### Create the stored template
 
-If the Dockerfile does not need local build assets, create a stored template:
+Run the create from the directory that contains the Dockerfile and assets, or pass `--context`:
 
 ```bash
-zwrm templates create cowork-base --dockerfile ./Dockerfile \
-  --description "Cowork document tooling"
+cd cowork-agent
+zwrm templates create cowork-base --dockerfile Dockerfile \
+  --description "Cowork document tooling" \
+  --disk-size-mb 4096
 
 zwrm templates list
 ```
 
-The build runs asynchronously. Wait until `cowork-base` is `ready` before assigning it to an agent. Use the stored name or ID as the agent's template.
+The CLI prints the directory it uploads and shows progress; a large context takes as long as your uplink allows. The build runs asynchronously. Wait until `cowork-base` is `ready` before assigning it to an agent, then use the stored name or ID as the agent's template.
 
-### GitHub repository with assets
+<Note>
+Size the writable disk for your assets: the default quota is 2048 MiB, and a large baked-in bundle on top of the agent base image can exceed it. Pass a larger `--disk-size-mb` at create time.
+</Note>
 
-Push the repository to public GitHub and use it directly:
+### Public GitHub repository
+
+For a community template you want to share, push the same layout to public GitHub and use it directly:
 
 ```text
 github.com/acme/cowork-agent
@@ -175,6 +188,10 @@ The template belongs on the agent definition, not on an individual run or sessio
     Use `claude` or `codex` for the other runtimes. The response contains the agent ID.
   </Tab>
 </Tabs>
+
+<Note>
+The first workspace boot for a template builds that template's agent image — for a large context this takes several minutes. Later boots reuse the cached image and start in seconds. Rebuilding or updating the template triggers one more slow first boot.
+</Note>
 
 Every subsequent connect, run, dashboard chat, and interactive session uses the stored image. A session request selects a workspace, not an image:
 
@@ -232,7 +249,7 @@ For a stored template, `zwrm templates list` must also report `ready`.
 
 ## Update the image
 
-- For a stored Dockerfile template, change the Dockerfile and run `zwrm templates rebuild <name>`.
+- For a stored template, `zwrm templates rebuild <name>` rebuilds from the stored context — for example after an agent-base update. To change the context files themselves, delete the template and create it again with the new directory, then re-attach agents that referenced it.
 - For a GitHub template, push a new commit to the referenced repository.
 - Stop the running agent VM before the next boot so it can use the rebuilt root filesystem.
 
@@ -243,7 +260,9 @@ Workspace volumes survive image changes. On boot, ZWRM copies files from the ima
 | Symptom | Cause | Fix |
 |---|---|---|
 | The agent still has the standard environment | The template was built but never assigned to the agent | Pass `--template` to `zwrm agent create`, or update the existing agent through `/v1/agents/connect` |
-| `COPY` reports that a file does not exist | `zwrm templates create` received only the Dockerfile text | Use a public GitHub repository as the build context |
+| `COPY` reports that a file does not exist | The file is outside the uploaded context or matched by `.dockerignore` | Run the create from the directory that contains it (or pass `--context`), and check `.dockerignore` |
+| The upload is rejected with `413` | The compressed context exceeds 1 GiB | Trim it with `.dockerignore`, or download large assets during the build instead |
+| The first chat or run after creating an agent takes minutes | The template's agent image builds on the first boot | Expected once per template; later boots start in seconds |
 | SSH, chat, or the agent runtime does not start | The Dockerfile started from a generic base image | Start with `ghcr.io/zwrm-eu/agent-base:latest` |
 | A changed file under `/home/agent` still has its old content | The workspace volume preserves existing paths | Test with a new session key, or keep immutable content outside `/home/agent` |
 | Startup performs hundreds of file uploads or receives `429` responses | Static tools and assets are being synchronized at runtime | Bake them into the image and upload only per-session inputs |
