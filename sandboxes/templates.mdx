@@ -49,7 +49,7 @@ These templates are registered automatically when the control plane starts, from
 
 ## Creating custom templates
 
-Custom templates are built from a Dockerfile. The Dockerfile defines the complete environment — OS packages, language runtimes, tools, and default configuration.
+Custom templates are built from a Docker build context: a Dockerfile plus any local files it copies in. The Dockerfile defines the complete environment — OS packages, language runtimes, tools, and default configuration — and `COPY`/`ADD` pull in assets from the uploaded context (the current directory by default, `--context <dir>` otherwise, `.dockerignore` applied, up to 1 GiB compressed).
 
 <Tabs>
   <Tab title="CLI">

@@ -544,11 +544,11 @@ See the [Sandboxes guides](/sandbox) for egress control, persistence, and templa
 
 Manage agent and sandbox VM templates. [Guide →](/agents/templates)
 
-`templates create` uploads the Dockerfile text only. It does not upload sibling files as a Docker build context; use a public GitHub repository when the Dockerfile needs `COPY` or `ADD`.
+`templates create` uploads the complete Docker build context — the current directory by default, or `--context <dir>` — filtered by `.dockerignore`, up to 1 GiB compressed. `COPY` and `ADD` work with local files; `--dockerfile` must point to a file inside the context.
 
 ```bash
 zwrm templates list
-zwrm templates create <name> --dockerfile <path> [--description <text>] [--env KEY=VALUE ...] [--egress-mode allow_all|deny_all] [--egress-allow-cidr <cidr>] [--egress-deny-cidr <cidr>] [--egress-allow-port <port>] [--disk-size-mb <n>] [--bandwidth-mbps <n>] [--ops-per-sec <n>] [--burst-mbps <n>] [--burst-ops <n>]
+zwrm templates create <name> --dockerfile <path> [--context <dir>] [--description <text>] [--env KEY=VALUE ...] [--egress-mode allow_all|deny_all] [--egress-allow-cidr <cidr>] [--egress-deny-cidr <cidr>] [--egress-allow-port <port>] [--disk-size-mb <n>] [--bandwidth-mbps <n>] [--ops-per-sec <n>] [--burst-mbps <n>] [--burst-ops <n>]
 zwrm templates rebuild <name>
 zwrm templates update-quota <name-or-id> [--disk-size-mb <n>] [--bandwidth-mbps <n>] [--ops-per-sec <n>] [--burst-mbps <n>] [--burst-ops <n>] [--clear-rate-limit]
 zwrm templates delete <name> [-f]
