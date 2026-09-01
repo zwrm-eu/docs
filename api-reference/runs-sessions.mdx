@@ -30,8 +30,8 @@ A session is one live conversation — a run's headless session or an interactiv
 | `GET` | `/v1/agents/{agent_id}/sessions/{session_id}` | Get a session |
 | `GET` | `/v1/agents/{agent_id}/sessions/{session_id}/events` | Event timeline (see below) |
 | `GET` | `/v1/agents/{agent_id}/sessions/{session_id}/todos` | Latest task-list snapshot (see below) |
-| `GET` | `/v1/agents/{agent_id}/sessions/{session_id}/commands` | List invocable Claude commands |
-| `POST` | `/v1/agents/{agent_id}/sessions/{session_id}/command` | Invoke a Claude command and wait for its reply |
+| `GET` | `/v1/agents/{agent_id}/sessions/{session_id}/commands` | List invocable session commands |
+| `POST` | `/v1/agents/{agent_id}/sessions/{session_id}/command` | Invoke a session command and wait for its reply |
 | `POST` | `/v1/agents/{agent_id}/sessions/{session_id}/shell` | Run an operator shell command and add its result to context |
 | `POST` | `/v1/agents/{agent_id}/sessions/{session_id}/messages` | Send a user message into the session |
 | `POST` | `/v1/agents/{agent_id}/sessions/{session_id}/interrupt` | Interrupt the current turn |
@@ -82,7 +82,7 @@ The session-create `permission_mode` and `mode` take the same values: `default`,
 
 ### Commands
 
-Claude sessions expose their slash-command catalog through `GET .../commands`. The catalog combines platform-projected skills, Claude's built-in commands, and repository-local `.claude/commands` files:
+Command-capable session harnesses expose their catalog through `GET .../commands`. ZWRM normalizes the active harness's catalog into one response shape:
 
 ```json
 {
@@ -103,12 +103,11 @@ Invoke one with `POST .../command`:
 ```json
 {
   "command": "review",
-  "arguments": "src/app.ts",
-  "model": "sonnet"
+  "arguments": "src/app.ts"
 }
 ```
 
-`arguments` and `model` are optional. `model` is a per-turn Claude model override; the session returns to its previous model when the command finishes. You can include or omit the leading `/` in `command`.
+`arguments` and `model` are optional. `model` is a harness-specific per-turn model override; the session returns to its previous model when the command finishes. You can include or omit the leading `/` in `command`.
 
 The command runs as a normal session turn. Its events land on the ordinary timeline, while the request waits and returns the completed assistant message:
 
@@ -123,7 +122,7 @@ The command runs as a normal session turn. Its events land on the ordinary timel
 }
 ```
 
-Commands require a Claude agent. `pi` and `codex` sessions return `400`. The session must be idle when you invoke a command; otherwise the API returns `409`.
+Command support is a capability of the active session harness. Claude supports commands today. Its catalog combines built-ins, platform-projected skills, and repository-local `.claude/commands` files. A harness without command support returns `400`. Any additional command-capable harness uses the same endpoint and response contract. The session must be idle when you invoke a command; otherwise the API returns `409`.
 
 ### Operator shell
 
