@@ -75,6 +75,19 @@ Live per-token pricing is shown in EUR in the dashboard (the **Models** page, an
 `ZWRM_GATEWAY_TOKEN` is **reserved for the platform** — it's the billing boundary, so you can't set it as an org or agent secret. That's what makes the zwrm runtime a no-key, credits-metered harness. (The provider names `NEBIUS_API_KEY` / `LYCEUM_API_KEY` are no longer reserved — those keys never enter agent VMs anyway.)
 </Note>
 
+## Your own endpoints
+
+Beyond the catalogs above, an organization can register **external OpenAI-compatible endpoints** — a self-hosted vLLM, an Azure OpenAI deployment, a vendor account ZWRM doesn't resell — and use their models on zwrm-runtime agents. They're written `ext/<provider>/<model-id>`, run on your credential, and are billed by your vendor rather than against credits.
+
+```bash
+zwrm org llm-provider add myvllm --base-url https://llm.example.com/v1 --api-key -
+zwrm agent update my-agent --model ext/myvllm/Qwen/Qwen3-235B-A22B-Instruct-2507
+```
+
+See [External model providers](/agents/external-providers) for registration, authentication, and how they differ from catalog models.
+
 ## If a model leaves the catalog
 
 Catalogs evolve. A stored default model that's no longer offered is re-resolved against the current catalog; if it's gone entirely, the run or session falls back to the harness default and logs a warning rather than failing to boot. Historical `model` values recorded on past runs and sessions are left as-is.
+
+Models from [external providers](/agents/external-providers) deliberately behave the other way: if the provider is disabled or deleted, runs and sessions pinned to its models **fail with a clear error** instead of degrading, because a silent fallback would move the work onto billed credits.
