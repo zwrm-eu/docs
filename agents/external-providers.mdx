@@ -1,0 +1,157 @@
+---
+title: "External model providers"
+description: "Bring your own OpenAI-compatible endpoint and use its models on agents."
+icon: "plug"
+---
+
+Register an **OpenAI-compatible endpoint of your own** — a self-hosted vLLM, an Azure OpenAI deployment, a vendor account ZWRM doesn't resell — and use its models on zwrm-runtime agents, alongside the platform catalog.
+
+Requests are proxied through the platform's [LLM gateway](/agents/openai-api), so your key stays on the control plane and never enters a VM. But they run on **your** account: nothing is billed to your ZWRM credits.
+
+| | Platform catalog | External provider |
+|---|---|---|
+| Credential | Platform's, invisible to you | **Yours**, encrypted at rest |
+| Billing | Prepaid [credits](/billing/credits) | Your vendor bills you directly |
+| Model naming | `qwen/qwen3-235b-instruct` | `ext/<provider>/<model-id>` |
+| `require_eu_models` | Enforced | Not enforced — see [EU residency](#eu-residency) |
+| `zwrm/auto` routing | Yes | Never |
+
+## Register a provider
+
+<Steps>
+<Step title="Open the provider settings">
+Go to **Settings → Organization → Model providers**, or from the **Models** page open the **⋯** menu and choose **Add custom provider**.
+</Step>
+<Step title="Name it and point it at the endpoint">
+The **name** becomes part of every model id (`ext/<name>/<model>`), so keep it short and lowercase — `myvllm`, `azure`. The **base URL** is the OpenAI-compatible API root, the same value you'd give an OpenAI client: `https://llm.example.com/v1`.
+</Step>
+<Step title="Choose how it authenticates">
+**API key** sends `Authorization: Bearer <key>`. **Custom headers** sends a header set verbatim — see [Authentication](#authentication).
+</Step>
+<Step title="Pick the models">
+Click **Discover models** to list what the endpoint advertises, then tick the ones to offer on agents. Set each model's context window, max output, and reasoning/vision flags — see [Model metadata](#model-metadata).
+</Step>
+</Steps>
+
+From the CLI:
+
+```bash
+# "-" reads the key from stdin, keeping it out of shell history
+zwrm org llm-provider add myvllm \
+  --base-url https://llm.example.com/v1 \
+  --api-key - \
+  --model Qwen/Qwen3-235B-A22B-Instruct-2507
+
+zwrm org llm-provider discover myvllm   # what does it serve?
+zwrm org llm-provider list
+```
+
+Registering a provider is an organization-level action, and it's a **human surface**: agent tokens can't create or repoint a provider, even ones whose own completions flow through it.
+
+## Authentication
+
+<Tabs>
+<Tab title="API key">
+The common case. The key is sent as `Authorization: Bearer <key>`, and you never see it again — the API reports only *whether* a credential is stored.
+
+```bash
+zwrm org llm-provider add myvllm --base-url https://llm.example.com/v1 --api-key -
+```
+</Tab>
+<Tab title="Custom headers">
+For endpoints that authenticate some other way — Azure OpenAI's `api-key`, a Cloudflare Access client pair, a gateway fronting your model server. Headers are sent verbatim, so write your own `Authorization` header here if the endpoint wants one alongside others.
+
+```bash
+zwrm org llm-provider add azure \
+  --base-url https://my-resource.openai.azure.com/openai/v1 \
+  --header "api-key: $AZURE_KEY" \
+  --model gpt-4o
+```
+
+A base URL may carry a query string (Azure's `?api-version=…`) — the API path is inserted before it.
+</Tab>
+<Tab title="No credential">
+Leave both empty for an endpoint that needs no auth, such as a vLLM on your private network. Reaching a private address additionally requires host-admin approval (`--allow-private`).
+</Tab>
+</Tabs>
+
+Header names and values are validated when you save. You can't override the fields the gateway owns — `Host`, `Content-Type`, `Content-Length`, `Accept`, the hop-by-hop headers, or the `X-ZWRM-*` attribution pair — and control characters in a value are rejected.
+
+<Warning>
+Changing a provider's **base URL clears its stored credential** unless you supply a new one in the same save. Any organization member can edit a provider, so a retained key travelling to a new URL would be a way to exfiltrate it. Re-enter the key when you move an endpoint; the dashboard warns you before saving.
+</Warning>
+
+## Model metadata
+
+Each model carries the limits and capabilities the in-VM harness plans against:
+
+| Field | Default if unset | Why it matters |
+|-------|------------------|----------------|
+| Context window | 128,000 | The harness compacts the conversation against this number |
+| Max output | 32,768 | Caps a single reply |
+| Reasoning | off | Whether the model emits thinking tokens |
+| Vision | off | Whether image input is accepted |
+
+The defaults are deliberately conservative, and the harness treats them as the model's real limits — so a reasoning model left with **Reasoning** off behaves as a non-reasoning one. Set them to match what your endpoint actually serves.
+
+<Note>
+Registering a provider **without** picking models imports everything its `/models` listing advertises, each with default metadata. That's convenient for a single-model endpoint and unwieldy for a vendor serving dozens — use **Discover models** and tick what you need.
+</Note>
+
+**Refresh models** re-reads the endpoint's listing: ids you already declared keep their metadata, new ids arrive with defaults, and ids the endpoint no longer serves are dropped.
+
+## Use the models
+
+An external model is written `ext/<provider>/<model-id>` — the vendor's own id, unchanged, after your provider name:
+
+```
+ext/myvllm/Qwen/Qwen3-235B-A22B-Instruct-2507
+```
+
+They're selectable anywhere a zwrm-runtime model is, grouped under **External**:
+
+- **Per agent** — **Settings → Default model** on the agent, or `zwrm agent update <name> --model ext/...`
+- **Per run** — the model picker in **New run**, or `zwrm agent run --model ext/...`
+- **Per chat session** — the model control in the composer, before you send the first message. A session's model is fixed once it starts, so switching means starting a new chat.
+- **Through the API** — as `model` on [`POST /v1/openai/chat/completions`](/agents/openai-api)
+
+Only the zwrm runtime can use them: `claude` and `codex` agents reach their vendors directly rather than through the gateway. `zwrm/auto` never routes to an external model — it picks from the platform catalog only, so pin the model explicitly when you want yours.
+
+New providers reach a running agent VM on its **next boot**; the API and the dashboard see them immediately.
+
+## Billing and policy
+
+Nothing about an external completion is billed by ZWRM: no credits are debited, the prepaid balance gate doesn't apply, and neither do the daily platform spend caps. Your vendor bills you directly. Usage still appears in the audit log (token counts and model names, never content), and per-agent daily budgets still apply, since those bound an agent's overall activity rather than platform spend.
+
+### EU residency
+
+The **`require_eu_models`** setting does **not** apply to external providers. The endpoint is your own choice, so the platform doesn't second-guess where it runs. The **EU-resident** switch on a provider is a self-declared label shown on the model listing — informational only, never enforced.
+
+## Attribution
+
+So you can tell which ZWRM session consumed which tokens on your side, every external completion carries the calling agent and session:
+
+```http
+POST https://your-endpoint/v1/chat/completions
+X-ZWRM-Agent-Id: 9f3c…
+X-ZWRM-Session-Id: 7b21…
+
+{"model": "your-model-id", "user": "zwrm:session:7b21…", …}
+```
+
+The OpenAI `user` field is filled only when you didn't send one — your own value always wins. It degrades to `zwrm:agent:<id>` when no session is known, and is absent entirely for a plain API-key call, which has no session behind it.
+
+## Availability and removal
+
+Disabling or deleting a provider makes runs and sessions pinned to its models **fail with a clear error**. They deliberately don't fall back to a platform model — a silent fallback would move the work onto billed credits without telling you. Update each agent's model first, then remove the provider.
+
+<Note>
+This differs from platform catalog curation, where a model that leaves the catalog degrades to the harness default. See [If a model leaves the catalog](/agents/models#if-a-model-leaves-the-catalog).
+</Note>
+
+## Security
+
+- The credential is **encrypted at rest** with the platform's master key and never enters a VM. Agents authenticate to the gateway with their own short-lived token; the gateway holds your key.
+- Base URLs are validated at registration and **re-checked at dial time**, so a hostname that later resolves to a private address is still refused. Private and internal addresses require host-admin approval.
+- Redirects are confined to the endpoint's own origin, so a redirecting endpoint can't walk your credential to another host.
+- Management routes are unavailable to agent tokens.

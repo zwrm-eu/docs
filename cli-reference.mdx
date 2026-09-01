@@ -487,6 +487,24 @@ zwrm org secrets unset <NAME>
 zwrm org secrets add --from-file <path>
 ```
 
+### `zwrm org llm-provider`
+
+External OpenAI-compatible endpoints whose models zwrm-runtime agents can use as `ext/<provider>/<model-id>`. Runs on your credential and is billed by your vendor, not against credits. [Guide →](/agents/external-providers)
+
+```bash
+zwrm org llm-provider add <name> --base-url <url> [--api-key -] [--model <id>]...
+zwrm org llm-provider add azure --base-url <url> --header "api-key: $KEY"   # non-bearer auth
+zwrm org llm-provider list
+zwrm org llm-provider show <name>
+zwrm org llm-provider discover [<name>] [--base-url <url>]   # what does the endpoint serve?
+zwrm org llm-provider sync <name>                            # refresh the model list
+zwrm org llm-provider update <name> [--base-url <url>] [--api-key -] [--clear-api-key]
+zwrm org llm-provider enable <name> | disable <name>
+zwrm org llm-provider remove <name>
+```
+
+`--api-key -` reads the key from stdin, keeping it out of argv and shell history. Changing `--base-url` clears the stored credential unless `--api-key` rides the same command.
+
 ---
 
 ## `zwrm credits`
