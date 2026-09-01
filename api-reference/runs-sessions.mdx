@@ -30,6 +30,9 @@ A session is one live conversation — a run's headless session or an interactiv
 | `GET` | `/v1/agents/{agent_id}/sessions/{session_id}` | Get a session |
 | `GET` | `/v1/agents/{agent_id}/sessions/{session_id}/events` | Event timeline (see below) |
 | `GET` | `/v1/agents/{agent_id}/sessions/{session_id}/todos` | Latest task-list snapshot (see below) |
+| `GET` | `/v1/agents/{agent_id}/sessions/{session_id}/commands` | List invocable Claude commands |
+| `POST` | `/v1/agents/{agent_id}/sessions/{session_id}/command` | Invoke a Claude command and wait for its reply |
+| `POST` | `/v1/agents/{agent_id}/sessions/{session_id}/shell` | Run an operator shell command and add its result to context |
 | `POST` | `/v1/agents/{agent_id}/sessions/{session_id}/messages` | Send a user message into the session |
 | `POST` | `/v1/agents/{agent_id}/sessions/{session_id}/interrupt` | Interrupt the current turn |
 | `POST` | `/v1/agents/{agent_id}/sessions/{session_id}/permissions/{request_id}` | Answer a permission request |
@@ -77,6 +80,83 @@ Session statuses: `creating`, `idle`, `working`, `blocked` (waiting on a permiss
 
 The session-create `permission_mode` and `mode` take the same values: `default`, `acceptEdits`, `plan`, `bypassPermissions`. `pi` and `codex` agents map only `default` and `bypassPermissions` — the other two return `400` rather than being silently downgraded.
 
+### Commands
+
+Claude sessions expose their slash-command catalog through `GET .../commands`. The catalog combines platform-projected skills, Claude's built-in commands, and repository-local `.claude/commands` files:
+
+```json
+{
+  "session_id": "session-id",
+  "commands": [
+    {
+      "name": "review",
+      "description": "Review a path",
+      "argument_hint": "<path>",
+      "aliases": ["pr"]
+    }
+  ]
+}
+```
+
+Invoke one with `POST .../command`:
+
+```json
+{
+  "command": "review",
+  "arguments": "src/app.ts",
+  "model": "sonnet"
+}
+```
+
+`arguments` and `model` are optional. `model` is a per-turn Claude model override; the session returns to its previous model when the command finishes. You can include or omit the leading `/` in `command`.
+
+The command runs as a normal session turn. Its events land on the ordinary timeline, while the request waits and returns the completed assistant message:
+
+```json
+{
+  "session_id": "session-id",
+  "command": "review",
+  "message": {
+    "role": "assistant",
+    "text": "The review is clean."
+  }
+}
+```
+
+Commands require a Claude agent. `pi` and `codex` sessions return `400`. The session must be idle when you invoke a command; otherwise the API returns `409`.
+
+### Operator shell
+
+`POST .../shell` runs `/bin/bash -lc` immediately in the session workspace:
+
+```json
+{
+  "command": "git status --short"
+}
+```
+
+This is an operator action, not a model turn. It bypasses the model's tool permission mode. The session must be idle, so the API returns `409` instead of interleaving the command with a live turn. Execution is limited to 30 seconds and 1 MiB of combined stdout and stderr. Send a session turn after at most eight shell calls (or 1 MiB of queued shell context); another shell call returns `409` until that context is consumed.
+
+The response reports the subprocess outcome. A non-zero exit is still an HTTP `200`; a timeout sets `timed_out` to `true` and `exit_code` to `124`:
+
+```json
+{
+  "session_id": "session-id",
+  "command": "git status --short",
+  "output": " M src/app.ts\n",
+  "exit_code": 0,
+  "timed_out": false,
+  "truncated": false,
+  "duration_ms": 18
+}
+```
+
+Every authorized shell attempt is audited and consumes the expensive rate-limit tier. Scoped credentials require the dedicated `sessions:shell` capability, which is not part of an agent's default capability set.
+
+<Warning>
+The shell endpoint is a deliberate operator-to-model injection channel. ZWRM writes the command, output, and exit status as a durable `message.context` event and includes that marked context in the next user or command turn. Treat shell input and output as conversation input, even though the call itself starts no model turn.
+</Warning>
+
 ### Task lists
 
 Agents that plan with a todo tool (claude's TodoWrite, codex's plan tool) publish the session's task list in one normalized shape, regardless of harness.
@@ -108,7 +188,7 @@ Every event carries a stable `id` (`<session_id>:<seq>`), a per-session monotoni
 |------------|---------|---------|
 | `session.started` / `session.status` / `session.ended` / `session.error` | yes | Lifecycle and status changes (payload includes permission mode) |
 | `turn.started` / `turn.completed` | yes | Canonical turn boundaries; `turn.completed` carries a `status` (`completed`, `interrupted`, `error`, `ended`) |
-| `message.context` | yes | The user message as accepted into the session (`text` + `attachments`) |
+| `message.context` | yes | Accepted conversation context: a user message (`text` + `attachments`) or an operator-shell command and result (`source: operator_shell`) |
 | `turn.files_changed` | yes | Workspace files the turn has changed (payload lists the paths) |
 | `sdk.system` | yes | Session init metadata |
 | `sdk.assistant` | yes | A complete assistant message |
