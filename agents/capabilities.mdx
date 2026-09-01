@@ -8,7 +8,7 @@ Every agent VM carries a platform token so the agent can run `zwrm` commands —
 
 ## Default
 
-An agent gets every capability except `destroy`. It can build, ship, and manage; it cannot irreversibly tear down an app, machine, database, or volume — that stays an explicit per-agent grant.
+An agent gets every capability except `destroy` and `sessions:shell`. It can build, ship, and manage. Irreversible teardown and programmatic operator shell execution stay explicit per-agent grants.
 
 ```bash
 zwrm agent update my-project --allowed-scopes apps:read,deploy,logs:read
@@ -31,13 +31,19 @@ Scopes are `resource:action` pairs, plus a few atomic verbs:
 | Observability | `logs:read` |
 | Agent library | `agents:read`, `agents:write`, `skills:read`, `skills:write`, `memories:read`, `memories:write` |
 | Automation | `schedules:read`, `schedules:write`, `triggers:read`, `triggers:write` |
+| Agent sessions | `sessions:shell` |
 | MCP gateway | `mcp:read`, `mcp:write` |
 | Connectors | `connectors:read`, `connectors:write` |
 | Account | `ssh`, `identity` |
 | Teardown | `destroy` |
 
 <Warning>
-Only `destroy` — permanently deleting apps, machines, databases, and volumes — is off by default. Three write capabilities that **are** in the default set deserve attention:
+Two capabilities are off by default:
+
+- **`destroy`** permanently deletes apps, machines, databases, and volumes.
+- **`sessions:shell`** runs arbitrary shell commands in a live agent workspace. It also writes the command and output into the model's next-turn context, making it a deliberate operator-to-model injection channel.
+
+Three write capabilities that **are** in the default set deserve attention:
 
 - **`agents:write`** is deletion of the org's *other* agents, their workspaces and volumes included — a prompt-injected agent could tear down a colleague's workspace. Only the platform-managed org assistant is protected.
 - **`connectors:write`** attaches [connectors](/context/connectors) to the agent's own sessions, and it can reach every enabled virtual server in the org — including connectors whose upstream credential lives at the gateway and was never meant to back this agent.
