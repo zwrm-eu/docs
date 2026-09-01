@@ -22,15 +22,16 @@ response = client.chat.completions.create(
 print(response.choices[0].message.content)
 ```
 
-## Three kinds of model
+## Four kinds of model
 
-The `model` field selects between three different things behind one endpoint:
+The `model` field selects between four different things behind one endpoint:
 
 | `model` | What it is |
 |---------|------------|
 | A catalog slug, e.g. `qwen/qwen3-235b-instruct` | A **model, called directly** through the LLM gateway. Stateless: an ordinary completion with nothing but what you send, billed against prepaid [credits](/billing/credits). |
 | `zwrm/auto` | **Automatic model selection** — the platform picks a catalog model per request, [deterministically](#automatic-model-selection-zwrmauto). |
 | `agent/<name>` | One of your **agents**. Stateful: the conversation lives in the agent's workspace, and the agent brings its own tools, skills, and connectors. |
+| `ext/<provider>/<model-id>` | A model on an **endpoint your organization registered**. Served on your own credential and billed by your vendor, not against credits — see [External model providers](/agents/external-providers). |
 
 <Warning>
 Agents must be addressed as `agent/<name>` — a bare agent name is no longer accepted and returns `404 model_not_found`. The prefix keeps agent names and model slugs from colliding as the catalog grows.
@@ -81,6 +82,17 @@ Catalog models are served only where the deployment has the gateway enabled and 
 `eu_resident: true` means inference for that model runs entirely on EU infrastructure — true for the open-weights catalog, `false` for the Anthropic and OpenAI models, whose calls leave the EU. The flag is about **where inference runs**, not storage: the control plane logs token counts and model names only, never prompt or completion content, for any model.
 
 Organizations can enforce it with the **`require_eu_models`** org setting (dashboard → **Settings → Defaults**, or `PUT /v1/org/settings`; changing it takes an org admin or owner). When on, non-EU models disappear from the model listing and a completion naming one is refused with an explanatory `403 permission_error`. `zwrm/auto` respects the setting too — it routes only to EU-resident models, and a request only a non-EU model could serve gets the same explanatory `403`.
+
+### External providers (`ext/…`)
+
+Models on endpoints your organization registered are addressed as `ext/<provider>/<model-id>` and served through this same endpoint, on your credential:
+
+- **Not billed by ZWRM.** No credits are debited and no platform spend caps apply; your vendor bills you.
+- **`require_eu_models` doesn't apply.** The endpoint is your own choice; a provider's EU-resident flag is a self-declared label.
+- **Never routed to by `zwrm/auto`,** which picks from the platform catalog only.
+- **Attribution is forwarded** to your endpoint as `X-ZWRM-Agent-Id` / `X-ZWRM-Session-Id` headers, and as the OpenAI `user` field when you didn't set one.
+
+`GET /v1/openai/models` lists your organization's external models alongside the catalog. See [External model providers](/agents/external-providers) for how to register one.
 
 ### Automatic model selection (`zwrm/auto`)
 
