@@ -58,6 +58,7 @@
             "pages": [
               "agents/overview",
               "agents/models",
+              "agents/external-providers",
               "agents/runs",
               "agents/workspaces",
               "agents/messaging",
