@@ -29,6 +29,7 @@ A session is one live conversation — a run's headless session or an interactiv
 | `GET` | `/v1/agents/{agent_id}/sessions` | List sessions |
 | `GET` | `/v1/agents/{agent_id}/sessions/{session_id}` | Get a session |
 | `GET` | `/v1/agents/{agent_id}/sessions/{session_id}/events` | Event timeline (see below) |
+| `GET` | `/v1/agents/{agent_id}/sessions/{session_id}/todos` | Latest task-list snapshot (see below) |
 | `POST` | `/v1/agents/{agent_id}/sessions/{session_id}/messages` | Send a user message into the session |
 | `POST` | `/v1/agents/{agent_id}/sessions/{session_id}/interrupt` | Interrupt the current turn |
 | `POST` | `/v1/agents/{agent_id}/sessions/{session_id}/permissions/{request_id}` | Answer a permission request |
@@ -76,6 +77,22 @@ Session statuses: `creating`, `idle`, `working`, `blocked` (waiting on a permiss
 
 The session-create `permission_mode` and `mode` take the same values: `default`, `acceptEdits`, `plan`, `bypassPermissions`. `pi` and `codex` agents map only `default` and `bypassPermissions` — the other two return `400` rather than being silently downgraded.
 
+### Task lists
+
+Agents that plan with a todo tool (claude's TodoWrite, codex's plan tool) publish the session's task list in one normalized shape, regardless of harness.
+
+`GET .../todos` returns the latest snapshot as `{session_id, todos, updated_at}`:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `content` | string | The task description |
+| `status` | string | `pending`, `in_progress`, `completed`, or `cancelled` |
+| `priority` | string | `high`, `medium`, or `low`; omitted when the harness doesn't model priority |
+
+A session whose agent never wrote a task list returns an empty `todos` with no `updated_at` — `pi` agents have no todo tool, so their sessions always answer empty. Each snapshot replaces the whole list (that's how the tools themselves write), and a snapshot is only recorded once the tool call actually executed — a denied `TodoWrite` changes nothing.
+
+For live updates, watch the `todo.updated` event on the [events stream](#session-events) instead of polling; its payload is the same `todos` array.
+
 ## Session events
 
 ```
@@ -98,6 +115,7 @@ Every event carries a stable `id` (`<session_id>:<seq>`), a per-session monotoni
 | `sdk.user` | yes | Tool results / user-side messages |
 | `sdk.result` | yes | End-of-turn result with usage and cost |
 | `permission.request` / `permission.decision` | yes | Tool-permission round-trips |
+| `todo.updated` | yes | The agent's task list changed; payload carries the full normalized list (see [Task lists](#task-lists)) |
 | `park.request` / `park.resolved` | yes | A platform tool (e.g. `sleep`) parked the turn until a deadline; the VM may suspend, and the platform resolves the park to resume it |
 | `sdk.partial` | no | Token-stream deltas (streaming only; superseded by the following `sdk.assistant`) |
 
