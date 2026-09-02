@@ -46,7 +46,7 @@ The runtime is set once, at creation (`zwrm agent create <name> --runtime <zwrm|
 |------|---------|---------|
 | `claude` | Claude Code | Your org's Anthropic credentials |
 | `codex` | OpenAI Codex | Your org's OpenAI credentials (API key or ChatGPT subscription) |
-| `pi` | The **zwrm runtime** (spelled `zwrm` on the CLI and in the dashboard; EU-hosted open models) | Prepaid [credits](/billing/credits) |
+| `pi` | The **zwrm runtime** (spelled `zwrm` on the CLI and in the dashboard; EU-first catalog of open models) | Prepaid [credits](/billing/credits) |
 | `opencode` | **OpenCode** — *beta*, enabled per organization by the platform team (same EU-first catalog as the zwrm runtime) | Prepaid [credits](/billing/credits) |
 
 Each harness exposes its own model catalog and reasoning-effort ladder — see [Models](/agents/models). claude and codex run on credentials you bring; the zwrm runtime and OpenCode are metered against prepaid credits with no key to manage for catalog models (their [external-provider](/agents/external-providers) models run on your credential and are billed by your vendor).
