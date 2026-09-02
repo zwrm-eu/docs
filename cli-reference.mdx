@@ -509,7 +509,7 @@ zwrm org llm-provider remove <name>
 
 ## `zwrm credits`
 
-Prepaid credits (EUR) metering the [zwrm runtime](/agents/models#the-zwrm-runtime-pi). Buy credits in the dashboard. [Guide →](/billing/credits)
+Prepaid credits (EUR) metering the [zwrm runtime](/agents/models#the-zwrm-runtime-pi) and the [OpenCode runtime](/agents/models#opencode-opencode) (catalog models; external-provider models are billed by your vendor). Buy credits in the dashboard. [Guide →](/billing/credits)
 
 ```bash
 zwrm credits                              # balance, metering status, ok/low/EXHAUSTED
@@ -588,7 +588,7 @@ zwrm agent create <name> --runtime <zwrm|claude|codex|opencode> [--size <preset>
 
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
-| `--runtime` | string | — (required) | Agent runtime: `zwrm`, `claude`, `codex`, or `opencode` (beta, enabled per organization) |
+| `--runtime` | string | — (required) | Agent runtime: `zwrm`, `claude`, `codex`, or `opencode` (beta, enabled per organization; accepted but not yet listed in `--help`) |
 | `--size` | string | `performance-2x` | VM size preset |
 | `--template` | string | — | Stored template name/ID or public GitHub repository |
 

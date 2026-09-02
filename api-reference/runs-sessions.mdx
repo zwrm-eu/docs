@@ -78,7 +78,7 @@ Session statuses: `creating`, `idle`, `working`, `blocked` (waiting on a permiss
 
 `POST .../mode` switches the permission mode mid-session; the body is `{"mode": "..."}`.
 
-The session-create `permission_mode` and `mode` take the same values: `default`, `acceptEdits`, `plan`, `bypassPermissions`. `pi` and `codex` agents map only `default` and `bypassPermissions` — the other two return `400` rather than being silently downgraded.
+The session-create `permission_mode` and `mode` take the same values: `default`, `acceptEdits`, `plan`, `bypassPermissions`. `pi`, `codex`, and `opencode` agents map only `default` and `bypassPermissions` — the other two return `400` rather than being silently downgraded.
 
 ### Commands
 
@@ -199,7 +199,7 @@ Every event carries a stable `id` (`<session_id>:<seq>`), a per-session monotoni
 | `sdk.partial` | no | Token-stream deltas (streaming only; superseded by the following `sdk.assistant`) |
 
 <Note>
-`sdk.*` payloads are the agent harness's SDK messages passed through verbatim — treat their inner structure as defined by that SDK (Claude Agent SDK for claude agents; the codex / pi / opencode SDKs for those harnesses), not by ZWRM.
+`sdk.*` payloads use the Claude Agent SDK's stream-json shapes: for claude agents they are the SDK's messages passed through; for codex, pi and opencode the in-VM daemon translates the harness's native events into those same shapes (the `system`/`init` event carries a `harness` field naming the source). Treat their inner structure as defined by that SDK shape, not by ZWRM.
 </Note>
 
 ## OpenAI-compatible API
