@@ -22,10 +22,17 @@ Bring your org's Anthropic credentials as an [agent secret](/agents/secrets) —
 
 | Alias | Model |
 |-------|-------|
-| `opus` | Claude Opus |
-| `sonnet` | Claude Sonnet |
+| `opus` | Claude Opus 5 |
+| `sonnet` | Claude Sonnet 5 |
+| `fable` | Claude Fable 5.1 |
+
+Each alias tracks the newest release of its family. To pin a specific release, pass the full model ID instead — `claude-opus-5`, `claude-sonnet-5`, `claude-fable-5`, `claude-fable-5-1`. Both Fable releases are selectable: `fable` resolves to Fable 5.1, while `claude-fable-5` keeps an agent on Fable 5.
 
 Claude supports all four permission modes and the full effort ladder. Leaving the model empty lets Claude Code pick its own default. The Anthropic-licensed document built-ins (docx/pdf/pptx/xlsx skills) are available **only** on claude agents.
+
+<Note>
+Fable models run on your Anthropic credentials like the rest of the Claude catalog, but Anthropic gates them: your account needs access to the Fable tier, and they are not served to zero-data-retention organizations. If a run fails at model selection, check your Anthropic account's model access first.
+</Note>
 
 ## Codex
 
