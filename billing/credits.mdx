@@ -1,26 +1,26 @@
 ---
 title: "Credits & billing"
-description: "Prepaid credits for the zwrm runtime, subscriptions, and invoices."
+description: "Prepaid credits for the zwrm and OpenCode runtimes, subscriptions, and invoices."
 icon: "credit-card"
 ---
 
 ZWRM has two independent billing surfaces:
 
-- **Prepaid credits** — a EUR balance that meters usage of the **[zwrm runtime](/agents/models#the-zwrm-runtime-pi)** (the `pi` harness), the **[OpenCode runtime](/agents/models#opencode-opencode-beta)** (beta), and direct model calls through the **[OpenAI-compatible API](/agents/openai-api)**. Claude and Codex agents run on *your* Anthropic/OpenAI credentials and never touch credits.
+- **Prepaid credits** — a EUR balance that meters usage of the **[zwrm runtime](/agents/models#the-zwrm-runtime-pi)** (the `pi` harness), the **[OpenCode runtime](/agents/models#opencode-opencode)** (beta), and direct model calls through the **[OpenAI-compatible API](/agents/openai-api)**. Claude and Codex agents run on *your* Anthropic/OpenAI credentials and never touch credits.
 - **A subscription** — the plan that unlocks compute. Separate from credits; managed entirely in the dashboard.
 
 ## Prepaid credits
 
 A credit is one **euro cent**. Balance, the ledger, per-agent usage, and model prices are all denominated in EUR.
 
-Two things are metered: zwrm-runtime (pi) agent sessions and catalog completions on the [OpenAI-compatible API](/agents/openai-api). Both are priced control-plane-side from the provider's reported token usage at the model's per-million rates — converted from USD at the deployment's rate, which is set per provider and folds in FX and margin — and each charge lands in your daily usage and **debits the org's credit balance in the same atomic write**, so a crash can never lose or double-count a debit. Every debit carries a unique idempotency key: a replay writes nothing. Sub-cent remainders are carried (on the agent for sessions, on the org for API calls), so at most one cent is ever rounded in your favor over a carrier's whole life.
+Two things are metered: agent sessions on the gateway runtimes — the zwrm runtime (pi) and OpenCode — for platform-catalog models, and catalog completions on the [OpenAI-compatible API](/agents/openai-api). Completions on your own [external providers](/agents/external-providers) are never metered: your vendor bills those. Both are priced control-plane-side from the provider's reported token usage at the model's per-million rates — converted from USD at the deployment's rate, which is set per provider and folds in FX and margin — and each charge lands in your daily usage and **debits the org's credit balance in the same atomic write**, so a crash can never lose or double-count a debit. Every debit carries a unique idempotency key: a replay writes nothing. Sub-cent remainders are carried (on the agent for sessions, on the org for API calls), so at most one cent is ever rounded in your favor over a carrier's whole life.
 
 ### Check your balance and usage
 
 ```bash
 zwrm credits              # balance (€), metering status, ok / low / EXHAUSTED
 zwrm credits history      # ledger: purchases, debits, adjustments
-zwrm credits usage        # per-agent zwrm-runtime consumption (today + 7 days)
+zwrm credits usage        # per-agent zwrm-runtime / OpenCode consumption (today + 7 days)
 ```
 
 `history` pages newest-first — `--limit` (max 200) and `--before <ledger-id>` walk older entries.
@@ -34,7 +34,7 @@ VAT is handled by Stripe Tax where the deployment enables it: prices are tax-exc
 ### Running low and running out
 
 - **Low-balance warning** — when the balance falls under a configured threshold, the dashboard shows a banner and ZWRM emails the org's owners/admins — at most once per below-threshold episode: the warning re-arms only after the balance recovers to the threshold, so you aren't re-emailed while it stays low. `zwrm credits` reports status `low`.
-- **Exhaustion** — once the balance reaches zero, **new credit-metered work is refused with `402 Payment Required`** — checked per turn for sessions, at dispatch for runs, and before each catalog completion on the OpenAI-compatible API (OpenAI error code `insufficient_quota`); a turn or completion already in flight is never killed. This is surfaced **per agent**: each zwrm-runtime agent shows the warning and the new-agent dialog disables the zwrm-runtime option. Claude and Codex agents are unaffected — they don't use credits.
+- **Exhaustion** — once the balance reaches zero, **new credit-metered work is refused with `402 Payment Required`** — checked per turn for sessions, at dispatch for runs, and before each catalog completion on the OpenAI-compatible API (OpenAI error code `insufficient_quota`); a turn or completion already in flight is never killed. The refusal applies to zwrm-runtime and OpenCode agents alike (their external-provider models are exempt — nothing about those debits credits). It is surfaced **per agent**: each zwrm-runtime agent shows the warning and the new-agent dialog disables the zwrm-runtime option. Claude and Codex agents are unaffected — they don't use credits.
 
 <Note>
 Enforcement only applies where metering is on (a deployment can run with metering disabled). It never blocks claude/codex work, and it fails open on a read error rather than stranding an org.

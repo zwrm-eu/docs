@@ -12,8 +12,8 @@ An agent's **type** — set once at creation — selects the *harness* it runs o
 |------|---------|---------|-----------|
 | `claude` | Claude Code | Your org's Anthropic credentials | Your Anthropic account (metered in USD for [budgets](/agents/budgets)) |
 | `codex` | OpenAI Codex | Your org's OpenAI credentials | Your OpenAI account — **not** metered by ZWRM |
-| `pi` | The **zwrm runtime** | EU-hosted open models, platform-provided key | Prepaid [credits](/billing/credits) (EUR) |
-| `opencode` | **OpenCode** — *beta* | EU-hosted open models, platform-provided key (same catalog as the zwrm runtime) | Prepaid [credits](/billing/credits) (EUR) |
+| `pi` | The **zwrm runtime** | EU-first gateway catalog, platform-provided key | Prepaid [credits](/billing/credits) (EUR) |
+| `opencode` | **OpenCode** — *beta* | The same EU-first gateway catalog as the zwrm runtime, platform-provided key | Prepaid [credits](/billing/credits) (EUR) |
 
 The `pi` harness is presented as **zwrm** in the dashboard and called the *zwrm runtime* in copy; the CLI spells it `zwrm` too (`--runtime zwrm` — `--runtime pi` is rejected). Only the stored type and the API keep the engine name `pi`.
 
@@ -61,7 +61,7 @@ Codex runs on your own OpenAI account, so ZWRM does not meter its cost: the per-
 
 ## The zwrm runtime (`pi`)
 
-The native runtime needs **no credentials from you** — the VM boots with a short-lived platform gateway token (`ZWRM_GATEWAY_TOKEN`) and buys its completions from the platform's [LLM gateway](/agents/openai-api); vendor API keys never enter the VM. Usage is metered against prepaid [credits](/billing/credits). Every model is **EU-hosted** (the platform guarantee), across multiple EU providers; a model's provider follows from the model, not from any configuration you set.
+The native runtime needs **no credentials from you** — the VM boots with a short-lived platform gateway token (`ZWRM_GATEWAY_TOKEN`) and buys its completions from the platform's [LLM gateway](/agents/openai-api); vendor API keys never enter the VM. Usage is metered against prepaid [credits](/billing/credits). The catalog is **EU-first** across several providers — each model's residency is shown as `eu_resident` in the picker and on `GET /v1/openai/models`, and `require_eu_models` enforces EU-only serving for an organization; a model's provider follows from the model, not from any configuration you set.
 
 | Alias | Model |
 |-------|-------|
@@ -74,6 +74,10 @@ The native runtime needs **no credentials from you** — the VM boots with a sho
 | `gpt-oss` | gpt-oss 120B |
 | `qwen-thinking` | Qwen3 Next 80B Thinking |
 | `hermes-405b` | Hermes 4 405B |
+| `glm-5.3-flash` | GLM-5.3 Flash |
+| `gpt-5.6-sol` | GPT-5.6 Sol |
+| `gpt-5.6-terra` | GPT-5.6 Terra |
+| `gpt-5.6-luna` | GPT-5.6 Luna |
 
 Aliases are what the CLI (`--model`) and the dashboard picker take. Inside the VM — the interactive `pi` session and its `/model` UI — models go by their public gateway slug instead (`qwen/qwen3-235b-instruct`), the same names the [OpenAI-compatible API](/agents/openai-api) serves; catalog and price updates land on the next VM boot.
 
@@ -83,22 +87,22 @@ Live per-token pricing is shown in EUR in the dashboard (the **Models** page, an
 `ZWRM_GATEWAY_TOKEN` is **reserved for the platform** — it's the billing boundary, so you can't set it as an org or agent secret. That's what makes the zwrm runtime a no-key, credits-metered harness. (The provider names `NEBIUS_API_KEY` / `LYCEUM_API_KEY` are no longer reserved — those keys never enter agent VMs anyway.)
 </Note>
 
-## OpenCode (`opencode`) — beta
+## OpenCode (`opencode`)
 
 <Warning>
 The OpenCode runtime is currently in **beta**, and is **enabled per organization by the platform team** — it is not self-serve. If your organization doesn't see it in the runtime picker, ask us to enable it. Expect rough edges; report anything surprising.
 </Warning>
 
-[OpenCode](https://opencode.ai/) is an open-source coding agent. On ZWRM it runs the same way the zwrm runtime does: the VM boots with a short-lived platform gateway token, buys its completions from the platform's [LLM gateway](/agents/openai-api), and needs **no credentials from you** — vendor keys never enter the VM. Usage is metered against prepaid [credits](/billing/credits), and every model is EU-hosted.
+[OpenCode](https://opencode.ai/) is an open-source coding agent. On ZWRM it runs the same way the zwrm runtime does: the VM boots with a platform gateway token, buys its completions from the platform's [LLM gateway](/agents/openai-api), and needs **no credentials from you** for the platform catalog — vendor keys never enter the VM. Catalog usage is metered against prepaid [credits](/billing/credits). The catalog is **EU-first**, not EU-only: each model's residency is shown as `eu_resident` in the picker and on `GET /v1/openai/models`, and an organization can enforce EU-only serving with `require_eu_models`. Models from your own [external providers](/agents/external-providers) are the exception on every count: they run on your credential, are billed by your vendor, and are hosted wherever your endpoint is.
 
 ```bash
 zwrm agent create my-agent --runtime opencode
-zwrm agent run --agent my-agent --model kimi-code --prompt "Summarize the open issues"
+zwrm agent run --agent my-agent --model qwen-235b --prompt "Summarize the open issues"
 ```
 
-- **Models** — the **same catalog and aliases as the zwrm runtime** (the table above, `auto` included), plus your organization's [external providers](/agents/external-providers) as `ext/<provider>/<model-id>`. Inside the VM, models go by their gateway slug, as with the zwrm runtime, and catalog updates land on the next VM boot.
+- **Models** — the **same catalog and aliases as the zwrm runtime** (the [zwrm runtime catalog](#the-zwrm-runtime-pi) above, `auto` included), plus your organization's [external providers](/agents/external-providers) as `ext/<provider>/<model-id>`. Inside the VM, models go by their gateway slug, as with the zwrm runtime, and catalog updates land on the next VM boot.
 - **Permission modes** — Ask and Bypass.
-- **Connectors, skills, memory** — connectors ride OpenCode's native MCP client behind the platform permission gate, so escalation and approvals work as on the other runtimes; [skills](/context/skills) load from `~/.claude/skills`; [memory](/context/memory) and sleep/park work.
+- **Connectors, skills, memory** — connectors ride OpenCode's native MCP client behind the platform permission gate, so escalation and approvals go through the same gate as on the other runtimes (an approval's *edited* input is not applied on OpenCode); [skills](/context/skills) seeded to `~/.claude/skills` are picked up by OpenCode's Claude-compatible skill discovery; [memory](/context/memory) and sleep/park work.
 - **Session commands** — OpenCode's own slash commands (built-ins, command files, skill-projected) are listed and invoked through the session commands API, and the operator shell endpoint works unchanged.
 
 An organization's OpenCode access can be withdrawn by the platform team; existing OpenCode agents are then refused at their next session or run (a turn in progress finishes).

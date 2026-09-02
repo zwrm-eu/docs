@@ -28,7 +28,7 @@ zwrm agent budget my-project --daily-usd 25 --max-runs 40
 The same caps can be set via `zwrm agent update --daily-budget --max-runs-per-day` or from the agent page in the dashboard.
 
 <Note>
-The daily **spend** cap measures metered model cost, so it only bites on harnesses ZWRM meters — claude (your Anthropic cost) and the zwrm runtime (which also draws down prepaid [credits](/billing/credits)). Codex runs on your own OpenAI account and isn't metered, so only its **run-count** cap applies. See [Models](/agents/models).
+The daily **spend** cap measures metered model cost, so it only bites on harnesses ZWRM meters — claude (your Anthropic cost) and the zwrm runtime and OpenCode (which also draw down prepaid [credits](/billing/credits) for catalog models). Codex runs on your own OpenAI account and isn't metered, so only its **run-count** cap applies. See [Models](/agents/models).
 </Note>
 
 ## What happens at the cap
