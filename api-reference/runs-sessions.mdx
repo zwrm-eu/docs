@@ -158,7 +158,7 @@ The shell endpoint is a deliberate operator-to-model injection channel. ZWRM wri
 
 ### Task lists
 
-Agents that plan with a todo tool (claude's TodoWrite, codex's plan tool) publish the session's task list in one normalized shape, regardless of harness.
+Agents that plan with a todo tool (claude's TodoWrite, codex's plan tool, opencode's todowrite) publish the session's task list in one normalized shape, regardless of harness.
 
 `GET .../todos` returns the latest snapshot as `{session_id, todos, updated_at}`:
 
@@ -199,7 +199,7 @@ Every event carries a stable `id` (`<session_id>:<seq>`), a per-session monotoni
 | `sdk.partial` | no | Token-stream deltas (streaming only; superseded by the following `sdk.assistant`) |
 
 <Note>
-`sdk.*` payloads are the agent harness's SDK messages passed through verbatim — treat their inner structure as defined by that SDK (Claude Agent SDK for claude agents; the codex / pi SDKs for those harnesses), not by ZWRM.
+`sdk.*` payloads are the agent harness's SDK messages passed through verbatim — treat their inner structure as defined by that SDK (Claude Agent SDK for claude agents; the codex / pi / opencode SDKs for those harnesses), not by ZWRM.
 </Note>
 
 ## OpenAI-compatible API

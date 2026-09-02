@@ -489,7 +489,7 @@ zwrm org secrets add --from-file <path>
 
 ### `zwrm org llm-provider`
 
-External OpenAI-compatible endpoints whose models zwrm-runtime agents can use as `ext/<provider>/<model-id>`. Runs on your credential and is billed by your vendor, not against credits. [Guide →](/agents/external-providers)
+External OpenAI-compatible endpoints whose models zwrm-runtime and OpenCode agents can use as `ext/<provider>/<model-id>`. Runs on your credential and is billed by your vendor, not against credits. [Guide →](/agents/external-providers)
 
 ```bash
 zwrm org llm-provider add <name> --base-url <url> [--api-key -] [--model <id>]...
@@ -583,12 +583,12 @@ Manage agents. [Guide →](/agents/overview)
 Create a named agent definition without booting its workspace VM. The runtime is stored on the agent and reused by connect, runs, and chat.
 
 ```bash
-zwrm agent create <name> --runtime <zwrm|claude|codex> [--size <preset>] [--template <t>]
+zwrm agent create <name> --runtime <zwrm|claude|codex|opencode> [--size <preset>] [--template <t>]
 ```
 
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
-| `--runtime` | string | — (required) | Agent runtime: `zwrm`, `claude`, or `codex` |
+| `--runtime` | string | — (required) | Agent runtime: `zwrm`, `claude`, `codex`, or `opencode` (beta, enabled per organization) |
 | `--size` | string | `performance-2x` | VM size preset |
 | `--template` | string | — | Stored template name/ID or public GitHub repository |
 
@@ -646,7 +646,7 @@ Update agent configuration (only passed flags change).
 zwrm agent update <instance> [--size <preset>] [--model <m>] [--effort <e>] [--instructions <text>] [--workspace-ttl <dur>] [--daily-budget <usd>] [--max-runs-per-day <n>] [--allowed-scopes <list>] [--disable-boot-token[=false]]
 ```
 
-`--model` is harness-specific (`opus`/`sonnet`/`fable` for claude, catalog aliases for codex and the zwrm runtime — see [Models](/agents/models)). `--allowed-scopes` takes a comma-separated `resource:action` list; an empty value resets to the platform default. `--disable-boot-token` mints no in-VM `zwrm` credential at the next boot (`--disable-boot-token=false` restores it) — distinct from an empty `--allowed-scopes`, which means the default set. [Guide →](/agents/capabilities)
+`--model` is harness-specific (`opus`/`sonnet`/`fable` for claude, catalog aliases for codex, the zwrm runtime and OpenCode — see [Models](/agents/models)). `--allowed-scopes` takes a comma-separated `resource:action` list; an empty value resets to the platform default. `--disable-boot-token` mints no in-VM `zwrm` credential at the next boot (`--disable-boot-token=false` restores it) — distinct from an empty `--allowed-scopes`, which means the default set. [Guide →](/agents/capabilities)
 
 ### `zwrm agent memory`
 
