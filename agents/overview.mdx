@@ -4,7 +4,7 @@ description: "AI workers that run autonomous tasks and interactive sessions on i
 icon: "robot"
 ---
 
-ZWRM Agents are AI workers — Claude Code, OpenAI Codex, or the native **zwrm runtime** — that run in isolated Firecracker microVMs. An **agent is pure configuration** — instructions, default model, effort, VM size, connectors, skills, and budgets. Execution state lives in **workspaces**: a persistent volume plus a session-continuity key. VMs are **ephemeral**: one boots when a run or chat starts and is torn down when it finishes; the workspace volume (files, repos, conversation transcript) is what carries everything forward.
+ZWRM Agents are AI workers — Claude Code, OpenAI Codex, the native **zwrm runtime**, or OpenCode (beta) — that run in isolated Firecracker microVMs. An **agent is pure configuration** — instructions, default model, effort, VM size, connectors, skills, and budgets. Execution state lives in **workspaces**: a persistent volume plus a session-continuity key. VMs are **ephemeral**: one boots when a run or chat starts and is torn down when it finishes; the workspace volume (files, repos, conversation transcript) is what carries everything forward.
 
 Agents have full access to the ZWRM platform — the `zwrm` CLI is pre-installed and authenticated inside every VM. Your agent can build, deploy, scale, and manage applications directly.
 
@@ -40,15 +40,16 @@ There is no built-in repo concept: a repo is whatever the prompt (or a skill) cl
 
 ## Agent types
 
-The runtime is set once, at creation (`zwrm agent create <name> --runtime <zwrm|claude|codex>`), and picks the harness the agent runs on:
+The runtime is set once, at creation (`zwrm agent create <name> --runtime <zwrm|claude|codex|opencode>`), and picks the harness the agent runs on:
 
 | Type | Harness | Billing |
 |------|---------|---------|
 | `claude` | Claude Code | Your org's Anthropic credentials |
 | `codex` | OpenAI Codex | Your org's OpenAI credentials (API key or ChatGPT subscription) |
-| `pi` | The **zwrm runtime** (spelled `zwrm` on the CLI and in the dashboard; EU-hosted open models) | Prepaid [credits](/billing/credits) |
+| `pi` | The **zwrm runtime** (spelled `zwrm` on the CLI and in the dashboard; EU-first catalog of open models) | Prepaid [credits](/billing/credits) |
+| `opencode` | **OpenCode** — *beta*, enabled per organization by the platform team (same EU-first catalog as the zwrm runtime) | Prepaid [credits](/billing/credits) |
 
-Each harness exposes its own model catalog and reasoning-effort ladder — see [Models](/agents/models). claude and codex run on credentials you bring; the zwrm runtime is metered against prepaid credits with no key to manage.
+Each harness exposes its own model catalog and reasoning-effort ladder — see [Models](/agents/models). claude and codex run on credentials you bring; the zwrm runtime and OpenCode are metered against prepaid credits with no key to manage for catalog models (their [external-provider](/agents/external-providers) models run on your credential and are billed by your vendor).
 
 Agent names are **unique per organization, across runtimes**: `default` can name a claude agent *or* a codex agent in an org, not both. `zwrm agent connect` resolves the stored agent by name or ID — you never repeat the runtime. Connecting to a name that doesn't exist offers to create it (asking for the runtime) in an interactive terminal; non-interactive use never creates implicitly.
 
@@ -63,7 +64,7 @@ zwrm agent update my-project --model opus --effort high --size performance-2x
 | Flag | Description |
 |------|-------------|
 | `--size` | Default VM size preset (e.g. `performance-2x`) |
-| `--model` | Default model — harness-specific (`opus`/`sonnet`/`fable` for claude, catalog aliases for codex and the zwrm runtime). See [Models](/agents/models) |
+| `--model` | Default model — harness-specific (`opus`/`sonnet`/`fable` for claude, catalog aliases for codex, the zwrm runtime and OpenCode). See [Models](/agents/models) |
 | `--effort` | Default reasoning effort: `low`, `medium`, `high`, `xhigh`, `max` |
 | `--instructions` | Per-agent system-prompt append |
 | `--workspace-ttl` | Keyed workspace retention (e.g. `720h`; `0` = never expire) |

@@ -18,7 +18,7 @@ Every custom agent Dockerfile must extend the ZWRM agent base image:
 FROM ghcr.io/zwrm-eu/agent-base:latest
 ```
 
-The base image provides Ubuntu 22.04, Node.js 22, the `agent` user, SSH setup, the in-VM agent daemon, the ZWRM CLI, and the Pi, Claude Code, and Codex runtimes. Starting from a generic image such as `ubuntu`, `node`, or `python` omits that plumbing and can produce an image that builds successfully but cannot run as a ZWRM agent. You can inspect the image and its Dockerfiles in the public [`zwrm-eu/agent-images`](https://github.com/zwrm-eu/agent-images) repository.
+The base image provides Ubuntu 22.04, Node.js 22, the `agent` user, SSH setup, the in-VM agent daemon, the ZWRM CLI, and the Pi, Claude Code, Codex, and OpenCode runtimes. Starting from a generic image such as `ubuntu`, `node`, or `python` omits that plumbing and can produce an image that builds successfully but cannot run as a ZWRM agent. You can inspect the image and its Dockerfiles in the public [`zwrm-eu/agent-images`](https://github.com/zwrm-eu/agent-images) repository.
 
 Do not recreate the `agent` user or install the agent daemon yourself. ZWRM injects runtime configuration and platform credentials when the VM boots. Keep credentials out of the image and configure them as [agent secrets](/agents/secrets).
 
@@ -43,7 +43,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends YOUR_PACKAGES \
 USER agent
 ```
 
-Node.js 22 is already present. Remove Dockerfile steps that create the `agent` user or reinstall Node.js, SSH, Pi, Claude Code, Codex, the ZWRM CLI, or `zwrm-agentd`.
+Node.js 22 is already present. Remove Dockerfile steps that create the `agent` user or reinstall Node.js, SSH, Pi, Claude Code, Codex, OpenCode, the ZWRM CLI, or `zwrm-agentd`.
 
 Agent skills and images solve different problems. A skill gives the agent instructions and reusable scripts; the image supplies the operating-system packages and runtime environment those scripts need. Keep using skills for behavior, but bake their stable dependencies and large static assets into the custom image.
 
