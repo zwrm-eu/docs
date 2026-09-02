@@ -4,7 +4,7 @@ description: "Bring your own OpenAI-compatible endpoint and use its models on ag
 icon: "plug"
 ---
 
-Register an **OpenAI-compatible endpoint of your own** — a self-hosted vLLM, an Azure OpenAI deployment, a vendor account ZWRM doesn't resell — and use its models on zwrm-runtime agents, alongside the platform catalog.
+Register an **OpenAI-compatible endpoint of your own** — a self-hosted vLLM, an Azure OpenAI deployment, a vendor account ZWRM doesn't resell — and use its models on zwrm-runtime and OpenCode agents, alongside the platform catalog.
 
 Requests are proxied through the platform's [LLM gateway](/agents/openai-api), so your key stays on the control plane and never enters a VM. But they run on **your** account: nothing is billed to your ZWRM credits.
 
@@ -108,14 +108,14 @@ An external model is written `ext/<provider>/<model-id>` — the vendor's own id
 ext/myvllm/Qwen/Qwen3-235B-A22B-Instruct-2507
 ```
 
-They're selectable anywhere a zwrm-runtime model is, grouped under **External**:
+They're selectable anywhere a zwrm-runtime or OpenCode model is, grouped under **External**:
 
 - **Per agent** — **Settings → Default model** on the agent, or `zwrm agent update <name> --model ext/...`
 - **Per run** — the model picker in **New run**, or `zwrm agent run --model ext/...`
 - **Per chat session** — the model control in the composer, before you send the first message. A session's model is fixed once it starts, so switching means starting a new chat.
 - **Through the API** — as `model` on [`POST /v1/openai/chat/completions`](/agents/openai-api)
 
-Only the zwrm runtime can use them: `claude` and `codex` agents reach their vendors directly rather than through the gateway. `zwrm/auto` never routes to an external model — it picks from the platform catalog only, so pin the model explicitly when you want yours.
+Only the gateway runtimes — the zwrm runtime and OpenCode — can use them: `claude` and `codex` agents reach their vendors directly rather than through the gateway. `zwrm/auto` never routes to an external model — it picks from the platform catalog only, so pin the model explicitly when you want yours.
 
 New providers reach a running agent VM on its **next boot**; the API and the dashboard see them immediately.
 
