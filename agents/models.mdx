@@ -100,7 +100,7 @@ zwrm agent create my-agent --runtime opencode
 zwrm agent run --agent my-agent --model qwen-235b --prompt "Summarize the open issues"
 ```
 
-- **Models** — the **same catalog and aliases as the zwrm runtime** (the [zwrm runtime catalog](#the-zwrm-runtime-pi) above, `auto` included), plus your organization's [external providers](/agents/external-providers) as `ext/<provider>/<model-id>`. Inside the VM, models go by their gateway slug, as with the zwrm runtime, and catalog updates land on the next VM boot.
+- **Models** — the **same catalog and aliases as the zwrm runtime** (the [zwrm runtime catalog](#the-zwrm-runtime-pi) above, `auto` included), plus your organization's [external providers](/agents/external-providers) as `ext/<provider>/<model-id>`. Inside the VM, models go by their gateway slug, as with the zwrm runtime; platform-catalog updates land on the next VM boot, while your external providers reach every new session immediately.
 - **Permission modes** — Ask and Bypass.
 - **Connectors, skills, memory** — connectors ride OpenCode's native MCP client behind the platform permission gate, so escalation and approvals go through the same gate as on the other runtimes (an approval's *edited* input is not applied on OpenCode); [skills](/context/skills) seeded to `~/.claude/skills` are picked up by OpenCode's Claude-compatible skill discovery; [memory](/context/memory) and sleep/park work.
 - **Session commands** — OpenCode's own slash commands (built-ins, command files, skill-projected) are listed and invoked through the session commands API, and the operator shell endpoint works unchanged.
