@@ -547,6 +547,7 @@ zwrm sandbox list [--status running|creating|suspended|destroyed]
 zwrm sandbox status <id>
 zwrm sandbox upload <id> <local> <remote>
 zwrm sandbox download <id> <remote> <local>
+zwrm sandbox rm <id> <remote> [-r]
 zwrm sandbox keepalive <id> [--timeout <dur>]
 zwrm sandbox wake <id>
 zwrm sandbox destroy <id> [-f]
@@ -680,6 +681,17 @@ zwrm agent resize [instance] --volume <size>   # grow-only, agent must be stoppe
 ```bash
 zwrm agent logs [instance] [--limit 50]
 ```
+
+### `zwrm agent files`
+
+Browse and remove files in an agent workspace. [Guide →](/agents/workspaces)
+
+```bash
+zwrm agent files ls <instance> [path] [--workspace default]
+zwrm agent files rm <instance> <path> [-r] [--workspace default]
+```
+
+Paths are relative to the workspace home. `rm` needs a running workspace VM and refuses the home itself; `-r` removes a directory and its contents.
 
 ### `zwrm agent connectors`
 

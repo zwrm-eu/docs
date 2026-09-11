@@ -370,6 +370,28 @@ curl http://localhost:8080/v1/sandboxes/sbx_abc123/files/home/user/output.json -
 
 ---
 
+## Delete file
+
+Remove a file from the sandbox filesystem, or a directory tree with `?recursive=true`.
+
+```bash
+DELETE /v1/sandboxes/{id}/files/{path}
+```
+
+```bash
+curl -X DELETE http://localhost:8080/v1/sandboxes/sbx_abc123/files/home/user/main.py
+curl -X DELETE "http://localhost:8080/v1/sandboxes/sbx_abc123/files/tmp/build?recursive=true"
+```
+
+| Status | Condition |
+|--------|-----------|
+| `204` | Deleted |
+| `400` | Invalid path (root, contains `..`), or the path is a directory and `recursive` was not set |
+| `404` | Path not found |
+| `409` | Sandbox not running, or its image predates file deletion |
+
+---
+
 ## List directory
 
 List the contents of a directory in the sandbox.
