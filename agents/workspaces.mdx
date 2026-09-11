@@ -42,7 +42,8 @@ A resize is refused while the workspace is running, suspended, or waking, or whi
 
 ## Files
 
-- **Browse and download** workspace files via the dashboard, or via the API (`GET /v1/agents/{agent}/workspaces/{ref}/files/...`). This works **even when the VM is off** — a cold workspace's files are served read-only straight from the stored volume. **Uploads** (`PUT`) need a live VM.
+- **Browse and download** workspace files via the dashboard, or via the API (`GET /v1/agents/{agent}/workspaces/{ref}/files/...`). This works **even when the VM is off** — a cold workspace's files are served read-only straight from the stored volume. **Uploads** (`PUT`) and **deletes** (`DELETE`, `?recursive=true` for a directory) need a live VM.
+- **Delete** a single file from the dashboard file browser, the API, or `zwrm agent files rm <agent> <path>` (`-r` for a directory). Paths cannot leave the workspace home and symlinks are never followed; each delete leaves an `agent_workspace.file_deleted` audit entry.
 - **Run deliverables** — files the agent stages in `~/outputs/` are snapshotted onto the run when it finalizes, so they remain available after the VM is gone.
 
 ## Lifecycle & tiers
