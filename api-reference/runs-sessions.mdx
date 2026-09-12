@@ -39,7 +39,7 @@ A session is one live conversation — a run's headless session or an interactiv
 | `POST` | `/v1/agents/{agent_id}/sessions/{session_id}/mode` | Switch permission mode |
 | `POST` | `/v1/agents/{agent_id}/sessions/{session_id}/end` | End the session |
 
-Session statuses: `creating`, `idle`, `working`, `blocked` (waiting on a permission decision), `ended`, `error`.
+Session statuses: `creating`, `idle`, `working`, `blocked` (waiting on a permission decision or a question answer), `ended`, `error`.
 
 ### Start a session
 
@@ -77,6 +77,36 @@ Session statuses: `creating`, `idle`, `working`, `blocked` (waiting on a permiss
 | `updated_input` | Optional replacement tool input, passed through as SDK JSON |
 
 `POST .../mode` switches the permission mode mid-session; the body is `{"mode": "..."}`.
+
+### Questions
+
+An agent can ask the user structured questions. They ride the same channel as permissions: a `permission.request` event with `kind: "question"` (also visible as `pending_permission` on the blocked session's `GET`), answered with `POST .../permissions/{request_id}`. Key on `kind`, not on the tool name — the name is harness-specific (`AskUserQuestion` on claude, `request_user_input` on codex, `question` on opencode).
+
+The request's `input.questions[]` carries, per question:
+
+| Field | Description |
+|-------|-------------|
+| `id` | Answer key (codex and opencode). Absent on claude, whose answers are keyed by the question text |
+| `question` | The full question |
+| `header` | Short label |
+| `options[]` | `{label, description}` choices |
+| `multiSelect` | `true` when several options may be chosen |
+
+Answer with `behavior: "allow"` and `updated_input` set to the original `input` plus an `answers` object keyed by question `id` (or by question text on claude). A value is the chosen label, several labels joined with `, `, or free text; opencode also accepts an array of labels:
+
+```json
+{
+  "behavior": "allow",
+  "updated_input": {
+    "questions": [...],
+    "answers": { "q1": "production", "q2": ["lint", "tests"] }
+  }
+}
+```
+
+`behavior: "deny"` declines: the agent is told the question was dismissed and continues without answers. Approving without an `answers` object is treated as a decline on codex and opencode rather than delivering empty answers.
+
+Questions are only offered on interactive sessions. Runs (`POST /v1/agents/{agent_id}/runs`) and the OpenAI-compatible endpoint have nobody to answer, so the question tools are withheld from the model there.
 
 The session-create `permission_mode` and `mode` take the same values: `default`, `acceptEdits`, `plan`, `bypassPermissions`. `pi`, `codex`, and `opencode` agents map only `default` and `bypassPermissions` — the other two return `400` rather than being silently downgraded.
 
@@ -193,7 +223,7 @@ Every event carries a stable `id` (`<session_id>:<seq>`), a per-session monotoni
 | `sdk.assistant` | yes | A complete assistant message |
 | `sdk.user` | yes | Tool results / user-side messages |
 | `sdk.result` | yes | End-of-turn result with usage and cost |
-| `permission.request` / `permission.decision` | yes | Tool-permission round-trips |
+| `permission.request` / `permission.decision` | yes | Tool-permission round-trips; with `kind: "question"`, a structured question and its answers (see [Questions](#questions)) |
 | `todo.updated` | yes | The agent's task list changed; payload carries the full normalized list (see [Task lists](#task-lists)) |
 | `park.request` / `park.resolved` | yes | A platform tool (e.g. `sleep`) parked the turn until a deadline; the VM may suspend, and the platform resolves the park to resume it |
 | `sdk.partial` | no | Token-stream deltas (streaming only; superseded by the following `sdk.assistant`) |
