@@ -204,10 +204,10 @@ Every event carries a stable `id` (`<session_id>:<seq>`), a per-session monotoni
 
 ## OpenAI-compatible API
 
-One chat-completions endpoint serving catalog models (`qwen/qwen3-235b-instruct`, …), automatic routing (`zwrm/auto`), and your agents (`agent/<name>`). Full semantics in the [guide](/agents/openai-api).
+One chat-completions endpoint serving catalog models (`qwen/qwen3-235b-instruct`, …), automatic routing (`zwrm/auto`), and your organization's external providers (`ext/…`). Pure model passthrough — agents are driven through the sessions and runs routes above. Full semantics in the [guide](/agents/openai-api).
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `POST` | `/v1/openai/chat/completions` | A completion — catalog model, `zwrm/auto`, or one agent turn (streaming supported) |
-| `GET` | `/v1/openai/models` | `zwrm/auto`, the model catalog (with EUR pricing, capabilities, `eu_resident`), and your agents |
+| `POST` | `/v1/openai/chat/completions` | A stateless completion — catalog model, `zwrm/auto`, or external-provider model (streaming supported) |
+| `GET` | `/v1/openai/models` | `zwrm/auto`, the model catalog (with EUR pricing, capabilities, `eu_resident`), and your external providers |
 | `GET` | `/v1/openai/models/{id}` | Single-model lookup (id as sent, slashes included) |
