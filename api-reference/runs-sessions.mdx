@@ -99,6 +99,7 @@ At least one field is required. The response is `{"model": "...", "effort": "...
 
 - `409` while a turn is live: switch between prompts, or interrupt first. The switch lands on the next turn; on `codex` a message steered into a running turn keeps that turn's model.
 - `409` on a workspace whose agent image predates model switching; the row is left untouched.
+- `400` for an `ext/` model whose provider was registered or changed after the session started: the workspace learns the org's external providers at session start, so use a new session for it.
 - Where the harness cannot switch, start a new session with `resume_session_id` and the new `model`/`effort` — the conversation continues under a new session row.
 
 ### Commands
