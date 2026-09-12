@@ -106,7 +106,7 @@ Answer with `behavior: "allow"` and `updated_input` set to the original `input` 
 
 `behavior: "deny"` declines: the agent is told the question was dismissed and continues without answers. Approving without an `answers` object is treated as a decline on codex and opencode rather than delivering empty answers.
 
-Questions are only offered on interactive sessions. Runs (`POST /v1/agents/{agent_id}/runs`) and the OpenAI-compatible endpoint have nobody to answer, so the question tools are withheld from the model there.
+Questions are only offered on interactive sessions. Runs (`POST /v1/agents/{agent_id}/runs`) have nobody to answer, so the question tools are withheld from the model there.
 
 The session-create `permission_mode` and `mode` take the same values: `default`, `acceptEdits`, `plan`, `bypassPermissions`. `pi`, `codex`, and `opencode` agents map only `default` and `bypassPermissions` — the other two return `400` rather than being silently downgraded.
 
