@@ -91,7 +91,6 @@ The request's `input.questions[]` carries, per question:
 | `header` | Short label |
 | `options[]` | `{label, description}` choices |
 | `multiSelect` | `true` when several options may be chosen |
-| `secret` | Optional, codex only: the answer is sensitive and should be masked while typed |
 
 Answer with `behavior: "allow"` and `updated_input` set to the original `input` plus an `answers` object keyed by question `id`. A value is one string (a chosen label or free text) or, for a multi-select, an array of labels. The same shape is accepted on every harness; the platform translates it to what the harness expects:
 
@@ -105,7 +104,7 @@ Answer with `behavior: "allow"` and `updated_input` set to the original `input` 
 }
 ```
 
-`behavior: "deny"` declines: the agent is told the question was dismissed and continues without answers. Approving without an `answers` object is treated as a decline on every harness rather than delivering empty answers. A question left out of `answers` is reported to the agent as unanswered.
+`behavior: "deny"` declines: the agent is told the question was dismissed and continues without answers. An approval whose `answers` resolve to nothing (missing, empty, or keyed by anything but the question ids) is refused with `400` before any decision is recorded, so the agent never receives empty answers. A question left out of `answers` is reported to the agent as unanswered.
 
 Questions are only offered on interactive sessions. Runs (`POST /v1/agents/{agent_id}/runs`) have nobody to answer, so the question tools are withheld from the model there.
 
