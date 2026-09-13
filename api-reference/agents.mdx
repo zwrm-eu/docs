@@ -11,7 +11,7 @@ An agent is [pure configuration](/agents/overview); these endpoints manage the d
 | Method | Path | Description |
 |--------|------|-------------|
 | `POST` | `/v1/agents` | Create an agent (strict: `409` if the name is taken or the selected template is still building) |
-| `GET` | `/v1/harnesses` | The harnesses the org may use, with what each can do (see [Harnesses](#harnesses)) |
+| `GET` | `/v1/harnesses` | Every harness with what it can do (see [Harnesses](#harnesses)) |
 | `GET` | `/v1/agents` | List agents |
 | `GET` | `/v1/agents/{agent_id}` | Get an agent (includes required-secrets checklist) |
 | `PATCH` | `/v1/agents/{agent_id}` | Update configuration (only provided fields change) |
@@ -43,7 +43,7 @@ An agent is [pure configuration](/agents/overview); these endpoints manage the d
 
 ## Harnesses
 
-`GET /v1/harnesses` lists the harnesses (agent types) the caller's organization may create, with their capabilities. It is the source UIs read instead of hard-coding what a harness supports; a harness gated to specific organizations is absent for the others.
+`GET /v1/harnesses` lists every harness (agent type) this control plane knows, with its capabilities. It is the source UIs read instead of hard-coding what a harness supports. Capabilities are not entitlements: which harnesses your organization may *create* is the `harnesses` list on `GET /v1/org/settings`, and a harness you can no longer create is still described here so agents you already own of it keep working in the UI.
 
 ```json
 {"harnesses": [
