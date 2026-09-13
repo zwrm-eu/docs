@@ -37,6 +37,7 @@ A session is one live conversation — a run's headless session or an interactiv
 | `POST` | `/v1/agents/{agent_id}/sessions/{session_id}/interrupt` | Interrupt the current turn |
 | `POST` | `/v1/agents/{agent_id}/sessions/{session_id}/permissions/{request_id}` | Answer a permission request |
 | `POST` | `/v1/agents/{agent_id}/sessions/{session_id}/mode` | Switch permission mode |
+| `POST` | `/v1/agents/{agent_id}/sessions/{session_id}/model` | Switch the model and/or effort for every later turn |
 | `POST` | `/v1/agents/{agent_id}/sessions/{session_id}/end` | End the session |
 
 Session statuses: `creating`, `idle`, `working`, `blocked` (waiting on a permission decision or a question answer), `ended`, `error`.
@@ -59,7 +60,7 @@ Session statuses: `creating`, `idle`, `working`, `blocked` (waiting on a permiss
 - A keyed workspace resumes its own last conversation automatically (when it was recorded by the same harness); `resume_session_id` is only needed to pick an older session.
 - The response includes the resolved `workspace_id`.
 
-### Messages, permissions, mode
+### Messages, permissions, mode, model
 
 `POST .../messages` queues a user message into the session:
 
@@ -109,6 +110,27 @@ Answer with `behavior: "allow"` and `updated_input` set to the original `input` 
 Questions are only offered on interactive sessions. Runs (`POST /v1/agents/{agent_id}/runs`) have nobody to answer, so the question tools are withheld from the model there.
 
 The session-create `permission_mode` and `mode` take the same values: `default`, `acceptEdits`, `plan`, `bypassPermissions`. `pi`, `codex`, and `opencode` agents map only `default` and `bypassPermissions` — the other two return `400` rather than being silently downgraded.
+
+`POST .../model` switches the model and/or reasoning effort between prompts, without ending the conversation. Unlike the per-turn `model` on `/command`, the switch is persistent: every later turn uses it until the next switch.
+
+| Field | Description |
+|-------|-------------|
+| `model` | Harness-specific alias or ID, validated like the session-create `model` (catalog, `ext/` registry, provider availability, EU policy) |
+| `effort` | `low`, `medium`, `high`, `xhigh`, `max`; clamped to what the model in force accepts |
+
+At least one field is required. The response is `{"model": "...", "effort": "..."}` with the values now in force (model canonicalised, effort clamped); the session `GET` reports the same, and the timeline records a `session.model_changed` event.
+
+| Harness | Model | Effort |
+|---------|-------|--------|
+| `claude` | yes | no — fixed for the session's lifetime (`400`) |
+| `codex` | yes | yes |
+| `opencode` | yes | accepted, unused |
+| `pi` | no — bound at session start (`400`) | no |
+
+- `409` while a turn is live: switch between prompts, or interrupt first. The switch lands on the next turn; on `codex` a message steered into a running turn keeps that turn's model.
+- `409` on a workspace whose agent image predates model switching; the row is left untouched.
+- `400` for an `ext/` model whose provider was registered or changed after the session started: the workspace learns the org's external providers at session start, so use a new session for it.
+- Where the harness cannot switch, start a new session with `resume_session_id` and the new `model`/`effort` — the conversation continues under a new session row.
 
 ### Commands
 
@@ -216,6 +238,7 @@ Every event carries a stable `id` (`<session_id>:<seq>`), a per-session monotoni
 | Event type | Durable | Meaning |
 |------------|---------|---------|
 | `session.started` / `session.status` / `session.ended` / `session.error` | yes | Lifecycle and status changes (payload includes permission mode) |
+| `session.model_changed` | yes | A mid-session model/effort switch; payload carries `model`, `effort`, `previous_model`, `previous_effort` |
 | `turn.started` / `turn.completed` | yes | Canonical turn boundaries; `turn.completed` carries a `status` (`completed`, `interrupted`, `error`, `ended`) |
 | `message.context` | yes | Accepted conversation context: a user message (`text` + `attachments`) or an operator-shell command and result (`source: operator_shell`) |
 | `turn.files_changed` | yes | Workspace files the turn has changed (payload lists the paths) |
