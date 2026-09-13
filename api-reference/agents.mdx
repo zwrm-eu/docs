@@ -11,6 +11,7 @@ An agent is [pure configuration](/agents/overview); these endpoints manage the d
 | Method | Path | Description |
 |--------|------|-------------|
 | `POST` | `/v1/agents` | Create an agent (strict: `409` if the name is taken or the selected template is still building) |
+| `GET` | `/v1/harnesses` | Every harness with what it can do (see [Harnesses](#harnesses)) |
 | `GET` | `/v1/agents` | List agents |
 | `GET` | `/v1/agents/{agent_id}` | Get an agent (includes required-secrets checklist) |
 | `PATCH` | `/v1/agents/{agent_id}` | Update configuration (only provided fields change) |
@@ -39,6 +40,30 @@ An agent is [pure configuration](/agents/overview); these endpoints manage the d
 | `cmd` | Connect only — override the login command for this boot (e.g. `aider`) |
 
 `PATCH /v1/agents/{agent_id}` also accepts `allowed_scopes`: omitted leaves the set unchanged, an empty array (`[]`) resets it to the platform default, and each value must be a configurable scope. It likewise accepts `boot_token_disabled`: `true` stops minting the boot token (applies at the next boot; the stored scope set is preserved), `false` restores it. Both fields surface on the agent response.
+
+## Harnesses
+
+`GET /v1/harnesses` lists every harness (agent type) this control plane knows, with its capabilities. It is the source UIs read instead of hard-coding what a harness supports. Capabilities are not entitlements: which harnesses your organization may *create* is the `harnesses` list on `GET /v1/org/settings`, and a harness you can no longer create is still described here so agents you already own of it keep working in the UI.
+
+```json
+{"harnesses": [
+  {"type": "claude", "label": "Claude", "display_name": "the claude harness",
+   "permission_modes": ["default", "acceptEdits", "plan", "bypassPermissions"],
+   "model_options": true, "live_model_switch": true, "live_effort_switch": false, "uses_gateway": false},
+  {"type": "codex", "label": "Codex", "display_name": "the codex harness",
+   "permission_modes": ["default", "bypassPermissions"],
+   "model_options": true, "live_model_switch": true, "live_effort_switch": true, "uses_gateway": false}
+]}
+```
+
+| Field | Meaning |
+|-------|---------|
+| `type` | The stored `agent_type` |
+| `label` / `display_name` | Short product name for pickers; sentence form for messages |
+| `permission_modes` | The session permission modes the harness maps, in picker order |
+| `model_options` | Sessions and runs take a `model`/`effort` selection |
+| `live_model_switch` / `live_effort_switch` | A live session's model / effort can move between prompts (`POST .../sessions/{session_id}/model`) |
+| `uses_gateway` | Model traffic runs through the platform gateway, where the org's external (`ext/`) models are selectable |
 
 ## Workspaces
 
