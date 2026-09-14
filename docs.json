@@ -45,7 +45,6 @@
           },
           {
             "group": "PostgreSQL",
-            "tag": "Beta",
             "pages": [
               "postgres/overview",
               "postgres/backups",
