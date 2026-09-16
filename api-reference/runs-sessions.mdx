@@ -17,6 +17,8 @@ One autonomous task on a workspace. See the [Runs guide](/agents/runs).
 | `POST` | `/v1/agent-runs/{id}/cancel` | Cancel |
 | `POST` | `/v1/agent-runs/{id}/continue` | Follow-up run on the finished run's workspace |
 
+A run prompt whose first word is `/clear`, `/new` or `/reset` is refused with `400` (on dispatch and on `continue`): a run has no textbox, and a keyed run would otherwise hand the command to the harness against the workspace's conversation. See [reserved slash commands](#messages-permissions-mode-model) under sessions.
+
 `?open=true` returns exactly the non-terminal runs, uncapped. It already selects every non-terminal status, so combining it with `?status=` is a `400`.
 
 ## Sessions
@@ -55,8 +57,9 @@ Session statuses: `creating`, `idle`, `working`, `blocked` (waiting on a permiss
 | `cwd` | string | Working directory for the session |
 | `append_system_prompt` | string | Extra system-prompt text for this session |
 | `resume_session_id` | string | A prior session of this agent to resume explicitly. It must belong to the workspace the `session_key` resolves to — transcripts live on the workspace volume and cannot be resumed elsewhere (`400`). |
+| `fresh` | boolean | Start a **new conversation on the same workspace**: same files, empty transcript. The workspace's automatic resume is skipped and its resume handle cleared, so later keyed sessions continue this conversation; the prior session stays in history and resumable by `resume_session_id`. Cannot be combined with `resume_session_id` (`400`). This is the safe form of `/clear` and `/new`. |
 
-- Sessions on **different** keys run in parallel, each in its own workspace. One live session per workspace: starting a session on a key whose workspace already has one returns `409`.
+- Sessions on **different** keys run in parallel, each in its own workspace. One live session per workspace: starting a session on a key whose workspace already has one returns `409` — `fresh` does not end it for you; end the session first.
 - A keyed workspace resumes its own last conversation automatically (when it was recorded by the same harness); `resume_session_id` is only needed to pick an older session.
 - The response includes the resolved `workspace_id`.
 
@@ -68,6 +71,8 @@ Session statuses: `creating`, `idle`, `working`, `blocked` (waiting on a permiss
 |-------|-------------|
 | `text` | The message text |
 | `attachments` | Optional file references: `{path, source}` objects, `source` = `workspace` (a file already in the session's workspace) or `upload`. Attach only when the session response advertises `supports_attachments` — older control planes silently drop unknown fields |
+
+**Reserved slash commands.** A message whose first word is `/clear`, `/new` or `/reset` is a silent no-op: the same `202 {"status": "queued"}` as any message, but nothing reaches the harness, nothing is recorded on the timeline and no turn starts. The harnesses' own `/clear` would rotate the transcript underneath the session and orphan the conversation, and the platform cannot rely on every client's text input to catch it. To actually start over on the same files, create a session with `fresh: true`. Any other leading slash is ordinary text (Claude skills and custom commands keep working). The same names are refused on `POST .../command` and as a run prompt (`400`).
 
 `POST .../permissions/{request_id}` answers a pending permission request. The `request_id` comes from the `permission.request` event, or from `pending_permission` on a blocked session's single-session `GET`:
 
@@ -173,6 +178,8 @@ The command runs as a normal session turn. Its events land on the ordinary timel
   }
 }
 ```
+
+`clear` and its aliases `new` and `reset` are reserved by the platform: a harness's own entry for them is not listed, an alias that collides is dropped from the listing, and invoking one returns `400` pointing at `fresh: true` on session create.
 
 Command support is a capability of the active session harness. Claude supports commands today. Its catalog combines built-ins, platform-projected skills, and repository-local `.claude/commands` files. A harness without command support returns `400`. Any additional command-capable harness uses the same endpoint and response contract. The session must be idle when you invoke a command; otherwise the API returns `409`.
 
