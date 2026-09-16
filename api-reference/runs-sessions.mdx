@@ -17,7 +17,7 @@ One autonomous task on a workspace. See the [Runs guide](/agents/runs).
 | `POST` | `/v1/agent-runs/{id}/cancel` | Cancel |
 | `POST` | `/v1/agent-runs/{id}/continue` | Follow-up run on the finished run's workspace |
 
-A run prompt whose first word is `/clear`, `/new` or `/reset` is refused with `400` (on dispatch, on `continue`, and when saving a schedule): a run has no textbox, and a keyed run would otherwise hand the command to the harness against the workspace's conversation. See [reserved slash commands](#messages-permissions-mode-model) under sessions.
+A run prompt whose first word is `/clear`, `/new`, `/reset` or `/compact` is refused with `400` (on dispatch, on `continue`, and when saving a schedule): a run has no textbox, and a keyed run would otherwise hand the command to the harness against the workspace's conversation. See [reserved slash commands](#messages-permissions-mode-model) under sessions.
 
 `?open=true` returns exactly the non-terminal runs, uncapped. It already selects every non-terminal status, so combining it with `?status=` is a `400`.
 
@@ -40,6 +40,7 @@ A session is one live conversation — a run's headless session or an interactiv
 | `POST` | `/v1/agents/{agent_id}/sessions/{session_id}/permissions/{request_id}` | Answer a permission request |
 | `POST` | `/v1/agents/{agent_id}/sessions/{session_id}/mode` | Switch permission mode |
 | `POST` | `/v1/agents/{agent_id}/sessions/{session_id}/model` | Switch the model and/or effort for every later turn |
+| `POST` | `/v1/agents/{agent_id}/sessions/{session_id}/compact` | Summarize the conversation so far into a shorter context |
 | `POST` | `/v1/agents/{agent_id}/sessions/{session_id}/end` | End the session |
 
 Session statuses: `creating`, `idle`, `working`, `blocked` (waiting on a permission decision or a question answer), `ended`, `error`.
@@ -72,7 +73,7 @@ Session statuses: `creating`, `idle`, `working`, `blocked` (waiting on a permiss
 | `text` | The message text |
 | `attachments` | Optional file references: `{path, source}` objects, `source` = `workspace` (a file already in the session's workspace) or `upload`. Attach only when the session response advertises `supports_attachments` — older control planes silently drop unknown fields |
 
-**Reserved slash commands.** A message whose first word is `/clear`, `/new` or `/reset` is a silent no-op: the same `202 {"status": "queued"}` as any message, but nothing reaches the harness, nothing is recorded on the timeline and no turn starts. The harnesses' own `/clear` would rotate the transcript underneath the session and orphan the conversation, and the platform cannot rely on every client's text input to catch it. To actually start over on the same files, create a session with `fresh: true`. Any other leading slash is ordinary text (Claude skills and custom commands keep working). The same names are refused on `POST .../command` and as a run prompt (`400`, on dispatch, continue, schedules and a trigger whose instruction renders to one); texted from a phone through messaging they are dropped like a sticker.
+**Reserved slash commands.** A message whose first word is `/clear`, `/new` or `/reset` is a silent no-op: the same `202 {"status": "queued"}` as any message, but nothing reaches the harness, nothing is recorded on the timeline and no turn starts. The harnesses' own `/clear` would rotate the transcript underneath the session and orphan the conversation, and the platform cannot rely on every client's text input to catch it. To actually start over on the same files, create a session with `fresh: true`. A message whose first word is `/compact` runs the [compaction](#context-compaction) instead of a turn, with the rest of the text as its instructions, and answers `200` with the compaction's outcome (or its `400`/`409`). Any other leading slash is ordinary text (Claude skills and custom commands keep working). The same names are refused on `POST .../command` and as a run prompt (`400`, on dispatch, continue, schedules and a trigger whose instruction renders to one); texted from a phone through messaging they are dropped like a sticker.
 
 `POST .../permissions/{request_id}` answers a pending permission request. The `request_id` comes from the `permission.request` event, or from `pending_permission` on a blocked session's single-session `GET`:
 
@@ -137,6 +138,37 @@ At least one field is required. The response is `{"model": "...", "effort": "...
 - `400` for an `ext/` model whose provider was registered or changed after the session started: the workspace learns the org's external providers at session start, so use a new session for it.
 - Where the harness cannot switch, start a new session with `resume_session_id` and the new `model`/`effort` — the conversation continues under a new session row.
 
+### Context compaction
+
+`POST .../compact` has the session's harness summarize the conversation so far into a shorter context, between prompts, without ending the conversation. Every harness has a native compaction; the platform runs it as a control call rather than a turn, so no assistant message is produced and the request returns once the harness has compacted.
+
+| Field | Description |
+|-------|-------------|
+| `instructions` | Optional custom summarization guidance (max 4096 bytes). `claude` and `pi` honour it; `codex` and `opencode` ignore it |
+
+The response is the same payload the timeline records as a `context.compacted` event:
+
+```json
+{
+  "session_id": "session-id",
+  "trigger": "manual",
+  "instructions": "keep the migration notes",
+  "pre_tokens": 118000,
+  "post_tokens": 16000
+}
+```
+
+| Harness | Compaction | Token counts |
+|---------|------------|--------------|
+| `claude` | the CLI's own compaction | before and after |
+| `codex` | the app-server's thread compaction | before and after |
+| `opencode` | the server's summarize | none |
+| `pi` | pi's own compaction | before and estimated after |
+
+- `409` while a turn is live, while another control call holds the session, or on a workspace whose agent image predates compaction; compact between prompts.
+- The harnesses' **automatic** compactions land on the timeline as the same event with `trigger: "auto"`, so a reader sees where context moved whether or not anyone asked.
+- A compaction is one model call over the whole context: it is gated like a turn (credits) and spends tokens.
+
 ### Commands
 
 Command-capable session harnesses expose their catalog through `GET .../commands`. ZWRM normalizes the active harness's catalog into one response shape:
@@ -179,7 +211,7 @@ The command runs as a normal session turn. Its events land on the ordinary timel
 }
 ```
 
-`clear` and its aliases `new` and `reset` are reserved by the platform: a harness's own entry for them is not listed, an alias that collides is dropped from the listing, and invoking one returns `400` pointing at `fresh: true` on session create.
+`clear` (with its aliases `new` and `reset`) and `compact` are reserved by the platform: a harness's own entry for them is not listed, an alias that collides is dropped from the listing, and invoking one returns `400` pointing at the primitive that replaces it (`fresh: true` on session create, or `POST .../compact`).
 
 Command support is a capability of the active session harness. Claude supports commands today. Its catalog combines built-ins, platform-projected skills, and repository-local `.claude/commands` files. A harness without command support returns `400`. Any additional command-capable harness uses the same endpoint and response contract. The session must be idle when you invoke a command; otherwise the API returns `409`.
 
@@ -246,6 +278,7 @@ Every event carries a stable `id` (`<session_id>:<seq>`), a per-session monotoni
 |------------|---------|---------|
 | `session.started` / `session.status` / `session.ended` / `session.error` | yes | Lifecycle and status changes (payload includes permission mode) |
 | `session.model_changed` | yes | A mid-session model/effort switch; payload carries `model`, `effort`, `previous_model`, `previous_effort` |
+| `context.compacted` | yes | The conversation was summarized into a shorter context; payload carries `trigger` (`manual` or `auto`) and, where the harness measures them, `pre_tokens` and `post_tokens`; a manual one also carries its `instructions`. Outside any turn |
 | `turn.started` / `turn.completed` | yes | Canonical turn boundaries; `turn.completed` carries a `status` (`completed`, `interrupted`, `error`, `ended`) |
 | `message.context` | yes | Accepted conversation context: a user message (`text` + `attachments`) or an operator-shell command and result (`source: operator_shell`) |
 | `turn.files_changed` | yes | Workspace files the turn has changed (payload lists the paths) |
