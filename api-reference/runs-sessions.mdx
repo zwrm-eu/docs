@@ -17,7 +17,7 @@ One autonomous task on a workspace. See the [Runs guide](/agents/runs).
 | `POST` | `/v1/agent-runs/{id}/cancel` | Cancel |
 | `POST` | `/v1/agent-runs/{id}/continue` | Follow-up run on the finished run's workspace |
 
-A run prompt whose first word is `/clear`, `/new` or `/reset` is refused with `400` (on dispatch and on `continue`): a run has no textbox, and a keyed run would otherwise hand the command to the harness against the workspace's conversation. See [reserved slash commands](#messages-permissions-mode-model) under sessions.
+A run prompt whose first word is `/clear`, `/new` or `/reset` is refused with `400` (on dispatch, on `continue`, and when saving a schedule): a run has no textbox, and a keyed run would otherwise hand the command to the harness against the workspace's conversation. See [reserved slash commands](#messages-permissions-mode-model) under sessions.
 
 `?open=true` returns exactly the non-terminal runs, uncapped. It already selects every non-terminal status, so combining it with `?status=` is a `400`.
 
@@ -72,7 +72,7 @@ Session statuses: `creating`, `idle`, `working`, `blocked` (waiting on a permiss
 | `text` | The message text |
 | `attachments` | Optional file references: `{path, source}` objects, `source` = `workspace` (a file already in the session's workspace) or `upload`. Attach only when the session response advertises `supports_attachments` — older control planes silently drop unknown fields |
 
-**Reserved slash commands.** A message whose first word is `/clear`, `/new` or `/reset` is a silent no-op: the same `202 {"status": "queued"}` as any message, but nothing reaches the harness, nothing is recorded on the timeline and no turn starts. The harnesses' own `/clear` would rotate the transcript underneath the session and orphan the conversation, and the platform cannot rely on every client's text input to catch it. To actually start over on the same files, create a session with `fresh: true`. Any other leading slash is ordinary text (Claude skills and custom commands keep working). The same names are refused on `POST .../command` and as a run prompt (`400`).
+**Reserved slash commands.** A message whose first word is `/clear`, `/new` or `/reset` is a silent no-op: the same `202 {"status": "queued"}` as any message, but nothing reaches the harness, nothing is recorded on the timeline and no turn starts. The harnesses' own `/clear` would rotate the transcript underneath the session and orphan the conversation, and the platform cannot rely on every client's text input to catch it. To actually start over on the same files, create a session with `fresh: true`. Any other leading slash is ordinary text (Claude skills and custom commands keep working). The same names are refused on `POST .../command` and as a run prompt (`400`, on dispatch, continue, schedules and a trigger whose instruction renders to one); texted from a phone through messaging they are dropped like a sticker.
 
 `POST .../permissions/{request_id}` answers a pending permission request. The `request_id` comes from the `permission.request` event, or from `pending_permission` on a blocked session's single-session `GET`:
 
