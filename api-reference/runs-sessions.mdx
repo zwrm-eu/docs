@@ -144,7 +144,7 @@ At least one field is required. The response is `{"model": "...", "effort": "...
 
 | Field | Description |
 |-------|-------------|
-| `instructions` | Optional custom summarization guidance (max 4096 bytes). `claude` and `pi` honour it; `codex` and `opencode` ignore it |
+| `instructions` | Optional custom summarization guidance (max 4096 bytes). `claude` and `pi` honour it; `codex` and `opencode` record it on the event but do not use it |
 
 The response is the same payload the timeline records as a `context.compacted` event:
 
@@ -161,7 +161,7 @@ The response is the same payload the timeline records as a `context.compacted` e
 | Harness | Compaction | Token counts |
 |---------|------------|--------------|
 | `claude` | the CLI's own compaction | before and after |
-| `codex` | the app-server's thread compaction | before and after |
+| `codex` | the app-server's thread compaction | none (the pinned app-server reports no counts) |
 | `opencode` | the server's summarize | none |
 | `pi` | pi's own compaction | before and estimated after |
 
