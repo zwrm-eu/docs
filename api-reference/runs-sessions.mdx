@@ -167,6 +167,7 @@ The response is the same payload the timeline records as a `context.compacted` e
 
 - `409` while a turn is live, while another control call holds the session, or on a workspace whose agent image predates compaction; compact between prompts.
 - The harnesses' **automatic** compactions land on the timeline as the same event with `trigger: "auto"`, so a reader sees where context moved whether or not anyone asked.
+- To decide *when* to compact, read `context_usage` on the single-session `GET` (or the `context.usage` event): `{"tokens": 84000, "window": 200000, "percent": 42}`; absent until the first turn reports.
 - A compaction is one model call over the whole context: it is gated like a turn (credits) and spends tokens.
 
 ### Commands
@@ -279,6 +280,7 @@ Every event carries a stable `id` (`<session_id>:<seq>`), a per-session monotoni
 | `session.started` / `session.status` / `session.ended` / `session.error` | yes | Lifecycle and status changes (payload includes permission mode) |
 | `session.model_changed` | yes | A mid-session model/effort switch; payload carries `model`, `effort`, `previous_model`, `previous_effort` |
 | `context.compacted` | yes | The conversation was summarized into a shorter context; payload carries `trigger` (`manual` or `auto`) and, where the harness measures them, `pre_tokens` and `post_tokens`; a manual one also carries its `instructions`. Outside any turn |
+| `context.usage` | yes | After each turn (and each compaction on `claude`): how much of the model's context window the conversation occupies — `tokens`, and `window` plus `percent` where the window is known (the harness reports it on `claude`, `codex` and `pi`; for a gateway model the platform fills it from the catalog). Also served as `context_usage` on the single-session `GET`, so a poller knows when to compact |
 | `turn.started` / `turn.completed` | yes | Canonical turn boundaries; `turn.completed` carries a `status` (`completed`, `interrupted`, `error`, `ended`) |
 | `message.context` | yes | Accepted conversation context: a user message (`text` + `attachments`) or an operator-shell command and result (`source: operator_shell`) |
 | `turn.files_changed` | yes | Workspace files the turn has changed (payload lists the paths) |
