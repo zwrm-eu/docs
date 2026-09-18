@@ -49,10 +49,10 @@ An agent is [pure configuration](/agents/overview); these endpoints manage the d
 {"harnesses": [
   {"type": "claude", "label": "Claude", "display_name": "the claude harness",
    "permission_modes": ["default", "acceptEdits", "plan", "bypassPermissions"],
-   "model_options": true, "live_model_switch": true, "live_effort_switch": false, "uses_gateway": false},
+   "model_options": true, "live_model_switch": true, "live_effort_switch": false, "uses_gateway": false, "commands": true},
   {"type": "codex", "label": "Codex", "display_name": "the codex harness",
    "permission_modes": ["default", "bypassPermissions"],
-   "model_options": true, "live_model_switch": true, "live_effort_switch": true, "uses_gateway": false}
+   "model_options": true, "live_model_switch": true, "live_effort_switch": true, "uses_gateway": false, "commands": false}
 ]}
 ```
 
@@ -64,6 +64,7 @@ An agent is [pure configuration](/agents/overview); these endpoints manage the d
 | `model_options` | Sessions and runs take a `model`/`effort` selection |
 | `live_model_switch` / `live_effort_switch` | A live session's model / effort can move between prompts (`POST .../sessions/{session_id}/model`) |
 | `uses_gateway` | Model traffic runs through the platform gateway, where the org's external (`ext/`) models are selectable |
+| `commands` | The harness lists and runs structured commands (`GET .../sessions/{session_id}/commands`, `POST .../command`): Claude and OpenCode |
 
 ## Workspaces
 
