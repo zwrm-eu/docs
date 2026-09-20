@@ -64,7 +64,7 @@ Reads are org-scoped (session/user auth) and deliberately outside the agent-toke
 
 ## Subscriptions & invoices
 
-A subscription is what unlocks compute — an org without one has no plan and no compute (there is no free tier). Plans, intervals (monthly or annual), payment methods, invoices, plan changes, and cancellation are all handled in the **dashboard** through Stripe's billing portal; there is no `zwrm billing` CLI command. Some deployments offer a no-card trial.
+A subscription is what unlocks compute — an org without one has no plan and no compute (there is no free tier; the API refuses VM boots with `402` and `error_code: no_active_plan` — see [Plan and billing limits](/api-reference/overview#plan-and-billing-limits)). Plans, intervals (monthly or annual), payment methods, invoices, plan changes, and cancellation are all handled in the **dashboard** through Stripe's billing portal; there is no `zwrm billing` CLI command. Some deployments offer a no-card trial.
 
 ## Inviting your team
 
