@@ -61,6 +61,7 @@ Session statuses: `creating`, `idle`, `working`, `blocked` (waiting on a permiss
 | `fresh` | boolean | Start a **new conversation on the same workspace**: same files, empty transcript. The workspace's automatic resume is skipped and its resume handle cleared, so later keyed sessions continue this conversation; the prior session stays in history and resumable by `resume_session_id`. Cannot be combined with `resume_session_id` (`400`). This is the safe form of `/clear` and `/new`. |
 
 - Sessions on **different** keys run in parallel, each in its own workspace. One live session per workspace: starting a session on a key whose workspace already has one returns `409` — `fresh` does not end it for you; end the session first.
+- `402` with `error_code` `vcpu_limit_exceeded` or `no_active_plan` when the organization's plan refuses to boot the workspace VM. Any later call that has to wake a parked workspace answers the same way — see [Plan and billing limits](/api-reference/overview#plan-and-billing-limits).
 - A keyed workspace resumes its own last conversation automatically (when it was recorded by the same harness); `resume_session_id` is only needed to pick an older session.
 - The response includes the resolved `workspace_id`.
 
