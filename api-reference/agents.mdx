@@ -16,7 +16,7 @@ An agent is [pure configuration](/agents/overview); these endpoints manage the d
 | `GET` | `/v1/agents/{agent_id}` | Get an agent (includes required-secrets checklist) |
 | `PATCH` | `/v1/agents/{agent_id}` | Update configuration (only provided fields change) |
 | `DELETE` | `/v1/agents/{agent_id}` | Delete the agent (VM, volume, record) |
-| `POST` | `/v1/agents/connect` | Connect: boot a VM for an interactive session (creates the agent if the name is new) |
+| `POST` | `/v1/agents/connect` | Connect: boot a VM for an interactive session (creates the agent if the name is new). `402` with an `error_code` when the organization's plan refuses the VM — see [Plan and billing limits](/api-reference/overview#plan-and-billing-limits) |
 | `POST` | `/v1/agents/{agent_id}/disconnect` | Disconnect: destroy the VM, keep the volume |
 | `PUT` | `/v1/agents/{agent_id}/volume` | Resize the volume (grow-only; the workspace must be disconnected — `409` while it is running or suspended) |
 | `DELETE` | `/v1/agents/{agent_id}/volume` | Delete the volume |
