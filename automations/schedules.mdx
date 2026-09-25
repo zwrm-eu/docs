@@ -27,7 +27,7 @@ zwrm schedules create "Morning digest" \
 
 - Cron is always interpreted in **UTC**; minimum granularity is one minute. Seconds fields and `@every` are not supported.
 - With a `--session-key`, every firing continues the same workspace — same conversation, same files. Without one, each firing is a one-shot run.
-- The agent binding is immutable — delete and recreate the schedule to move it to another agent.
+- The agent binding is immutable. Everything else can be [changed in place](#change-a-schedule).
 - Up to **20 schedules per agent**; prompts up to 16 KiB.
 
 ## Metadata tags
@@ -53,12 +53,26 @@ A schedule never stacks runs: if the previous run is still going when the next w
 ```bash
 zwrm schedules list [--agent support-bot]
 zwrm schedules firings <schedule-id> [--limit 50]
+zwrm schedules update <schedule-id> [--name <n>] [--cron "<expr>"] [--prompt <text>] [--session-key <key>] [--metadata k=v | --clear-metadata]
 zwrm schedules pause <schedule-id>
 zwrm schedules resume <schedule-id>
 zwrm schedules delete <schedule-id>
 ```
 
 `list` shows each schedule's cron, enabled state, next run, and last run. The firing log records **every due firing regardless of outcome**: `fired`, `skipped_still_running`, `rejected_budget`, or `error`.
+
+### Change a schedule
+
+`update` changes a schedule in place. Only the flags you pass change, and the schedule keeps its ID, session key, tags, and firing log:
+
+```bash
+zwrm schedules update <schedule-id> --cron "0 9 1 */2 *"
+zwrm schedules update <schedule-id> --prompt "Summarize overnight tickets and flag urgent ones"
+zwrm schedules update <schedule-id> --session-key ""     # fresh workspace per run
+zwrm schedules update <schedule-id> --clear-metadata
+```
+
+`--metadata` replaces all tags (repeatable); `--clear-metadata` removes them. Use `update` rather than deleting and recreating a schedule: a recreated schedule gets a new ID and loses its session key, tags, and firing log. Agents are told the same, so asking an agent to change a schedule edits it in place.
 
 ### Pause and resume
 
