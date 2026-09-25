@@ -31,6 +31,8 @@ Each alias tracks the newest release of its family. To pin a specific release, p
 
 Claude supports all four permission modes and the full effort ladder. When neither the run nor the agent sets a model, claude runs the platform default, Claude Opus 5.5; when neither sets an effort, it runs at `high` (Opus 5.5's own default is `medium`, so the platform pins it). The Anthropic-licensed document built-ins (docx/pdf/pptx/xlsx skills) are available **only** on claude agents.
 
+Claude agents run the Claude Code version the platform pins in its agent image, and a workspace moves to it whenever it boots, so long-lived workspaces follow platform updates without being recreated. A newer version you installed yourself inside a workspace (for example with `claude update` over SSH) is kept; the platform never downgrades it. Each session's `sdk.system` init event reports the version it ran as `claude_code_version`.
+
 <Note>
 Fable models run on your Anthropic credentials like the rest of the Claude catalog, but Anthropic gates them: your account needs access to the Fable tier, and they are not served to zero-data-retention organizations. If a run fails at model selection, check your Anthropic account's model access first.
 </Note>
