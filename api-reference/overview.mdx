@@ -47,7 +47,7 @@ Errors return JSON with a short description and the HTTP status repeated as an i
 
 ### Plan and billing limits
 
-`402 Payment Required` is the API's one "plan or billing limit" status. `403` means permission — a role, an owner, a policy — not a limit. A plan refusal is the platform declining to boot or wake a VM for the organization, and it carries an `error_code` so clients can tell the limits apart:
+`402 Payment Required` is the API's one "plan or billing limit" status. `403` means permission — a role, an owner, a policy — not a limit, with one leftover exception described below. A plan refusal is the platform declining to boot or wake a VM for the organization, and it carries an `error_code` so clients can tell the limits apart:
 
 | `error_code` | Meaning |
 |--------------|---------|
@@ -55,7 +55,7 @@ Errors return JSON with a short description and the HTTP status repeated as an i
 | `no_active_plan` | The organization has no active subscription, so no compute is admitted — see [Subscriptions](/billing/credits). |
 | `size_class_not_allowed` | The organization's plan allows `shared-cpu-*` sizes only, and the agent workspace would boot at a performance size (the agent default is `performance-2x`). Pick a `shared-cpu-*` size for the agent or change the plan. Only fresh boots check it; resuming a suspended workspace does not. |
 
-Any call that boots or wakes a VM can answer this way: starting a session (or sending to one whose workspace is parked), [warming a workspace](/api-reference/agents#warm-a-workspace), `POST /v1/agents/connect`, workspace file operations that need the in-VM daemon, machine create/start/restart, PostgreSQL create and scale, sandbox create, and transferring an app into another organization. [Credit exhaustion](/billing/credits) is also a `402`, with the message `Insufficient credits` and no `error_code`. Only agent workspaces use `402 size_class_not_allowed`. Everything else that takes a size on a `shared-cpu-*`-only plan (app create, deploy, update and scale, machine create, PostgreSQL create and replica scale, sandbox create, and the organization's default size) still refuses a performance size with `403`.
+Any call that boots or wakes a VM can answer this way: starting a session (or sending to one whose workspace is parked), [warming a workspace](/api-reference/agents#warm-a-workspace), `POST /v1/agents/connect`, workspace file operations that need the in-VM daemon, machine create/start/restart, PostgreSQL create and scale, sandbox create, and transferring an app into another organization. [Credit exhaustion](/billing/credits) is also a `402`, with the message `Insufficient credits` and no `error_code`. The leftover exception: only agent workspaces use `402 size_class_not_allowed`. Everything else that takes a size on a `shared-cpu-*`-only plan (app create, deploy, update and scale, machine create, PostgreSQL create and replica scale, sandbox create, and the organization's default size) still refuses a performance size with `403`.
 
 The [OpenAI-compatible endpoints](/agents/openai-api) are the exception — they render errors in the OpenAI wire shape.
 

@@ -75,7 +75,7 @@ curl --request POST "https://<platform>/v1/agents/my-project/workspaces/warm" \
 Pass the same `session_key` (and `visibility`) that the session will use, so both land on the same workspace. The session created afterwards finds the VM running and skips the boot.
 
 - The call returns `202` at once with the workspace's `status`: `warming` (a boot started or is under way), `ready` (a VM without a session is already running), or `busy` (a live session holds the workspace; nothing to do).
-- A warmed VM that no session or run claims is released after its hold: 15 minutes by default, set with `hold_seconds` (at least 60 seconds, at most the platform maximum, 30 minutes by default). The hold counts from the moment the VM is ready. Repeat calls extend it, never shorten it.
+- A warmed VM that no session or run claims is released after its hold: 15 minutes by default, set with `hold_seconds` (at least 60 seconds, at most the platform maximum of 30 minutes by default). The hold counts from the moment the VM is ready. Repeat calls extend it, never shorten it.
 - Warming is checked like starting a session — the agent's budget, credits, and your plan apply — and a warmed VM counts toward your organization's concurrent-vCPU cap while it runs.
 
 See the [API reference](/api-reference/agents#warm-a-workspace) for the full request and response.
