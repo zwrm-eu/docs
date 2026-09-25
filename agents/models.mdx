@@ -63,7 +63,7 @@ Codex runs on your own OpenAI account, so ZWRM does not meter its cost: the per-
 
 ## The zwrm runtime (`pi`)
 
-The native runtime needs **no credentials from you** — the VM boots with a short-lived platform gateway token (`ZWRM_GATEWAY_TOKEN`) and buys its completions from the platform's [LLM gateway](/agents/openai-api); vendor API keys never enter the VM. Usage is metered against prepaid [credits](/billing/credits). The catalog is **EU-first** across several providers — each model's residency is shown as `eu_resident` in the picker and on `GET /v1/openai/models`, and `require_eu_models` enforces EU-only serving for an organization; a model's provider follows from the model, not from any configuration you set.
+The native runtime needs **no credentials from you** — it buys its completions from the platform's [LLM gateway](/agents/openai-api) through the in-VM daemon, which authenticates each call with the workspace's automatically renewed [identity](/agents/capabilities#how-an-agent-authenticates); vendor API keys never enter the VM. Usage is metered against prepaid [credits](/billing/credits). The catalog is **EU-first** across several providers — each model's residency is shown as `eu_resident` in the picker and on `GET /v1/openai/models`, and `require_eu_models` enforces EU-only serving for an organization; a model's provider follows from the model, not from any configuration you set.
 
 | Alias | Model |
 |-------|-------|
@@ -86,7 +86,7 @@ Aliases are what the CLI (`--model`) and the dashboard picker take. Inside the V
 Live per-token pricing is shown in EUR in the dashboard (the **Models** page, and **Settings → Credits → Model pricing**) and via [`GET /v1/credits/pricing`](/billing/credits) — rates and margins are set per deployment (and can differ per provider), so the docs don't hardcode numbers. The zwrm runtime expresses two permission modes (Ask and Bypass).
 
 <Note>
-`ZWRM_GATEWAY_TOKEN` is **reserved for the platform** — it's the billing boundary, so you can't set it as an org or agent secret. That's what makes the zwrm runtime a no-key, credits-metered harness. (The provider names `NEBIUS_API_KEY` / `LYCEUM_API_KEY` are no longer reserved — those keys never enter agent VMs anyway.)
+`ZWRM_GATEWAY_TOKEN` is **reserved for the platform**, so you can't set it as an org or agent secret. In the VM it holds only a placeholder: the harness's model calls go through the in-VM daemon, which authenticates them for the platform. That's what makes the zwrm runtime a no-key, credits-metered harness. (The provider names `NEBIUS_API_KEY` / `LYCEUM_API_KEY` are no longer reserved — those keys never enter agent VMs anyway.)
 </Note>
 
 ## OpenCode (`opencode`)
@@ -95,7 +95,7 @@ Live per-token pricing is shown in EUR in the dashboard (the **Models** page, an
 The OpenCode runtime is currently in **beta**, and is **enabled per organization by the platform team** — it is not self-serve. If your organization doesn't see it in the runtime picker, ask us to enable it. Expect rough edges; report anything surprising.
 </Warning>
 
-[OpenCode](https://opencode.ai/) is an open-source coding agent. On ZWRM it runs the same way the zwrm runtime does: the VM boots with a platform gateway token, buys its completions from the platform's [LLM gateway](/agents/openai-api), and needs **no credentials from you** for the platform catalog — vendor keys never enter the VM. Catalog usage is metered against prepaid [credits](/billing/credits). The catalog is **EU-first**, not EU-only: each model's residency is shown as `eu_resident` in the picker and on `GET /v1/openai/models`, and an organization can enforce EU-only serving with `require_eu_models`. Models from your own [external providers](/agents/external-providers) are the exception on every count: they run on your credential, are billed by your vendor, and are hosted wherever your endpoint is.
+[OpenCode](https://opencode.ai/) is an open-source coding agent. On ZWRM it runs the same way the zwrm runtime does: it buys its completions from the platform's [LLM gateway](/agents/openai-api) through the in-VM daemon and needs **no credentials from you** for the platform catalog — vendor keys never enter the VM. Catalog usage is metered against prepaid [credits](/billing/credits). The catalog is **EU-first**, not EU-only: each model's residency is shown as `eu_resident` in the picker and on `GET /v1/openai/models`, and an organization can enforce EU-only serving with `require_eu_models`. Models from your own [external providers](/agents/external-providers) are the exception on every count: they run on your credential, are billed by your vendor, and are hosted wherever your endpoint is.
 
 ```bash
 zwrm agent create my-agent --runtime opencode
