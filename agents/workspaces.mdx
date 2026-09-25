@@ -59,7 +59,7 @@ A workspace is tiered automatically to save resources — **you never manage thi
 
 The **conversation survives every tier**; **working files survive until archive**. An execution's teardown never kills a VM you are SSH-ed into.
 
-If a suspended workspace's snapshot can't be resumed (for example, because it was taken before a platform upgrade that changed the agent image), the wake boots the workspace fresh instead. Files and conversation are kept, but the session that was parked in the snapshot ends: messages to it get `409 Session is finished`. Start a new session on the same key; it resumes the conversation automatically.
+If a suspended workspace's snapshot can't be resumed (for example, because it was parked before the platform switched to [renewable agent identity](/agents/capabilities#how-an-agent-authenticates), or its snapshot files were lost), the wake boots the workspace fresh instead. Files and conversation are kept, but the session that was parked in the snapshot ends: messages to it get `409 Session is finished`. Start a new session on the same key; it resumes the conversation automatically.
 
 ## Warm boot
 

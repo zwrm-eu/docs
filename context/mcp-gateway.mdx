@@ -69,7 +69,7 @@ zwrm mcp server rm github-tools
 
 - `--upstream` is repeatable: `"name"` selects all of that upstream's tools, `"name:tool1,tool2"` selects a subset. Tool allowlists are the composition — build a read-only variant by selecting only read tools.
 - `--description` is served as the MCP `instructions` for connecting clients.
-- On a per-user OAuth upstream, every caller always acts as their own connected account — there is no per-attachment identity setting to configure. See [Connector identity](/context/credentials).
+- On a per-user OAuth upstream, a member acts as their own connected account, an agent in a chat as the member who started the chat, and an agent in an unattended run as its own — there is no per-attachment identity setting to configure. See [Connector identity](/context/credentials).
 - `add-upstream` grows an existing composition (`--upstream` takes the same selection syntax as `create`; adding an upstream already in the composition is an error unless `--replace` overwrites its tool selection). `remove-upstream` drops one or more upstreams and their tools; removing the last upstream is refused — delete the server with `rm` instead.
 - Tool names pass through unmodified unless two upstreams collide, in which case they are prefixed `{upstream}_{tool}`. A composition can also rename individual tools via `exposed_names` (upstream tool → exposed name, per upstream selection in the [API composition body](/api-reference/skills-mcp)) — an explicit exposed name always wins over pass-through and collision prefixing.
 - `get` shows the endpoint, the exposed tool mapping, and any problems.

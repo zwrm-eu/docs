@@ -82,7 +82,7 @@ A workspace in the list carries `warm_until` (RFC 3339) while a [warm boot](#war
 
 ### Warm a workspace
 
-`POST /v1/agents/{agent_id}/workspaces/warm` boots the workspace a session is about to use, so the session created next skips the boot. Call it when the user opens the conversation; create the session when they send. Every field is optional; an empty body warms the `default` workspace for the default hold.
+`POST /v1/agents/{agent_id}/workspaces/warm` boots the workspace a session is about to use, so the session created next skips the boot. Call it when the user opens the conversation; create the session when they send. Every field is optional; an empty body warms the workspace an empty-key session create would use, for the default hold.
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -104,7 +104,7 @@ The answer is `202`:
 | `status` | Meaning |
 |----------|---------|
 | `warming` | A boot started, or one was already under way |
-| `ready` | A VM without a session is already running; its hold was extended if it had one |
+| `ready` | A VM without a session is already running. If it was warmed, its hold is extended; otherwise it belongs to an execution that is starting up, and `warm_until` is absent |
 | `busy` | A live session holds the workspace; nothing was done, and `warm_until` is absent |
 
 - `warm_until` is the earliest the VM may be released. When the boot finishes, the deadline moves later so the VM gets its full hold from the moment it is ready. Repeat calls extend the hold, never shorten it.
