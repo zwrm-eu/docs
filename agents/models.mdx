@@ -63,7 +63,7 @@ Codex runs on your own OpenAI account, so ZWRM does not meter its cost: the per-
 
 ## The zwrm runtime (`pi`)
 
-The native runtime needs **no credentials from you** — it buys its completions from the platform's [LLM gateway](/agents/openai-api) through the in-VM daemon, which authenticates each call with the workspace's automatically renewed [identity](/agents/capabilities#how-an-agent-authenticates); vendor API keys never enter the VM. Usage is metered against prepaid [credits](/billing/credits). The catalog is **EU-first** across several providers — each model's residency is shown as `eu_resident` in the picker and on `GET /v1/openai/models`, and `require_eu_models` enforces EU-only serving for an organization; a model's provider follows from the model, not from any configuration you set.
+The native runtime needs **no credentials from you** — it buys its completions from the platform's [LLM gateway](/agents/openai-api) through the in-VM daemon, which authenticates each call with its automatically renewed [identity](/agents/capabilities#how-an-agent-authenticates); vendor API keys never enter the VM. Usage is metered against prepaid [credits](/billing/credits). The catalog is **EU-first** across several providers — each model's residency is shown as `eu_resident` in the picker and on `GET /v1/openai/models`, and `require_eu_models` enforces EU-only serving for an organization; a model's provider follows from the model, not from any configuration you set.
 
 | Alias | Model |
 |-------|-------|

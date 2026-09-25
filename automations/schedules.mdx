@@ -63,7 +63,7 @@ zwrm schedules delete <schedule-id>
 
 ### Change a schedule
 
-`update` changes a schedule in place. Only the flags you pass change, and the schedule keeps its ID, session key, tags, and firing log:
+`update` changes a schedule in place. Only the flags you pass change; the schedule keeps its ID and firing log, and every field you don't pass:
 
 ```bash
 zwrm schedules update <schedule-id> --cron "0 9 1 */2 *"

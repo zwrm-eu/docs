@@ -785,7 +785,7 @@ zwrm mcp server rm <name>
 
 `add-upstream` uses the same selection syntax as `create`; adding an upstream already in the composition is an error unless `--replace` is set, which overwrites that upstream's tool selection. `remove-upstream` refuses to remove the last upstream — delete the server with `rm` instead.
 
-On a per-user OAuth upstream, every caller always acts as their own connected account — there is no per-attachment identity setting. [Guide →](/context/credentials)
+On a per-user OAuth upstream, a member acts as their own connected account, an agent in a chat as the member who started the chat, and an agent in an unattended run as its own — there is no per-attachment identity setting. [Guide →](/context/credentials)
 
 ### `zwrm mcp install`
 
@@ -825,7 +825,7 @@ zwrm schedules pause|resume <schedule-id>
 zwrm schedules delete <schedule-id>
 ```
 
-`update` changes only the flags you pass and keeps the schedule's ID, session key, tags, and firing log. `--session-key ""` switches to a fresh workspace per run; `--metadata` replaces all tags and `--clear-metadata` removes them.
+`update` changes only the flags you pass; the schedule keeps its ID and firing log, and every field you don't pass. `--session-key ""` switches to a fresh workspace per run; `--metadata` replaces all tags and `--clear-metadata` removes them.
 
 ---
 
