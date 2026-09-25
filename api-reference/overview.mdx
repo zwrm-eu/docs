@@ -47,14 +47,15 @@ Errors return JSON with a short description and the HTTP status repeated as an i
 
 ### Plan and billing limits
 
-`402 Payment Required` is the API's one "plan or billing limit" status. `403` always means permission — a role, an owner, a policy — never a limit. A plan refusal is the platform declining to boot or wake a VM for the organization, and it carries an `error_code` so clients can tell the limits apart:
+`402 Payment Required` is the API's one "plan or billing limit" status. `403` means permission — a role, an owner, a policy — not a limit. A plan refusal is the platform declining to boot or wake a VM for the organization, and it carries an `error_code` so clients can tell the limits apart:
 
 | `error_code` | Meaning |
 |--------------|---------|
 | `vcpu_limit_exceeded` | Starting this VM would exceed the organization's concurrent-vCPU cap. The message names the usage against the limit. Retrying does not help: the refusal clears only when other machines stop or the plan changes. |
 | `no_active_plan` | The organization has no active subscription, so no compute is admitted — see [Subscriptions](/billing/credits). |
+| `size_class_not_allowed` | The organization's plan allows `shared-cpu-*` sizes only, and the agent is set to a performance size. Pick a `shared-cpu-*` size for the agent or change the plan. |
 
-Any call that boots or wakes a VM can answer this way: starting a session (or sending to one whose workspace is parked), `POST /v1/agents/connect`, workspace file operations that need the in-VM daemon, machine create/start/restart, PostgreSQL create and scale, sandbox create, and transferring an app into another organization. [Credit exhaustion](/billing/credits) is also a `402`, with the message `Insufficient credits` and no `error_code`.
+Any call that boots or wakes a VM can answer this way: starting a session (or sending to one whose workspace is parked), [warming a workspace](/api-reference/agents#warm-a-workspace), `POST /v1/agents/connect`, workspace file operations that need the in-VM daemon, machine create/start/restart, PostgreSQL create and scale, sandbox create, and transferring an app into another organization. [Credit exhaustion](/billing/credits) is also a `402`, with the message `Insufficient credits` and no `error_code`. Apps, machines, databases, and sandboxes don't follow this for size yet: their creates refuse a performance size on a `shared-cpu-*`-only plan with `403`, not `402 size_class_not_allowed`.
 
 The [OpenAI-compatible endpoints](/agents/openai-api) are the exception — they render errors in the OpenAI wire shape.
 
