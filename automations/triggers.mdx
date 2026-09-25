@@ -164,4 +164,4 @@ zwrm triggers update <trigger-id> --clear-default-agent
 zwrm triggers update <trigger-id> --rate-per-day 0      # unlimited
 ```
 
-`--match` and `--routes` replace the whole list, and an empty value removes it; invalid JSON is rejected before anything is sent. The hook URL and secret can't be changed, and the CLI doesn't change Microsoft Teams options (use the API or the dashboard). Use `update` rather than deleting and recreating a trigger: a new trigger gets a new URL and secret, so the sender keeps posting to the old one, and the delivery log starts empty. Agents are told the same.
+`--match` and `--routes` replace the whole list, and an empty value removes it; invalid JSON is rejected before anything is sent. The hook URL and secret can't be changed, and the CLI doesn't change Microsoft Teams options (use the API or the dashboard). Use `update` rather than deleting and recreating a trigger: deleting it retires its hook URL, so the sender's deliveries to it fail until you reconfigure the sender with the new trigger's URL and secret, and the delivery log starts empty. Agents are told the same.

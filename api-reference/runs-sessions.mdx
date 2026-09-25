@@ -67,7 +67,7 @@ On `claude`, a session can move from `idle` to `working` without a message. When
 - `402` with `error_code` `vcpu_limit_exceeded`, `no_active_plan`, or `size_class_not_allowed` when the organization's plan refuses to boot the workspace VM. Any later call that has to wake a parked workspace answers the same way — see [Plan and billing limits](/api-reference/overview#plan-and-billing-limits).
 - A keyed workspace resumes its own last conversation automatically (when it was recorded by the same harness); `resume_session_id` is only needed to pick an older session.
 - The response includes the resolved `workspace_id`.
-- To take the boot off the first message, [warm the workspace](/api-reference/agents#warm-a-workspace) with the same `session_key` when the user opens the conversation; the session create then finds the VM running.
+- To take the boot off the first message, [warm the workspace](/api-reference/agents#warm-a-workspace) with the same `session_key` and `visibility` when the user opens the conversation; the session create then finds the VM running.
 
 ### Messages, permissions, mode, model
 

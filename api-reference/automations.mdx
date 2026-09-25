@@ -42,7 +42,7 @@ Cron → agent runs. See the [Schedules guide](/automations/schedules).
 | `POST` | `/v1/schedules` | Create a schedule (optional `session_key` and `metadata`) |
 | `GET` | `/v1/schedules` | List schedules (`?agent=` ID or name; `?metadata.<key>=<value>` to filter, ANDed) |
 | `GET` | `/v1/schedules/{schedule_id}` | Get a schedule (next/last run) |
-| `PATCH` | `/v1/schedules/{schedule_id}` | Update (pause/resume, cron, prompt, `session_key` — the agent binding is immutable) |
+| `PATCH` | `/v1/schedules/{schedule_id}` | Update (pause/resume, name, cron, prompt, `session_key`, `metadata` — the agent binding is immutable) |
 | `DELETE` | `/v1/schedules/{schedule_id}` | Delete (with its firing log) |
 | `GET` | `/v1/schedules/{schedule_id}/firings` | Firing log (`?limit=`, default 100) |
 

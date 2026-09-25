@@ -75,7 +75,7 @@ In the dashboard this is the **None** option on the capabilities card; on the AP
 
 ## How an agent authenticates
 
-An agent VM holds no long-lived platform token. The in-VM daemon gets an identity through the host's metadata service, signed by the control plane, valid for one hour and renewed automatically — including right after a suspended workspace wakes. It names the agent, organization, workspace, and machine, plus the session when it's issued for one. The daemon keeps it in memory; it is never written to the workspace volume or to the harness's configuration.
+An agent VM holds no long-lived platform token. The in-VM daemon gets an identity through the host's metadata service, signed by the control plane, valid for one hour and renewed automatically — including right after a suspended workspace wakes. It names the agent, organization, workspace, and machine; an identity issued to a session also names that session. The daemon keeps it in memory; it is never written to the workspace volume or to the harness's configuration.
 
 - **The `zwrm` CLI in the VM** uses the workspace's identity. A command run there, by the agent or by you over SSH, acts as the agent with the agent's capabilities, never as you.
 - **A session** uses its own identity for [connectors](/context/connectors), the platform's session tools, and model access. It stops working as soon as the session ends.
