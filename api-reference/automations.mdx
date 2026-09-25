@@ -29,7 +29,7 @@ Create and `PATCH` bodies share these fields (on `PATCH`, omitted fields are unc
 | `instruction` | Standing text that opens every fired run's prompt |
 | `message_template` | Renders the event into the prompt via `{dot.path}` tokens (an unresolved token renders empty); without it, the raw body is appended |
 | `session_key_path` | Dot-path into the payload whose value becomes the fired run's workspace key; empty = a fresh one-shot workspace per delivery |
-| `match_conditions` / `routes` | Payload match gate and per-route agent dispatch (shared condition grammar — see the [guide](/automations/triggers)) |
+| `match_conditions` / `routes` | Payload match gate and per-route agent dispatch (shared condition grammar — see the [guide](/automations/triggers)). On `PATCH` each replaces the whole list; `[]` removes it, and `null` leaves it unchanged |
 | `rate_per_day` | Daily firing cap; over-cap deliveries are dropped and logged |
 | `with_secret` / `secret` | Create only: `with_secret` (default `true`) generates the shared secret, returned once; `secret` imports a provider-minted one instead (never echoed; conflicts with `with_secret: false`) |
 
@@ -48,7 +48,7 @@ Cron → agent runs. See the [Schedules guide](/automations/schedules).
 
 `session_key` (create and update, max 256 characters) is the workspace-continuity key for the runs the schedule fires — same key = same workspace, so state carries across firings, like a run's session key.
 
-`metadata` is an opaque string map (max 20 entries, 64-character keys, 256-character values) accepted on create and update. A malformed `metadata.` filter returns `400` rather than silently widening the listing.
+`metadata` is an opaque string map (max 20 entries, 64-character keys, 256-character values) accepted on create and update. On update it replaces the whole map: `{}` clears it, and `null` or an absent field leaves it unchanged. A malformed `metadata.` filter returns `400` rather than silently widening the listing.
 
 ## Outbound webhooks
 
