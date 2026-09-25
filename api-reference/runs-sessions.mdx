@@ -45,6 +45,8 @@ A session is one live conversation — a run's headless session or an interactiv
 
 Session statuses: `creating`, `idle`, `working`, `blocked` (waiting on a permission decision or a question answer), `ended`, `error`.
 
+On `claude`, a session can move from `idle` to `working` without a message. When a background task the agent started (a background shell command or subagent) finishes, Claude Code takes a turn on its own to handle the result. That turn has the usual `turn.started` / `turn.completed` boundaries and `turn_id`s. While background tasks are still running, the idle `session.status` event carries their count as `background_tasks`.
+
 ### Start a session
 
 `POST /v1/agents/{agent_id}/sessions` — all request fields are optional; empty means the agent/harness default.
