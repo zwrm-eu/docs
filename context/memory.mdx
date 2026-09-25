@@ -36,6 +36,8 @@ In a session an agent has two tools:
 
 So "remember that we deploy on Fridays" or "you got that wrong — our staging DB is X" becomes durable without you touching anything.
 
+Both tools need the agent's `memories:write` [capability](/agents/capabilities), which is in the default set. Narrow it out, or turn off the agent's management access, and the agent can still read its memory but no longer change it.
+
 ## Curating memory yourself
 
 ```bash
