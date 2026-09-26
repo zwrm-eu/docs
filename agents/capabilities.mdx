@@ -4,7 +4,7 @@ description: "Scope what an agent is allowed to do on the platform."
 icon: "shield-halved"
 ---
 
-Every agent VM carries a platform token so the agent can run `zwrm` commands — deploy, read logs, create databases. Capabilities decide **which** of those the token is allowed to do.
+Every agent VM can call the platform as its agent, so the agent can run `zwrm` commands — deploy, read logs, create databases. Capabilities decide **which** of those calls it may make. They are checked on every request against the agent's current settings, so a change applies to the agent's next call: no reboot, no new session.
 
 ## Default
 
@@ -37,6 +37,8 @@ Scopes are `resource:action` pairs, plus a few atomic verbs:
 | Account | `ssh`, `identity` |
 | Teardown | `destroy` |
 
+The agent's platform tools inside a session follow the same capabilities: `save_skill`, `update_skill`, and `delete_skill` need `skills:write`, and `save_memory` and `delete_memory` need `memories:write`. Both are in the default set. Narrow them out and the tools refuse with `agent policy does not allow skills:write` (or `memories:write`), just like the matching CLI and API writes.
+
 <Warning>
 Two capabilities are off by default:
 
@@ -52,34 +54,39 @@ Three write capabilities that **are** in the default set deserve attention:
 Orgs running agents at mixed trust levels should narrow these away with `--allowed-scopes` on lower-trust agents.
 </Warning>
 
-`mcp:read` covers viewing upstreams, their tool catalogs, and virtual servers. OAuth grant management (connecting accounts on a per-user upstream) and scope discovery are never reachable with an agent token, whatever its scopes — consent stays a human step.
+`mcp:read` covers viewing upstreams, their tool catalogs, and virtual servers. OAuth grant management (connecting accounts on a per-user upstream) and scope discovery are never reachable from an agent, whatever its capabilities — consent stays a human step.
 
 Transferring an app to another organization is not grantable at all: no agent or scoped token can move an app out of your org.
 
-## Removing the token entirely
+## Removing management access
 
-The narrowest setting is no boot token at all:
+The narrowest setting gives the agent no management capabilities at all:
 
 ```bash
 zwrm agent update my-project --disable-boot-token
 zwrm agent update my-project --disable-boot-token=false   # restore it
 ```
 
-In the dashboard this is the **None** option on the capabilities card; on the API it is the `boot_token_disabled` field (settable at create and via `PATCH`). With the token disabled, the VM boots without an in-VM `zwrm` login — the agent cannot call the platform at all. The gateway (inference) credential still mints, so the harness keeps its models.
+In the dashboard this is the **None** option on the capabilities card; on the API it is the `boot_token_disabled` field (settable at create and via `PATCH`). The names date from when this setting removed a token minted at boot; today it switches the agent's management capabilities off. With it set, every management call from the VM, the `zwrm` CLI included, is refused with `403`, and the session tools that save, update, or delete skills and memories are off too. Model access and the agent's [connectors](/context/connectors) keep working.
 
-- This is distinct from an empty `--allowed-scopes`, which resets to the platform **default** set — it does not remove the token.
-- A stored custom scope set is preserved while the token is disabled and applies again when it is re-enabled.
-- The change applies at the **next boot**. A credential minted before the change stays valid until the workspace VM is disconnected — run `zwrm agent destroy <name>` to disconnect and revoke the agent's recorded platform credentials immediately (the volume is preserved).
+- This is distinct from an empty `--allowed-scopes`, which resets to the platform **default** set.
+- A stored custom scope set is preserved while management access is off and applies again when you restore it.
+- The change applies to the agent's next request, including inside a running session.
 
-<Note>
-The boot token is the in-VM `zwrm` CLI login. Sessions additionally receive their own short-lived per-session credential for gateway-managed connectors and session tools — disabling the boot token does not detach the agent's [connectors](/context/connectors).
-</Note>
+## How an agent authenticates
+
+An agent VM holds no long-lived platform token. The in-VM daemon gets an identity through the host's metadata service, signed by the control plane, valid for one hour and renewed automatically — including right after a suspended workspace wakes. It names the agent, organization, workspace, and machine; an identity issued to a session also names that session. The daemon keeps it in memory; it is never written to the workspace volume or to the harness's configuration.
+
+- **The `zwrm` CLI in the VM** uses the workspace's identity. A command run there, by the agent or by you over SSH, acts as the agent with the agent's capabilities, never as you.
+- **A session** uses its own identity for [connectors](/context/connectors), the platform's session tools, and model access. It stops working as soon as the session ends.
+- **Nothing expires mid-conversation.** A long chat keeps its connectors and tools past 24 hours; you never restart a chat to refresh a credential.
+- **Changes are live.** Narrowing capabilities, disabling a connector, or removing the agent's owner (or the member who started the chat) from the organization applies to the next request.
 
 ## What the agent sees
 
 A call outside an agent's capabilities fails with `403 token is not authorized for this endpoint`. The platform instructions tell agents that a 403 here is a policy limit rather than a bug — they should report it and ask you to grant the capability, not retry or work around it.
 
-Agent tokens are also **pinned to their agent and organization**: an agent's token only acts as that agent, inside its org.
+An agent's identity is also **pinned to its agent and organization**: it only acts as that agent, inside its org.
 
 <Note>
 The pin confines agent-addressed routes. Org-level resources — the skill library, schedules, triggers, the MCP gateway — resolve their target from the request rather than the URL, so an agent granted `skills:write`, `schedules:write`, or `mcp:write` can manage those across its own organization, not just its own agent.

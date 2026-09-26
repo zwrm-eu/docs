@@ -144,9 +144,24 @@ ZWRM does not retry inbound deliveries itself — the status codes are chosen so
 ```bash
 zwrm triggers list
 zwrm triggers deliveries <trigger-id> [--limit 50]
+zwrm triggers update <trigger-id> [--name <n>] [--default-agent <a> | --clear-default-agent] [--instruction <text>] [--message-template <tpl>] [--session-key-path <path>] [--match <json>] [--routes <json>] [--rate-per-day <n>]
 zwrm triggers pause <trigger-id>
 zwrm triggers resume <trigger-id>
 zwrm triggers delete <trigger-id>
 ```
 
 The delivery log records each delivery's disposition: `accepted`, `ignored`, `rejected_auth`, `rejected_route`, `rejected_rate`, or `rejected_budget`, plus the dispatched run ID. Duplicates are **not** logged — that outcome only returns `{"status":"duplicate"}` to the caller — and transient failures (`503`) record nothing, since the event stays retryable. Because the hook endpoint is public, `rejected_auth` rows are capped at 50 per trigger per 24h. Ignored deliveries record which condition failed and the actual value seen (e.g. `data.type equals 'order' — actual='refund'`).
+
+### Change a trigger
+
+`update` changes a trigger in place. Only the flags you pass change, and the trigger keeps its ID, hook URL, secret, and delivery log:
+
+```bash
+zwrm triggers update <trigger-id> --instruction "Refund duplicate charges"
+zwrm triggers update <trigger-id> --routes '[{"agent_id":"billing-bot","when":[{"path":"type","op":"equals","value":"charge.refunded"}]}]'
+zwrm triggers update <trigger-id> --match ""            # remove the match gate
+zwrm triggers update <trigger-id> --clear-default-agent
+zwrm triggers update <trigger-id> --rate-per-day 0      # unlimited
+```
+
+`--match` and `--routes` replace the whole list, and an empty value removes it; invalid JSON is rejected before anything is sent. The hook URL and secret can't be changed, and the CLI doesn't change Microsoft Teams options (use the API or the dashboard). Use `update` rather than deleting and recreating a trigger: deleting it retires its hook URL, so the sender's deliveries to it fail until you reconfigure the sender with the new trigger's URL and secret, and the delivery log starts empty. Agents are told the same.

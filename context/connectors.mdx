@@ -36,10 +36,15 @@ Tools from a connector attached with `--escalate` pause the run when the agent t
 
 Agent VMs run model-driven tool calls and arbitrary shell commands, so ZWRM never places upstream credentials inside them:
 
-- The VM receives only the gateway endpoint URL plus a **fresh, session-scoped platform token**, revoked when the session ends.
+- The harness's MCP config holds only a local address inside the VM. The in-VM daemon forwards each call to the gateway with the session's short-lived [identity](/agents/capabilities#how-an-agent-authenticates), renewed automatically and dead as soon as the session ends.
 - The gateway resolves the connector, injects the upstream credentials, and proxies the call.
-- A prompt injection that reads the agent's MCP config can, at worst, obtain a revocable, audited gateway token — never your GitHub/Slack/API tokens.
+- A prompt injection that reads the agent's MCP config finds only that local address, usable from inside the VM while the session lasts — never your GitHub/Slack/API tokens.
 
 ## Which account the agent acts as
 
-For upstreams using per-user OAuth, an agent acts as **its own connected account** — never its owner's. Authorize the agent once (from its dashboard page, or `zwrm mcp connect <upstream> --agent <id>`) and it has an identity. Which credential a call carries follows purely from the upstream's auth type — per-user OAuth upstreams always resolve the caller's own grant, other upstreams use the org-shared credential; there is nothing to configure per attachment. See [Connector identity](/context/credentials).
+For upstreams using per-user OAuth, the account depends on who the agent is working for:
+
+- **In a chat**, the agent acts as the **connected account of the member who started the chat**. That member connects their own account once (`zwrm mcp connect <upstream>`, or from the dashboard).
+- **In an unattended run** (a schedule, a trigger, `zwrm agent run`), the agent acts as **its own connected account** — never its owner's. Authorize the agent once (from its dashboard page, or `zwrm mcp connect <upstream> --agent <id>`).
+
+Other upstreams use the org-shared credential. Which credential a call carries follows purely from the upstream's auth type and the caller; there is nothing to configure per attachment. See [Connector identity](/context/credentials).

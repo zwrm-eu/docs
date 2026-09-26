@@ -65,7 +65,7 @@ Agents can write skills too. Inside a session an agent has `save_skill`, `update
 Ask an agent to "turn this workflow into a skill and save it" and it can, with the built-in `skill-creator` guiding the authoring, test prompts, and iteration.
 
 <Note>
-The session tools only mutate skills the calling agent created; built-ins are read-only to everyone. But that is not a library-wide guarantee: the REST skill endpoints have no ownership check, and `skills:write` is in the default boot-token scope set — so an agent's default-scoped credential **can** modify or delete any org skill, including ones humans uploaded. If agents shouldn't have that authority, narrow `skills:write` out of their [allowed scopes](/agents/capabilities).
+The session tools need the agent's `skills:write` [capability](/agents/capabilities), and they only mutate skills the calling agent created; built-ins are read-only to everyone. But that is not a library-wide guarantee: the REST skill endpoints have no ownership check, and `skills:write` is in the default capability set — so a default-scoped agent **can** modify or delete any org skill, including ones humans uploaded. If agents shouldn't have that authority, narrow `skills:write` out of their [allowed scopes](/agents/capabilities); that turns the session tools off too.
 </Note>
 
 ## Hand-dropped skills

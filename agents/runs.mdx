@@ -64,4 +64,6 @@ When the final turn ends, the run completes and the VM is gone. Deliverables:
 - **Result** — the final turn's text, shown in `run status` and on the run page.
 - **Files** — anything the agent staged in `~/outputs/` is snapshotted onto the run at finalize. Every VM boots with `~/outputs/` created and the convention written into the agent's platform instructions, so agents stage user-facing files there without being told.
 
+On `claude` agents, background work the agent started (a background shell command or subagent) holds the run open. When it finishes, the agent takes one more turn on its own to handle the result, and the run completes after that turn. The wait lasts at most 15 minutes and never runs past the run's timeout; after that the run completes and the leftover work stops with the VM.
+
 To reach a human outside the dashboard, the agent uses an attached [connector](/context/connectors) (email, Teams, Slack, …) — there is no built-in messaging. See [Waiting & outputs](/agents/messaging).
