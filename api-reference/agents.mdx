@@ -35,11 +35,11 @@ An agent is [pure configuration](/agents/overview); these endpoints manage the d
 | `template` | Stored template name/ID or public GitHub repository for the agent image. Runs and sessions inherit it from the agent |
 | `instructions` | Per-agent system-prompt append. On connect, an absent field leaves the stored value untouched |
 | `secrets` | Initial secrets (string map) set on the agent's backing app |
-| `allowed_scopes` | Create only — the agent's boot-token capability set. Each value must be a configurable scope (an unknown one is a `400` listing the valid set); absent or empty = the platform default set |
-| `boot_token_disabled` | Create only — `true` creates the agent with no boot token: its VMs boot without an in-VM `zwrm` credential. Distinct from empty `allowed_scopes`, which means the platform default set |
+| `allowed_scopes` | Not on connect — the agent's [capability](/agents/capabilities) set. Each value must be a configurable scope (an unknown one is a `400` listing the valid set); absent or empty = the platform default set |
+| `boot_token_disabled` | Not on connect — `true` creates the agent with no management capabilities: every management call from its VMs is refused and its skill and memory write tools are off, while model access and connectors keep working. Distinct from empty `allowed_scopes`, which means the platform default set |
 | `cmd` | Connect only — override the login command for this boot (e.g. `aider`) |
 
-`PATCH /v1/agents/{agent_id}` also accepts `allowed_scopes`: omitted leaves the set unchanged, an empty array (`[]`) resets it to the platform default, and each value must be a configurable scope. It likewise accepts `boot_token_disabled`: `true` stops minting the boot token (applies at the next boot; the stored scope set is preserved), `false` restores it. Both fields surface on the agent response.
+`PATCH /v1/agents/{agent_id}` also accepts `allowed_scopes`: omitted leaves the set unchanged, an empty array (`[]`) resets it to the platform default, and each value must be a configurable scope. It likewise accepts `boot_token_disabled`: `true` turns the agent's management capabilities off (the stored scope set is preserved), `false` restores them. Both apply to the agent's next request, running sessions included, and both fields surface on the agent response.
 
 ## Harnesses
 
@@ -71,11 +71,47 @@ An agent is [pure configuration](/agents/overview); these endpoints manage the d
 | Method | Path | Description |
 |--------|------|-------------|
 | `GET` | `/v1/agents/{agent_id}/workspaces` | List the agent's workspaces |
+| `POST` | `/v1/agents/{agent_id}/workspaces/warm` | Boot a session's workspace ahead of its first message (see [Warm a workspace](#warm-a-workspace)) |
 | `DELETE` | `/v1/agents/{agent_id}/workspaces/{workspace_id}` | Delete a workspace (and its volume) |
 | `PUT` | `/v1/agents/{agent_id}/workspace-ttl` | Set keyed-workspace TTL |
 | `GET` | `/v1/agents/{agent_id}/workspaces/{workspace_ref}/files/{path}` | List (`?list=true`), search (`?search=`), or download files. Listing and download work even when the VM is off — a cold workspace's files are served read-only host-side from the stored volume (`507` under host disk pressure). Search runs on the in-VM daemon only: it never wakes a parked workspace and returns `409` when the workspace isn't running. `workspace_ref` is a workspace ID or key (`default`) |
 | `PUT` | `/v1/agents/{agent_id}/workspaces/{workspace_ref}/files/{path}` | Upload a file into the workspace (requires a live daemon) |
 | `DELETE` | `/v1/agents/{agent_id}/workspaces/{workspace_ref}/files/{path}` | Delete one file, or a directory with `?recursive=true` (requires a live daemon; `409` when the workspace has no VM or its agent image predates file deletion). Paths stay inside the workspace home: the home itself and any `..` are refused (`400`), a symlink is unlinked rather than followed, and a directory without `recursive` is `400`. `204` on success, `404` when the path is absent. Every delete is audited as `agent_workspace.file_deleted` |
+
+A workspace in the list carries `warm_until` (RFC 3339) while a [warm boot](#warm-a-workspace) is holding its VM for a session: the time the VM is released if nothing claims it.
+
+### Warm a workspace
+
+`POST /v1/agents/{agent_id}/workspaces/warm` boots the workspace a session is about to use, so the session created next skips the boot. Call it when the user opens the conversation; create the session when they send. Every field is optional; an empty body warms the workspace an empty-key session create would use, for the default hold.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `session_key` | string | The workspace to warm, resolved exactly as on [session create](/api-reference/runs-sessions#start-a-session): same key, same workspace; a new key creates its workspace |
+| `visibility` | string | `private` or `org`, as on session create. Pass what the session will use |
+| `hold_seconds` | integer | How long the VM may wait unclaimed, counted from when it is ready. `0` or absent = 15 minutes; clamped to at least 60 seconds and at most the platform maximum (30 minutes by default). Negative is a `400` |
+
+The answer is `202`:
+
+```json
+{
+  "workspace_id": "workspace-id",
+  "key": "customer-42",
+  "status": "warming",
+  "warm_until": "2026-09-25T18:45:00Z"
+}
+```
+
+| `status` | Meaning |
+|----------|---------|
+| `warming` | A boot started, or one was already under way |
+| `ready` | A VM without a session is already running. If it was warmed, its hold is extended; otherwise it belongs to an execution that is starting up, and `warm_until` is absent |
+| `busy` | A live session holds the workspace; nothing was done, and `warm_until` is absent |
+
+- `warm_until` is the earliest the VM may be released. When the boot finishes, the deadline moves later so the VM gets its full hold from the moment it is ready. Repeat calls extend the hold, never shorten it.
+- The first session or run on the workspace claims the VM. From then on the VM follows that execution's lifecycle; a VM nobody claims is released when its hold runs out.
+- The checks that apply to starting a session apply first: the organization's harness access, the agent's budget, credits, and quotas. A plan refusal is `402` with an `error_code` (see [Plan and billing limits](/api-reference/overview#plan-and-billing-limits)), and a workspace the call itself created is removed again.
+- Calls that find a running VM are cheap. A call that has to boot a VM is rate-limited like a session create.
+- Each boot a warm starts is audited as `agent_workspace.warmed`.
 
 ## Connectors
 

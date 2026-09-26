@@ -46,7 +46,7 @@ zwrm org llm-provider discover myvllm   # what does it serve?
 zwrm org llm-provider list
 ```
 
-Registering a provider is an organization-level action, and it's a **human surface**: agent tokens can't create or repoint a provider, even ones whose own completions flow through it.
+Registering a provider is an organization-level action, and it's a **human surface**: agents can't create or repoint a provider, even ones whose own completions flow through it.
 
 ## Authentication
 
@@ -154,4 +154,4 @@ This differs from platform catalog curation, where a model that leaves the catal
 - The credential is **encrypted at rest** with the platform's master key and never enters a VM. Agents authenticate to the gateway with their own short-lived token; the gateway holds your key.
 - Base URLs are validated at registration and **re-checked at dial time**, so a hostname that later resolves to a private address is still refused. Private and internal addresses require host-admin approval.
 - Redirects are confined to the endpoint's own origin, so a redirecting endpoint can't walk your credential to another host.
-- Management routes are unavailable to agent tokens.
+- Management routes are unavailable to agents.

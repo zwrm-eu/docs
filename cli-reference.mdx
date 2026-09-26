@@ -647,7 +647,7 @@ Update agent configuration (only passed flags change).
 zwrm agent update <instance> [--size <preset>] [--model <m>] [--effort <e>] [--instructions <text>] [--workspace-ttl <dur>] [--daily-budget <usd>] [--max-runs-per-day <n>] [--allowed-scopes <list>] [--disable-boot-token[=false]]
 ```
 
-`--model` is harness-specific (`opus`/`sonnet`/`fable` for claude, catalog aliases for codex, the zwrm runtime and OpenCode — see [Models](/agents/models)). `--allowed-scopes` takes a comma-separated `resource:action` list; an empty value resets to the platform default. `--disable-boot-token` mints no in-VM `zwrm` credential at the next boot (`--disable-boot-token=false` restores it) — distinct from an empty `--allowed-scopes`, which means the default set. [Guide →](/agents/capabilities)
+`--model` is harness-specific (`opus`/`sonnet`/`fable` for claude, catalog aliases for codex, the zwrm runtime and OpenCode — see [Models](/agents/models)). `--allowed-scopes` takes a comma-separated `resource:action` list; an empty value resets to the platform default. `--disable-boot-token` turns the agent's management capabilities off, so every management call from its VM, the `zwrm` CLI included, is refused (`--disable-boot-token=false` restores them) — distinct from an empty `--allowed-scopes`, which means the default set. Both apply to the agent's next request. [Guide →](/agents/capabilities)
 
 ### `zwrm agent memory`
 
@@ -785,7 +785,7 @@ zwrm mcp server rm <name>
 
 `add-upstream` uses the same selection syntax as `create`; adding an upstream already in the composition is an error unless `--replace` is set, which overwrites that upstream's tool selection. `remove-upstream` refuses to remove the last upstream — delete the server with `rm` instead.
 
-On a per-user OAuth upstream, every caller always acts as their own connected account — there is no per-attachment identity setting. [Guide →](/context/credentials)
+On a per-user OAuth upstream, a member acts as their own connected account, an agent in a chat as the member who started the chat, and an agent in an unattended run as its own — there is no per-attachment identity setting. [Guide →](/context/credentials)
 
 ### `zwrm mcp install`
 
@@ -803,11 +803,12 @@ Inbound triggers: external events → agent runs. Creates `webhook`-provider tri
 zwrm triggers list
 zwrm triggers create <name> [--default-agent <a>] [--instruction <text>] [--message-template <tpl>] [--session-key-path <path>] [--match <json>] [--routes <json>] [--rate-per-day <n>] [--no-secret | --secret <s>]
 zwrm triggers deliveries <trigger-id> [--limit 50]
+zwrm triggers update <trigger-id> [--name <n>] [--default-agent <a> | --clear-default-agent] [--instruction <text>] [--message-template <tpl>] [--session-key-path <path>] [--match <json>] [--routes <json>] [--rate-per-day <n>]
 zwrm triggers pause|resume <trigger-id>
 zwrm triggers delete <trigger-id>
 ```
 
-`--secret` imports a provider-minted signing secret (Linear, Shopify, Sentry); mutually exclusive with `--no-secret`.
+`--secret` imports a provider-minted signing secret (Linear, Shopify, Sentry); mutually exclusive with `--no-secret`. `update` changes only the flags you pass and keeps the trigger's hook URL, secret, and delivery log; an empty `--match` or `--routes` removes it.
 
 ---
 
@@ -819,9 +820,12 @@ Cron → agent runs. [Guide →](/automations/schedules)
 zwrm schedules list [--agent <name>] [--metadata k=v]
 zwrm schedules create <name> --agent <a> --cron "<expr>" --prompt <text> [--session-key <key>] [--metadata k=v] [--paused]
 zwrm schedules firings <schedule-id> [--limit 50]
+zwrm schedules update <schedule-id> [--name <n>] [--cron "<expr>"] [--prompt <text>] [--session-key <key>] [--metadata k=v | --clear-metadata]
 zwrm schedules pause|resume <schedule-id>
 zwrm schedules delete <schedule-id>
 ```
+
+`update` changes only the flags you pass; the schedule keeps its ID and firing log, and every field you don't pass. `--session-key ""` switches to a fresh workspace per run; `--metadata` replaces all tags and `--clear-metadata` removes them.
 
 ---
 

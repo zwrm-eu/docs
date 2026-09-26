@@ -45,25 +45,29 @@ A session is one live conversation — a run's headless session or an interactiv
 
 Session statuses: `creating`, `idle`, `working`, `blocked` (waiting on a permission decision or a question answer), `ended`, `error`.
 
+On `claude`, a session can move from `idle` to `working` without a message. When a background task the agent started (a background shell command or subagent) finishes, Claude Code takes a turn on its own to handle the result. That turn has the usual `turn.started` / `turn.completed` boundaries and `turn_id`s. While background tasks are still running, the idle `session.status` event carries their count as `background_tasks`.
+
 ### Start a session
 
 `POST /v1/agents/{agent_id}/sessions` — all request fields are optional; empty means the agent/harness default.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `session_key` | string | Selects the workspace the session runs in, like a run's `--session` key. Same key = same workspace, conversation continues; a new key creates its workspace on first use. Empty = the agent's `default` workspace (the one dashboard chat and SSH use) — unlike runs, sessions never create anonymous workspaces. |
+| `session_key` | string | Selects the workspace the session runs in, like a run's `--session` key. Same key = same workspace, conversation continues; a new key creates its workspace on first use. Empty (or `default`) depends on the session's visibility: a `private` session gets your own private workspace (key `private-<your user ID>`), an `org` session the agent's shared `default` workspace (the one SSH uses). Unlike runs, sessions never create anonymous workspaces. |
 | `model` | string | Harness-specific alias or ID — see [Models](/agents/models) |
 | `effort` | string | `low`, `medium`, `high`, `xhigh`, `max` |
 | `permission_mode` | string | Initial tool-permission mode |
 | `cwd` | string | Working directory for the session |
 | `append_system_prompt` | string | Extra system-prompt text for this session |
 | `resume_session_id` | string | A prior session of this agent to resume explicitly. It must belong to the workspace the `session_key` resolves to — transcripts live on the workspace volume and cannot be resumed elsewhere (`400`). |
+| `visibility` | string | `private` (the workspace's owner and org admins) or `org` (every member). Empty keeps the existing workspace's visibility, or uses the organization's default (`private` unless the organization set `org`); scoped API keys always get `org`. Asking a private workspace for `org`, or a shared one for `private`, is a `409`: choose a new `session_key` |
 | `fresh` | boolean | Start a **new conversation on the same workspace**: same files, empty transcript. The workspace's automatic resume is skipped and its resume handle cleared, so later keyed sessions continue this conversation; the prior session stays in history and resumable by `resume_session_id`. Cannot be combined with `resume_session_id` (`400`). This is the safe form of `/clear` and `/new`. |
 
 - Sessions on **different** keys run in parallel, each in its own workspace. One live session per workspace: starting a session on a key whose workspace already has one returns `409` — `fresh` does not end it for you; end the session first.
-- `402` with `error_code` `vcpu_limit_exceeded` or `no_active_plan` when the organization's plan refuses to boot the workspace VM. Any later call that has to wake a parked workspace answers the same way — see [Plan and billing limits](/api-reference/overview#plan-and-billing-limits).
+- `402` with `error_code` `vcpu_limit_exceeded`, `no_active_plan`, or `size_class_not_allowed` when the organization's plan refuses to boot the workspace VM. Any later call that has to wake a parked workspace answers the same way (a resume from a suspended snapshot checks only `vcpu_limit_exceeded` and `no_active_plan`) — see [Plan and billing limits](/api-reference/overview#plan-and-billing-limits).
 - A keyed workspace resumes its own last conversation automatically (when it was recorded by the same harness); `resume_session_id` is only needed to pick an older session.
 - The response includes the resolved `workspace_id`.
+- To take the boot off the first message, [warm the workspace](/api-reference/agents#warm-a-workspace) with the same `session_key` and `visibility` when the user opens the conversation; the session create then finds the VM running.
 
 ### Messages, permissions, mode, model
 

@@ -58,3 +58,24 @@ A workspace is tiered automatically to save resources — **you never manage thi
 | **Archived** | ~30 days cold | Conversation only — **working files on the volume are deleted** | Full boot, conversation rehydrated into a fresh empty volume |
 
 The **conversation survives every tier**; **working files survive until archive**. An execution's teardown never kills a VM you are SSH-ed into.
+
+If a suspended workspace's snapshot can't be resumed (for example, because it was parked before the platform switched to [renewable agent identity](/agents/capabilities#how-an-agent-authenticates), or its snapshot files were lost), the wake boots the workspace fresh instead. Files and conversation are kept, but the session that was parked in the snapshot ends: messages to it get `409 Session is finished`. Start a new session on the same key; it resumes the conversation automatically.
+
+## Warm boot
+
+Starting a session on a workspace with no running VM waits for the boot: a few seconds from cold, then the harness starting up. A client can take that wait off the first message by warming the workspace when its user opens the conversation, before they send anything:
+
+```bash
+curl --request POST "https://<platform>/v1/agents/my-project/workspaces/warm" \
+  --header "Authorization: Bearer $ZWRM_API_TOKEN" \
+  --header "Content-Type: application/json" \
+  --data '{"session_key": "customer-42"}'
+```
+
+Pass the same `session_key` (and `visibility`) that the session will use, so both land on the same workspace. The session created afterwards finds the VM running and skips the boot.
+
+- The call returns `202` at once with the workspace's `status`: `warming` (a boot started or is under way), `ready` (a VM without a session is already running), or `busy` (a live session holds the workspace; nothing to do).
+- A warmed VM that no session or run claims is released after its hold: 15 minutes by default, set with `hold_seconds` (at least 60 seconds, at most the platform maximum of 30 minutes by default). The hold counts from the moment the VM is ready. Repeat calls extend it, never shorten it.
+- Warming is checked like starting a session — the agent's budget, credits, and your plan apply — and a warmed VM counts toward your organization's concurrent-vCPU cap while it runs.
+
+See the [API reference](/api-reference/agents#warm-a-workspace) for the full request and response.
