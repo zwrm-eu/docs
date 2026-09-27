@@ -31,7 +31,7 @@ An agent is [pure configuration](/agents/overview); these endpoints manage the d
 |-------|-------------|
 | `agent_type` | `claude` (default), `codex`, `pi`, or `opencode` (beta; enabled per organization) |
 | `instance` | Agent name, unique per org (default `default`) |
-| `size` | VM size preset (default `performance-2x`) |
+| `size` | VM size preset (default `performance-2x`, or `shared-cpu-4x` when the organization's plan allows `shared-cpu-*` sizes only, as every trial does; an explicit `performance-*` size on such a plan is a `402`) |
 | `template` | Stored template name/ID or public GitHub repository for the agent image. Runs and sessions inherit it from the agent |
 | `instructions` | Per-agent system-prompt append. On connect, an absent field leaves the stored value untouched |
 | `secrets` | Initial secrets (string map) set on the agent's backing app |
