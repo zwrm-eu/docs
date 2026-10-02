@@ -60,6 +60,22 @@ Taking control pauses the agent's computer-use tools. It does not stop commands 
 
 An organization admin viewing a member's private chat can watch the desktop but cannot start it or take control.
 
+## Route the browser through a proxy
+
+Some sites refuse requests from datacenter IP addresses. Sites behind Akamai or Cloudflare bot protection often do, and the browser then fails with errors such as `ERR_HTTP2_PROTOCOL_ERROR` or timeouts while other sites load normally. Route the browser through a proxy, for example a static ISP proxy, by setting the agent secret `BROWSER_PROXY`:
+
+```bash
+printf %s "http://user:pass@proxy.example.com:8080" \
+  | zwrm agent secrets set BROWSER_PROXY --stdin --instance researcher
+```
+
+- `http://`, `https://`, and `socks5://` are accepted. Credentials work with `http://` and `https://`; Chromium cannot authenticate to a SOCKS5 proxy.
+- The proxy applies from the workspace's next boot, because [agent secrets](/agents/secrets) are injected when the VM boots.
+- Only the browser uses it. Commands the agent runs in its shell keep the VM's own address.
+- A value that can't be used stops the `browser` tools, with an error in the agent's log, rather than browsing without the proxy.
+
+For logged-in work, prefer a static IP over a rotating pool: a stable address keeps sessions valid and avoids "new sign-in location" checks.
+
 ## Security
 
 - Web pages are untrusted input. A page can contain text written to steer the agent. Review what an agent did on sites where it holds credentials.
