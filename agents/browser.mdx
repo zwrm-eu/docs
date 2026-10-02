@@ -34,7 +34,7 @@ Every session gets two tool sets, on every runtime (Claude, Codex, OpenCode, Pi)
 
 The `computer` tools mirror Anthropic's computer-use toolset, and are ported from Anthropic's reference implementation. Coordinates are screenshot pixels on a 1280×800 display.
 
-Both tool sets drive the **same desktop**: the agent's browser runs visibly on it. To start another graphical program, the agent runs it from its shell with `DISPLAY=:99`, for example `DISPLAY=:99 chromium https://example.com &`.
+Both tool sets drive the **same browser window**. There is one browser, and it always runs visibly on the desktop: the agent opens a page with the `browser` tools, and uses the `computer` tools on that same window when it needs to work by sight. Every page the agent opens through its tools therefore shows in the live view. Only a script the agent writes and runs headless from its own shell would not. To start another graphical program, the agent runs it from its shell with `DISPLAY=:99`.
 
 The browser profile persists in the workspace, under `~/.zwrm/browser/profile`, so logins and cookies survive between sessions. Snapshots and screenshots the browser tools save go to `~/.zwrm/browser/output`, capped at 100 MB.
 
@@ -68,7 +68,7 @@ An organization admin viewing a member's private chat can watch the desktop but 
 
 ## Troubleshooting
 
-**The live view is black.** The desktop is running but nothing is on it. The agent browses visibly only on images built after October 2, 2026: restart the agent's workspace so it boots the current image. On any image, the agent can open a window on the desktop itself, for example by running `DISPLAY=:99 chromium &`.
+**The live view is black.** The desktop is running but nothing is on it yet: the agent hasn't opened a page in this session. The browser appears on the desktop when the agent first uses its `browser` tools. On images built before October 2, 2026 the browser ran invisibly: restart the agent's workspace so it boots the current image.
 
 **The desktop does not appear in the chat.** The agent was not created from the Browser template, or its workspace runs an image from before the live view existed. Check the agent's **Environment** in its settings, and restart the workspace.
 
