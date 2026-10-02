@@ -12,6 +12,7 @@ An agent is [pure configuration](/agents/overview); these endpoints manage the d
 |--------|------|-------------|
 | `POST` | `/v1/agents` | Create an agent (strict: `409` if the name is taken or the selected template is still building) |
 | `GET` | `/v1/harnesses` | Every harness with what it can do (see [Harnesses](#harnesses)) |
+| `GET` | `/v1/agent-templates` | The official template gallery (see [Template gallery](#template-gallery)) |
 | `GET` | `/v1/agents` | List agents |
 | `GET` | `/v1/agents/{agent_id}` | Get an agent (includes required-secrets checklist) |
 | `PATCH` | `/v1/agents/{agent_id}` | Update configuration (only provided fields change) |
@@ -40,6 +41,30 @@ An agent is [pure configuration](/agents/overview); these endpoints manage the d
 | `cmd` | Connect only — override the login command for this boot (e.g. `aider`) |
 
 `PATCH /v1/agents/{agent_id}` also accepts `allowed_scopes`: omitted leaves the set unchanged, an empty array (`[]`) resets it to the platform default, and each value must be a configurable scope. It likewise accepts `boot_token_disabled`: `true` turns the agent's management capabilities off (the stored scope set is preserved), `false` restores them. Both apply to the agent's next request, running sessions included, and both fields surface on the agent response.
+
+## Template gallery
+
+`GET /v1/agent-templates` lists the official templates (Browser, Go, Python API, Web, …) that the dashboard offers when creating an agent:
+
+```json
+{
+  "items": [
+    {
+      "id": "browser",
+      "name": "Browser",
+      "description": "Agents that browse the web and use a desktop: Chromium via Playwright MCP, plus computer use on a virtual display.",
+      "repo": "github.com/zwrm-eu/templates/browser",
+      "icon": "globe",
+      "tags": ["browser", "playwright", "chromium", "automation", "computer-use", "scraping"],
+      "default_size": "performance-2x",
+      "featured": true,
+      "official": true
+    }
+  ]
+}
+```
+
+Create an agent from one by passing its `repo` as `template`. The short `id` also resolves, but a [stored template](/agents/templates) with the same name takes precedence. If the gallery cannot be fetched, the list is empty. Scoped API keys need `agents:read`.
 
 ## Harnesses
 

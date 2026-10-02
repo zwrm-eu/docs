@@ -66,6 +66,7 @@
               "agents/capabilities",
               "agents/budgets",
               "agents/templates",
+              "agents/browser",
               "agents/secrets"
             ]
           },
