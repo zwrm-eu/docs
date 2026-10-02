@@ -257,12 +257,19 @@ Put one JSON manifest per server in `/etc/zwrm/mcp.d/`. The filename is the serv
 
 ```dockerfile
 USER root
+# Install the server and the Chromium build it expects, somewhere the agent
+# user can read. Browsers downloaded on first use would miss the startup budget.
+ENV PLAYWRIGHT_BROWSERS_PATH=/opt/ms-playwright
 RUN npm install -g @playwright/mcp@0.0.83 \
+ && /usr/local/lib/node_modules/@playwright/mcp/node_modules/.bin/playwright install --with-deps --no-shell chromium \
+ && chmod -R a+rX /opt/ms-playwright \
  && mkdir -p /etc/zwrm/mcp.d \
- && echo '{"command": "/usr/local/bin/playwright-mcp", "args": ["--headless"]}' \
+ && echo '{"command": "/usr/local/bin/playwright-mcp", "args": ["--browser", "chromium", "--headless", "--no-sandbox"], "env": {"PLAYWRIGHT_BROWSERS_PATH": "/opt/ms-playwright"}}' \
       > /etc/zwrm/mcp.d/browser.json
 USER agent
 ```
+
+This example runs the browser headless, so it never appears in a [live view](/agents/browser#watch-the-desktop-live). To show it on a desktop, launch it headed with `DISPLAY` set to your desktop's display, as the Browser template's [`zwrm-browser-mcp`](https://github.com/zwrm-eu/templates/blob/main/browser/bin/zwrm-browser-mcp) wrapper does.
 
 | Field | Description |
 |---|---|

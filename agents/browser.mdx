@@ -20,12 +20,12 @@ zwrm agent create researcher --runtime claude \
 Through the API, set `template` to `github.com/zwrm-eu/templates/browser` on [`POST /v1/agents`](/api-reference/agents#agents).
 
 <Note>
-Use `performance-2x` or larger. Chromium renders in software, without a GPU, and `shared-cpu-*` sizes are too slow for it.
+Use `performance-2x` or larger. Chromium renders in software, without a GPU, and `shared-cpu-*` sizes are too slow for it. Trial plans allow `shared-cpu-*` sizes only, so a browser agent needs a paid plan to run well.
 </Note>
 
 ## What the agent gets
 
-Every session gets two tool sets, on every runtime (Claude, Codex, OpenCode, Pi):
+Every session gets two tool sets, on every runtime (Claude, Codex, OpenCode, and the zwrm runtime):
 
 | Tools | What they do | Use for |
 |---|---|---|
@@ -34,7 +34,7 @@ Every session gets two tool sets, on every runtime (Claude, Codex, OpenCode, Pi)
 
 The `computer` tools mirror Anthropic's computer-use toolset, and are ported from Anthropic's reference implementation. Coordinates are screenshot pixels on a 1280×800 display.
 
-Both tool sets drive the **same browser window**. There is one browser, and it always runs visibly on the desktop: the agent opens a page with the `browser` tools, and uses the `computer` tools on that same window when it needs to work by sight. Every page the agent opens through its tools therefore shows in the live view. Only a script the agent writes and runs headless from its own shell would not. To start another graphical program, the agent runs it from its shell with `DISPLAY=:99`.
+Both tool sets drive the **same browser window**. There is one browser, and it always runs visibly on the desktop: the agent opens a page with the `browser` tools, and uses the `computer` tools on that same window when it needs to work by sight. Every page the agent opens through its tools therefore shows in the live view. Only a script the agent writes and runs headless from its own shell would not. To start another graphical program, the agent runs it from its shell in the background with `DISPLAY=:99`, for example `DISPLAY=:99 xterm &`, so the shell isn't blocked until the program exits.
 
 The browser profile persists in the workspace, under `~/.zwrm/browser/profile`, so logins and cookies survive between sessions. Snapshots and screenshots the browser tools save go to `~/.zwrm/browser/output`, capped at 100 MB.
 
