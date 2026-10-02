@@ -247,6 +247,55 @@ test -d /home/agent/cowork/.skills
 
 For a stored template, `zwrm templates list` must also report `ready`.
 
+## Ship tools and a desktop with an image
+
+An image can give every session extra tools and a virtual desktop, on every runtime, without any agent configuration. The [Browser template](/agents/browser) is built this way: see its source in [`zwrm-eu/templates/browser`](https://github.com/zwrm-eu/templates/tree/main/browser).
+
+### MCP servers
+
+Put one JSON manifest per server in `/etc/zwrm/mcp.d/`. The filename is the server name, and its tools reach the model as `mcp__<name>__<tool>`:
+
+```dockerfile
+USER root
+RUN npm install -g @playwright/mcp@0.0.83 \
+ && mkdir -p /etc/zwrm/mcp.d \
+ && echo '{"command": "/usr/local/bin/playwright-mcp", "args": ["--headless"]}' \
+      > /etc/zwrm/mcp.d/browser.json
+USER agent
+```
+
+| Field | Description |
+|---|---|
+| `command` | Required. Absolute path to the server's executable |
+| `args` | String array |
+| `env` | String map, merged over the session's environment. Dockerfile `ENV` does not reach the running VM, so put runtime variables here |
+| `escalate` | `true` pauses the server's tools for approval on unattended runs, like an [escalated connector](/context/connectors) |
+
+Names follow connector rules: lowercase letters, digits, and dashes. `zwrm` and `platform` are reserved, and a connector with the same name takes precedence. Install the server in the image: a command that downloads on first use (`npx -y …`) misses the startup budget of a few seconds, and the server is skipped.
+
+### A desktop for the live view
+
+Declare a desktop in `/etc/zwrm/desktop.json` to offer the chat's [live view and take-over](/agents/browser#watch-the-desktop-live):
+
+```json
+{
+  "start": ["/usr/local/bin/node", "/opt/my-desktop/start.mjs"],
+  "vnc_port": 5900,
+  "control_file": "/tmp/.zwrm-desktop-control",
+  "width": 1280,
+  "height": 800
+}
+```
+
+| Field | Description |
+|---|---|
+| `start` | Command that starts the desktop if it is not running, then exits `0`. It runs when someone selects **Start desktop**. |
+| `vnc_port` | Port of a VNC server on `127.0.0.1`, without a password. The platform relays it to authorized viewers; do not listen on other interfaces. |
+| `control_file` | File the platform writes `user <expiry-ms> <user-id>` to while a person holds control, and `agent` otherwise. A lease counts as held only until its expiry. Your image's tools should stop sending input while it is held. |
+| `width`, `height` | Optional. Desktop size, shown to viewers before the stream connects |
+
+The platform only forwards keyboard and mouse input from the person holding control, so your VNC server can accept input from every client.
+
 ## Update the image
 
 - For a stored template, `zwrm templates rebuild <name>` rebuilds from the stored context — for example after an agent-base update. To change the context files themselves, delete the template and create it again with the new directory, then re-attach agents that referenced it.
