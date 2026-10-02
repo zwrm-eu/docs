@@ -42,6 +42,10 @@ A session is one live conversation — a run's headless session or an interactiv
 | `POST` | `/v1/agents/{agent_id}/sessions/{session_id}/model` | Switch the model and/or effort for every later turn |
 | `POST` | `/v1/agents/{agent_id}/sessions/{session_id}/compact` | Summarize the conversation so far into a shorter context |
 | `POST` | `/v1/agents/{agent_id}/sessions/{session_id}/end` | End the session |
+| `GET` | `/v1/agents/{agent_id}/sessions/{session_id}/desktop` | Live desktop status (see [Live desktop](#live-desktop)) |
+| `POST` | `/v1/agents/{agent_id}/sessions/{session_id}/desktop/start` | Start the desktop |
+| `PUT` | `/v1/agents/{agent_id}/sessions/{session_id}/desktop/control` | Take, renew, or hand back control of the desktop |
+| `GET` | `/v1/agents/{agent_id}/sessions/{session_id}/desktop/vnc` | WebSocket: the desktop's live VNC stream |
 
 Session statuses: `creating`, `idle`, `working`, `blocked` (waiting on a permission decision or a question answer), `ended`, `error`.
 
@@ -252,6 +256,69 @@ Every authorized shell attempt is audited and consumes the expensive rate-limit 
 <Warning>
 The shell endpoint is a deliberate operator-to-model injection channel. ZWRM writes the command, output, and exit status as a durable `message.context` event and includes that marked context in the next user or command turn. Treat shell input and output as conversation input, even though the call itself starts no model turn.
 </Warning>
+
+### Live desktop
+
+Agents whose image declares a desktop, such as the [Browser template](/agents/browser), offer a live view of it with take-over. The endpoints are session-scoped. Whoever may send the session a message may watch the desktop and take control, except an organization admin in a member's private chat, who may only watch (`403` on start and on taking control). A finished session reports no desktop.
+
+**`GET .../desktop`** — status. It never wakes a suspended VM and doesn't count as activity, so poll it (every few seconds) while a view is open:
+
+```json
+{
+  "available": true,
+  "running": true,
+  "control": "agent",
+  "controlled_by_you": false,
+  "width": 1280,
+  "height": 800,
+  "suspended": false
+}
+```
+
+| Field | Description |
+|---|---|
+| `available` | The workspace has a desktop. `false`: show nothing |
+| `running` | Its VNC server is up. `false`: offer to start it |
+| `control` | `agent`, or `user` while a person holds control |
+| `controlled_by_you` | `control` is `user` and the holder is the caller |
+| `width`, `height` | Desktop size, when the image declares it |
+| `suspended` | The workspace VM is parked |
+
+**`POST .../desktop/start`** — wakes the VM if needed and starts the desktop; answers `{"running": true}`. `409` when the workspace has no desktop. Waking a parked VM is subject to the same credit check as a message (`402`).
+
+**`PUT .../desktop/control`** — body `{"holder": "user"}` to take control, `{"holder": "user", "renew": true}` to renew, `{"holder": "agent"}` to hand back. Answers `{"control": …, "controlled_by_you": …}`.
+
+- Control is a 90-second lease. Renew it about every 30 seconds while the person holds control, or it lapses back to the agent.
+- A renewal only extends the caller's own lease. After a hand-back, or when someone else holds control, it changes nothing and answers `controlled_by_you: false`: drop your local control state.
+- Taking control while another person holds it is a `409`. Anyone may hand back.
+- Handing back never wakes the VM, so it is safe to send when a view goes away.
+- Taking and handing back are recorded in the audit log.
+
+**`GET .../desktop/vnc`** — a WebSocket carrying the raw VNC (RFB) protocol in binary frames. Frames don't align with RFB messages; buffer them.
+
+- **Authentication:** native clients set `Authorization: Bearer <token>` on the upgrade request. Browser WebSockets cannot set headers: pass `?token=<token>` instead. The platform drops the query after authenticating it.
+- **Protocol:** RFB 3.8 (3.7 also works), security type None (`1`). There is no VNC password; the platform's authentication is the gate.
+- **Input:** keyboard, pointer, clipboard, and resize messages are forwarded only while the caller holds the control lease. Unsupported client messages close the stream with code `1008`.
+- **Keep-alive:** the server pings every 30 seconds and drops a client that stays silent for 75 seconds.
+- **Suspend:** while the socket is open, the VM does not idle-suspend. Close it when the view isn't visible.
+
+| Close code | Meaning | What to do |
+|---|---|---|
+| `4404` | The desktop is not running | Call `/desktop/start`, then reconnect |
+| `4409` | No desktop, or the session ended | Stop |
+| `4502` | The VM or its daemon failed | Retry with backoff |
+| `1000` | The desktop stream ended | Check `GET .../desktop`; reconnect while it reports `running` |
+
+A VM suspend or restore also drops the socket. Reconnect with backoff, and only while the status still reports `running`: reconnecting to a VM that was suspended on purpose would wake it.
+
+**Client flow:**
+
+1. Call `GET .../desktop`. If `available` is `false`, show nothing. If `running` is `false`, offer **Start desktop**.
+2. Connect the WebSocket view-only and keep polling the status.
+3. To take control, `PUT` `holder: user`, enable input, and renew every 30 seconds. Disable input as soon as a renewal or a poll says `controlled_by_you: false`.
+4. Hand back when the person is done, when the view closes, and when your app goes to the background. Close the socket too.
+
+[noVNC](https://github.com/novnc/noVNC) 1.7 renders the stream in a browser or web view: create the `WebSocket` yourself (so you can read close codes) and pass it to `new RFB(target, socket)` with `scaleViewport = true` and `viewOnly = true` until the person takes control.
 
 ### Task lists
 

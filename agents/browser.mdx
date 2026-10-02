@@ -1,0 +1,79 @@
+---
+title: "Browser and computer use"
+description: "Give an agent a real web browser and a desktop, watch it work live, and take control when it needs a hand."
+icon: "globe"
+---
+
+The **Browser** template gives an agent a Chromium browser and a 1280×800 virtual desktop inside its VM. The agent browses through the page structure, operates the desktop by screenshot, mouse, and keyboard, and you can watch the desktop live from the chat and take control at any time.
+
+## Create a browser agent
+
+In the dashboard, open **Agents** → **Set up agent**, and under **Environment** pick **Browser** from the **Templates** group.
+
+From the CLI:
+
+```bash
+zwrm agent create researcher --runtime claude \
+  --template github.com/zwrm-eu/templates/browser
+```
+
+Through the API, set `template` to `github.com/zwrm-eu/templates/browser` on [`POST /v1/agents`](/api-reference/agents#agents).
+
+<Note>
+Use `performance-2x` or larger. Chromium renders in software, without a GPU, and `shared-cpu-*` sizes are too slow for it.
+</Note>
+
+## What the agent gets
+
+Every session gets two tool sets, on every runtime (Claude, Codex, OpenCode, Pi):
+
+| Tools | What they do | Use for |
+|---|---|---|
+| `browser` (`mcp__browser__*`) | Navigate, click, type, fill forms, read the page's accessibility snapshot, take screenshots, manage tabs. Built on [Playwright MCP](https://github.com/microsoft/playwright-mcp). | Almost all web tasks. Fast and reliable, because it works on the page structure. |
+| `computer` (`mcp__computer__*`) | `screenshot`, `zoom`, `left_click`, `double_click`, `right_click`, `left_click_drag`, `mouse_move`, `scroll`, `type`, `key`, `hold_key`, `wait`, `cursor_position` | Desktop applications, canvas-heavy pages, and sites that resist automation |
+
+The `computer` tools mirror Anthropic's computer-use toolset, and are ported from Anthropic's reference implementation. Coordinates are screenshot pixels on a 1280×800 display.
+
+Both tool sets drive the **same desktop**: the agent's browser runs visibly on it. To start another graphical program, the agent runs it from its shell with `DISPLAY=:99`, for example `DISPLAY=:99 chromium https://example.com &`.
+
+The browser profile persists in the workspace, under `~/.zwrm/browser/profile`, so logins and cookies survive between sessions. Snapshots and screenshots the browser tools save go to `~/.zwrm/browser/output`, capped at 100 MB.
+
+## Watch the desktop live
+
+Open a chat with the agent and select **Desktop** in the side panel. The view shows the agent's desktop as it works, view-only. If the desktop isn't running yet, select **Start desktop**.
+
+The live view keeps the agent's VM awake while it is open and visible. It disconnects when you collapse it, and about a minute after you switch to another tab.
+
+## Take control
+
+Select **Take control** to use the desktop with your own mouse and keyboard, for example to accept a cookie dialog, sign in to a site, or solve a captcha. Select **Hand back to agent** when you're done.
+
+While you have control:
+
+- Only your input reaches the desktop. Other people watching stay view-only, and only one person can hold control at a time.
+- The agent's `computer` tools refuse input and tell the agent to wait. Its screenshots keep working, so it can see what you did. Its next observation after you hand back tells it that control is back.
+- Control returns to the agent on its own about 90 seconds after your browser closes or loses its connection, so a closed tab never locks the agent out.
+
+<Warning>
+Taking control pauses the agent's computer-use tools. It does not stop commands the agent runs in its own shell. Treat it as a way to work alongside the agent, not as a security boundary.
+</Warning>
+
+An organization admin viewing a member's private chat can watch the desktop but cannot start it or take control.
+
+## Security
+
+- Web pages are untrusted input. A page can contain text written to steer the agent. Review what an agent did on sites where it holds credentials.
+- The browser profile holds the sites' cookies and logins. Anyone with access to the workspace (SSH, the chat, the files) can use them.
+- Nothing in the VM listens publicly: the live view travels through the platform, authenticated as you.
+
+## Troubleshooting
+
+**The live view is black.** The desktop is running but nothing is on it. The agent browses visibly only on images built after October 2, 2026: restart the agent's workspace so it boots the current image. On any image, the agent can open a window on the desktop itself, for example by running `DISPLAY=:99 chromium &`.
+
+**The desktop does not appear in the chat.** The agent was not created from the Browser template, or its workspace runs an image from before the live view existed. Check the agent's **Environment** in its settings, and restart the workspace.
+
+**The agent will not continue after you hand back control.** Tell it in the chat that control is back. Current images report the hand-back to the agent automatically.
+
+## Build your own desktop image
+
+The Browser template is an ordinary [agent image](/agents/templates). You can extend it, or build your own image that offers tools and a desktop the same way. See [Ship tools and a desktop with an image](/agents/templates#ship-tools-and-a-desktop-with-an-image).
