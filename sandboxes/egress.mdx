@@ -1,17 +1,17 @@
 ---
 title: "Egress controls"
-description: "Restrict outbound network access from sandbox VMs"
+description: "Restrict outbound network access from sandbox VMs by IP address or site"
 icon: "shield-halved"
 ---
 
-By default, sandbox VMs have unrestricted outbound access to the internet. Egress controls let you restrict that access at the iptables level — per sandbox or as a default for all sandboxes created from a given template.
+By default, sandbox VMs have unrestricted outbound access to the internet. Egress controls restrict it by IP address and by site, per sandbox or as a default for all sandboxes created from a given template. Agents use the same policy shape; see [Network policy](/agents/network-policy).
 
 ## Modes
 
 | Mode | Behavior |
 |------|----------|
-| `allow_all` | All outbound traffic is permitted (default) |
-| `deny_all` | All outbound traffic is dropped unless explicitly allowed via `allow_cidrs` |
+| `allow_all` | All outbound traffic is permitted (default), except `deny_cidrs` and `deny_domains`: a block list |
+| `deny_all` | All outbound traffic is dropped unless allowed by `allow_cidrs` or `allow_domains`: an allow list |
 
 The metadata service at `169.254.169.254` is always reachable regardless of the policy. The in-VM agent daemon uses it to fetch its auth token at boot.
 
@@ -26,7 +26,15 @@ The metadata service at `169.254.169.254` is always reachable regardless of the 
 </ParamField>
 
 <ParamField body="deny_cidrs" type="string[]">
-  CIDRs to explicitly deny. Evaluated before `allow_cidrs`, so use this to carve out subnets from a broad allow rule. Example: `["10.0.0.0/8"]`.
+  CIDRs to deny. Under `allow_all` they form a block list; under `deny_all` they are evaluated before `allow_cidrs`, so use them to carve out subnets from a broad allow rule. Example: `["10.0.0.0/8"]`.
+</ParamField>
+
+<ParamField body="allow_domains" type="string[]">
+  Sites to allow over HTTP and HTTPS (ports 80 and 443), each including its subdomains. Only with `deny_all`. Example: `["pypi.org", "files.pythonhosted.org"]`.
+</ParamField>
+
+<ParamField body="deny_domains" type="string[]">
+  Sites to block, each including its subdomains. In either mode. Example: `["example.com"]`.
 </ParamField>
 
 <ParamField body="allow_ports" type="integer[]">
@@ -38,9 +46,10 @@ The metadata service at `169.254.169.254` is always reachable regardless of the 
 The API validates egress policies on create and returns `400` for:
 
 - Unknown mode (must be `allow_all` or `deny_all`)
-- `allow_all` combined with `allow_cidrs`, `deny_cidrs`, or `allow_ports`
+- `allow_all` combined with `allow_cidrs`, `allow_ports`, or `allow_domains`
+- A domain entry that is an IP address (use the CIDR fields) or not a valid domain
 - `allow_ports` set without `allow_cidrs`
-- Any `allow_cidrs` entry that overlaps the VM subnet (e.g. `172.16.0.0/16`) — this would punch a hole in cross-app isolation. Note that `0.0.0.0/0` overlaps everything, so it is always rejected: there is no "allow everything except X" pattern in `deny_all` mode; allowed destinations must be enumerated
+- Any `allow_cidrs` entry that overlaps the VM subnet (e.g. `172.16.0.0/16`) — this would punch a hole in cross-app isolation. `0.0.0.0/0` overlaps everything, so it is always rejected; for "everything except X", use `allow_all` with `deny_cidrs` or `deny_domains`
 - Any `deny_cidrs` entry that covers the metadata service address (`169.254.169.254`) — this would brick the in-VM daemon's token fetch
 - Malformed CIDR notation
 - Port numbers outside 1–65535
@@ -66,18 +75,32 @@ Pass an `egress` object when creating a sandbox to override the template default
       --egress-deny-cidr 203.0.113.128/25
     ```
 
+    ```bash
+    # Allow only PyPI, by site
+    zwrm sandbox create --template python \
+      --egress-allow-domain pypi.org \
+      --egress-allow-domain files.pythonhosted.org
+
+    # Everything except a few sites and a range
+    zwrm sandbox create --template python \
+      --egress-deny-domain example.com \
+      --egress-deny-cidr 198.51.100.0/24
+    ```
+
     <Warning>
-    There is no "allow everything except X" pattern: `--egress-allow-cidr 0.0.0.0/0` is always rejected with `400`, because any allow-CIDR that overlaps the VM subnet would punch a hole in cross-app isolation — and `0.0.0.0/0` overlaps everything. In `deny_all` mode, enumerate the destinations you want to allow.
+    `--egress-allow-cidr 0.0.0.0/0` is always rejected with `400`, because any allow-CIDR that overlaps the VM subnet would punch a hole in cross-app isolation. For "everything except X", use deny flags alone (`allow_all` mode).
     </Warning>
 
     Flags (available on `sandbox create` and `sandbox run`):
 
     | Flag | Description |
     |------|-------------|
-    | `--egress-mode` | `allow_all` or `deny_all`. When omitted and other egress flags are set, defaults to `deny_all`. |
+    | `--egress-mode` | `allow_all` or `deny_all`. When omitted, any allow flag makes it `deny_all` and deny flags alone make it `allow_all`. |
     | `--egress-allow-cidr` | Allow outbound to this CIDR (repeatable). Implies `deny_all`. |
     | `--egress-deny-cidr` | Deny outbound to this CIDR (repeatable). |
     | `--egress-allow-port` | Restrict `--egress-allow-cidr` to this TCP port (repeatable). |
+    | `--egress-allow-domain` | Allow this site and its subdomains over HTTP and HTTPS (repeatable). Implies `deny_all`. |
+    | `--egress-deny-domain` | Block this site and its subdomains (repeatable). |
   </Tab>
   <Tab title="API">
     ```bash
@@ -164,5 +187,7 @@ Egress rules are implemented as iptables rules in the `ZWRM` chain on the host. 
 3. **Catch-all deny** — a final `DROP` for all traffic from the sandbox IP, appended at the bottom of the chain
 
 The always-allow rule for the metadata service (`169.254.169.254/32`) is appended once at startup, so per-sandbox rules are inserted *above* it in the chain. The metadata service nonetheless stays reachable under any policy: the per-sandbox catch-all `DROP` is appended below the metadata `ACCEPT`, and any `deny_cidrs` entry that would cover the metadata address is rejected at validation time.
+
+Site rules (`allow_domains`, `deny_domains`) are enforced by the host's egress gateway. The firewall redirects the sandbox's TCP 80 and 443 to it; the gateway reads the name each connection asks for (the TLS server name, or the HTTP `Host` header), decides, and connects to that name itself rather than to the address the sandbox chose. While site rules are set, UDP 443 (HTTP/3) is dropped so clients fall back to TCP, and under `deny_all` DNS to the VM's resolvers stays allowed. See [what a policy can and can't stop](/agents/network-policy#what-a-policy-can-and-cant-stop).
 
 Rules are cleaned up automatically when the sandbox is destroyed or suspended.
