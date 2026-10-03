@@ -60,21 +60,28 @@ Taking control pauses the agent's computer-use tools. It does not stop commands 
 
 An organization admin viewing a member's private chat can watch the desktop but cannot start it or take control.
 
-## Route the browser through a proxy
+## Route sites through a proxy
 
-Some sites refuse requests from datacenter IP addresses. Sites behind Akamai or Cloudflare bot protection often do, and the browser then fails with errors such as `ERR_HTTP2_PROTOCOL_ERROR` or timeouts while other sites load normally. Route the browser through a proxy, for example a static ISP proxy, by setting the agent secret `BROWSER_PROXY`:
+Some sites refuse requests from datacenter IP addresses. Sites behind Akamai or Cloudflare bot protection often do: the browser then fails with errors such as "Access Denied", `ERR_HTTP2_PROTOCOL_ERROR`, or an endless "Just a moment…" check, while other sites load normally. Other sites, Google among them, misbehave behind a proxy. So the agent routes **per site**:
 
-```bash
-printf %s "http://user:pass@proxy.example.com:8080" \
-  | zwrm agent secrets set BROWSER_PROXY --stdin --instance researcher
-```
+1. Give the agent a proxy, for example a static ISP proxy, with the agent secret `BROWSER_PROXY`:
 
-- `http://`, `https://`, and `socks5://` are accepted. Credentials work with `http://` and `https://`; Chromium cannot authenticate to a SOCKS5 proxy.
+   ```bash
+   printf %s "http://user:pass@proxy.example.com:8080" \
+     | zwrm agent secrets set BROWSER_PROXY --stdin --instance researcher
+   ```
+
+2. That's all. Every site goes direct by default. When a site blocks it, the agent switches that site to the proxy with its `network` tools (`proxy_status`, `use_proxy`, `use_direct`), reloads, and remembers the choice in the workspace. Sites known to refuse datacenter networks start on the proxy.
+
+Details:
+
+- A choice covers the domain and its subdomains, and the most specific rule wins. Choices persist across sessions and reboots, per workspace.
+- `http://` and `https://` proxies are accepted, with or without credentials.
 - The proxy applies from the workspace's next boot, because [agent secrets](/agents/secrets) are injected when the VM boots.
-- Only the browser uses it. Commands the agent runs in its shell keep the VM's own address.
+- The agent's shell commands don't use the proxy.
 - A value that can't be used stops the `browser` tools, with an error in the agent's log, rather than browsing without the proxy.
 
-For logged-in work, prefer a static IP over a rotating pool: a stable address keeps sessions valid and avoids "new sign-in location" checks.
+For logged-in work, prefer a static IP over a rotating pool: a stable address keeps sessions valid and avoids "new sign-in location" checks. Some sites, typically premium retailers, also refuse well-known proxy networks; a proxy can't help with those.
 
 ## Security
 
