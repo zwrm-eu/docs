@@ -76,10 +76,11 @@ Some sites refuse requests from datacenter IP addresses. Sites behind Akamai or 
 Details:
 
 - A choice covers the domain and its subdomains, and the most specific rule wins. Choices persist across sessions and reboots, per workspace.
-- `http://` and `https://` proxies are accepted, with or without credentials.
-- The proxy applies from the workspace's next boot, because [agent secrets](/agents/secrets) are injected when the VM boots.
-- The agent's shell commands don't use the proxy.
-- A value that can't be used stops the `browser` tools, with an error in the agent's log, rather than browsing without the proxy.
+- The proxy's credentials never enter the VM. The host the VM runs on connects to the proxy for the browser, so neither the agent nor code it runs can read them.
+- An organization's [network policy](/agents/network-policy) applies to the proxy route too. A site the policy blocks stays blocked either way, and the agent's `network` tools tell it so instead of switching routes.
+- `http://` and `https://` proxies are accepted, with or without credentials. A value that isn't a proxy URL is ignored, and the agent browses without a proxy.
+- The proxy applies from the workspace's next boot or wake.
+- Only the browser routes per site. The agent's shell commands go direct.
 
 For logged-in work, prefer a static IP over a rotating pool: a stable address keeps sessions valid and avoids "new sign-in location" checks. Some sites, typically premium retailers, also refuse well-known proxy networks; a proxy can't help with those.
 

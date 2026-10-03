@@ -1,0 +1,113 @@
+---
+title: "Network policy"
+description: "Control which websites and IP addresses your agents can reach."
+icon: "shield-halved"
+---
+
+A network policy controls where an agent's VM can connect. It applies to everything the agent does: its browser, its shell, its tools, and the code it runs. The host the VM runs on enforces it, and the agent can't read or change it.
+
+There are two kinds of policy:
+
+- **Block list**: everything is reachable except the sites and addresses you list.
+- **Allow list**: only the sites and addresses you list are reachable.
+
+Set a policy for the whole organization, for a single agent, or both. An agent's own policy can only narrow the organization's: a destination is reachable only if both allow it.
+
+## Set the organization's policy
+
+In the dashboard, open **Settings** → **Organization** → **Network access**.
+
+From the CLI:
+
+```bash
+# Block a few sites for every agent
+zwrm org egress set --block facebook.com --block tiktok.com
+
+# Allow only a few sites and an address range
+zwrm org egress set --allow example.com --allow github.com --allow-cidr 203.0.113.0/24
+
+zwrm org egress          # show it
+zwrm org egress clear    # remove it
+```
+
+## Set an agent's policy
+
+In the dashboard, open the agent's **Settings** → **Network access**.
+
+From the CLI:
+
+```bash
+zwrm agent egress set my-agent --allow crm.example.com --allow docs.google.com
+zwrm agent egress my-agent        # show the organization's, the agent's, and what's in effect
+zwrm agent egress clear my-agent
+```
+
+| Flag | Description |
+|---|---|
+| `--allow` | A site to allow, including its subdomains. Repeatable. |
+| `--block` | A site to block, including its subdomains. Repeatable. |
+| `--allow-cidr` | An IP address or CIDR range to allow. Repeatable. |
+| `--block-cidr` | An IP address or CIDR range to block. Repeatable. |
+| `--allow-port` | Limits `--allow-cidr` to these TCP ports. |
+| `--mode` | `deny_all` for an allow list, `allow_all` for a block list. Without it, any `--allow*` flag makes an allow list, and `--block*` flags alone make a block list. |
+
+Only organization admins and owners can change a policy. Members can see it.
+
+A change applies from each workspace's next boot or wake. A running workspace keeps the policy it started with until it suspends or restarts.
+
+## How rules match
+
+- A site covers its subdomains: `example.com` includes `www.example.com` and `api.example.com`. `*.example.com` means the same as `example.com`. You can paste a URL; only its host name is kept.
+- The most specific rule wins. In an allow list of `example.com` with `--block admin.example.com`, the admin site is blocked and the rest of `example.com` is allowed.
+- In an allow list, allowed sites are reachable over HTTP and HTTPS (ports 80 and 443). IP rules apply to every port, unless `--allow-port` limits them.
+- In a block list, a blocked site is blocked on every port where the agent's connection names it.
+
+Some names always stay reachable, so a policy can never cut an agent off from the platform or from its model: the platform's own host, and the model provider the agent's runtime calls (for example `api.anthropic.com` for Claude). `zwrm agent egress` lists them.
+
+DNS stays available under an allow list, so allowed names resolve.
+
+## With a browser proxy
+
+An agent with a [browser proxy](/agents/browser#route-sites-through-a-proxy) (`BROWSER_PROXY`) keeps using it under a policy. The host connects to the proxy for the agent, so the proxy's credentials never enter the VM. The policy applies to every site, whether the browser reaches it directly or through the proxy.
+
+When the policy blocks a site, the browser shows a connection error, and the agent's `network` tools report which sites the policy blocked. The agent tells you the site is blocked by your organization's policy instead of retrying.
+
+## What a policy can and can't stop
+
+The host reads the site name each connection asks for (the TLS server name for HTTPS, the `Host` header for HTTP) and connects to that name itself, not to the address the VM chose. Pairing an allowed name with another address gains nothing.
+
+The host doesn't decrypt traffic, so it can't see inside an encrypted connection. Some limits follow from that:
+
+- **Domain fronting**: a connection that names an allowed site but asks the server for a different site inside the encrypted request reaches whatever that server hosts. This only matters for sites that share a server, such as a CDN.
+- **Block lists are best-effort.** A program can connect to a blocked site's IP address without naming the site. Allow lists don't have this gap: an unnamed connection is judged by its address, and only allowed addresses pass.
+- **DNS** is allowed under an allow list, and a determined program can carry data out through DNS queries.
+
+For a hard boundary, use an allow list.
+
+Connections over HTTP/3 (QUIC) are blocked while a policy has site rules. Browsers and other clients fall back to HTTPS over TCP.
+
+## API
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/v1/org/egress-policy` | The organization's policy. |
+| `PUT` | `/v1/org/egress-policy` | Replace it. Body: `{"policy": {...}}`, or `{"policy": null}` to clear it. |
+| `GET` | `/v1/agents/{agent_id}/egress-policy` | The agent's own policy, the organization's, the effective combination, the always-reachable names, and whether a browser proxy is set. |
+| `PUT` | `/v1/agents/{agent_id}/egress-policy` | Replace the agent's own policy. Same body. |
+
+A policy:
+
+```json
+{
+  "mode": "deny_all",
+  "allow_domains": ["example.com", "github.com"],
+  "allow_cidrs": ["203.0.113.0/24"],
+  "allow_ports": [443],
+  "deny_domains": ["gist.github.com"],
+  "deny_cidrs": []
+}
+```
+
+`mode` is `deny_all` for an allow list or `allow_all` for a block list. A block list takes only `deny_domains` and `deny_cidrs`. Changes are recorded in the [audit log](/platform/audit-log).
+
+[Sandboxes](/sandboxes/overview) accept the same `allow_domains` and `deny_domains` fields in their egress policy.
