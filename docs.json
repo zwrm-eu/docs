@@ -67,6 +67,7 @@
               "agents/budgets",
               "agents/templates",
               "agents/browser",
+              "agents/network-policy",
               "agents/secrets"
             ]
           },
