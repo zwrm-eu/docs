@@ -67,7 +67,7 @@ Some names always stay reachable, so a policy can never cut an agent off from th
 
 DNS stays available under an allow list, so allowed names resolve.
 
-Sites in private address ranges (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`) aren't reachable by name while a policy has site rules, even if an address rule allows the range: the host connects for the agent, and those ranges are the host's own networks.
+Sites in private address ranges (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`) aren't reachable on ports 80 and 443 while a policy has site rules, even if an address rule allows the range: the host connects for the agent, and those ranges are the host's own networks.
 
 ## With a browser proxy
 
