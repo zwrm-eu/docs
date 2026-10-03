@@ -60,15 +60,18 @@ A change applies from each workspace's next boot or wake. A running workspace ke
 - A site covers its subdomains: `example.com` includes `www.example.com` and `api.example.com`. `*.example.com` means the same as `example.com`. You can paste a URL; only its host name is kept.
 - The most specific rule wins. In an allow list of `example.com` with `--block admin.example.com`, the admin site is blocked and the rest of `example.com` is allowed.
 - In an allow list, allowed sites are reachable over HTTP and HTTPS (ports 80 and 443). IP rules apply to every port, unless `--allow-port` limits them.
-- In a block list, a blocked site is blocked on every port where the agent's connection names it.
+- In a block list, blocked sites are checked on HTTP and HTTPS (ports 80 and 443); blocked addresses on every port.
+- When both the organization and an agent have an allow list, a destination must be on both in the same form: a site on one list and an address range on the other don't combine. List the site on both, or the range on both.
 
 Some names always stay reachable, so a policy can never cut an agent off from the platform or from its model: the platform's own host, and the model provider the agent's runtime calls (for example `api.anthropic.com` for Claude). `zwrm agent egress` lists them.
 
 DNS stays available under an allow list, so allowed names resolve.
 
+Sites in private address ranges (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`) aren't reachable by name while a policy has site rules, even if an address rule allows the range: the host connects for the agent, and those ranges are the host's own networks.
+
 ## With a browser proxy
 
-An agent with a [browser proxy](/agents/browser#route-sites-through-a-proxy) (`BROWSER_PROXY`) keeps using it under a policy. The host connects to the proxy for the agent, so the proxy's credentials never enter the VM. The policy applies to every site, whether the browser reaches it directly or through the proxy.
+An agent with a [browser proxy](/agents/browser#route-sites-through-a-proxy) (`BROWSER_PROXY`, set on the agent or for the whole organization with `zwrm org secrets`) keeps using it under a policy. The host connects to the proxy for the agent, so the proxy's credentials never enter the VM. The policy applies to every site, whether the browser reaches it directly or through the proxy.
 
 When the policy blocks a site, the browser shows a connection error, and the agent's `network` tools report which sites the policy blocked. The agent tells you the site is blocked by your organization's policy instead of retrying.
 
@@ -79,7 +82,7 @@ The host reads the site name each connection asks for (the TLS server name for H
 The host doesn't decrypt traffic, so it can't see inside an encrypted connection. Some limits follow from that:
 
 - **Domain fronting**: a connection that names an allowed site but asks the server for a different site inside the encrypted request reaches whatever that server hosts. This only matters for sites that share a server, such as a CDN.
-- **Block lists are best-effort.** A program can connect to a blocked site's IP address without naming the site. Allow lists don't have this gap: an unnamed connection is judged by its address, and only allowed addresses pass.
+- **Block lists are best-effort.** A program can connect to a blocked site's IP address without naming the site, or use a port other than 80 and 443. Allow lists don't have this gap: an unnamed connection is judged by its address, only allowed addresses pass, and allowed sites are reachable on 80 and 443 only.
 - **DNS** is allowed under an allow list, and a determined program can carry data out through DNS queries.
 
 For a hard boundary, use an allow list.
@@ -108,6 +111,6 @@ A policy:
 }
 ```
 
-`mode` is `deny_all` for an allow list or `allow_all` for a block list. A block list takes only `deny_domains` and `deny_cidrs`. Changes are recorded in the [audit log](/platform/audit-log).
+`mode` is `deny_all` for an allow list or `allow_all` for a block list. A block list takes only `deny_domains` and `deny_cidrs`. Changes are recorded in the organization's audit log.
 
-[Sandboxes](/sandboxes/overview) accept the same `allow_domains` and `deny_domains` fields in their egress policy.
+[Sandboxes](/sandboxes/egress) accept the same `allow_domains` and `deny_domains` fields in their egress policy.

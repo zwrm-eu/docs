@@ -59,6 +59,15 @@ Subscriptions and credit-pack purchases run through Stripe in a separate auth se
 | `DELETE` | `/v1/org/domains/{domain_id}` | Remove a domain |
 | `POST` | `/v1/org/domains/{domain_id}/verify` | Verify DNS |
 
+## Network policy
+
+The [network policy](/agents/network-policy) every agent in the organization runs under.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/v1/org/egress-policy` | The organization's policy |
+| `PUT` | `/v1/org/egress-policy` | Replace it (`{"policy": {...}}`, or `null` to clear). Admins and owners only |
+
 ## Audit logs
 
 | Method | Path | Description |
