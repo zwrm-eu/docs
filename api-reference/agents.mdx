@@ -24,6 +24,8 @@ An agent is [pure configuration](/agents/overview); these endpoints manage the d
 | `PUT` | `/v1/agents/{agent_id}/instructions` | Set the per-agent instructions |
 | `GET` | `/v1/agents/{agent_id}/budget` | Budget caps and today's usage |
 | `PUT` | `/v1/agents/{agent_id}/budget` | Set budget caps |
+| `GET` | `/v1/agents/{agent_id}/egress-policy` | The agent's [network policy](/agents/network-policy): its own, the organization's, the combination in effect, and the names that always stay reachable |
+| `PUT` | `/v1/agents/{agent_id}/egress-policy` | Replace the agent's own network policy (`{"policy": {...}}`, or `null` to clear). Admins and owners only |
 | `GET` | `/v1/agents/{agent_id}/logs` | Connect/disconnect activity log |
 
 `POST /v1/agents` and `POST /v1/agents/connect` take the same body shape; every field is optional (an empty body creates a default `claude` agent):

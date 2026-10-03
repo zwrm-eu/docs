@@ -487,6 +487,16 @@ zwrm org secrets unset <NAME>
 zwrm org secrets add --from-file <path>
 ```
 
+### `zwrm org egress`
+
+The network policy every agent in the organization runs under: a block list or an allow list of sites and IP addresses. Admins and owners only. [Guide →](/agents/network-policy)
+
+```bash
+zwrm org egress
+zwrm org egress set [--allow <site>]... [--block <site>]... [--allow-cidr <cidr>]... [--block-cidr <cidr>]... [--allow-port <port>]... [--mode deny_all|allow_all]
+zwrm org egress clear
+```
+
 ### `zwrm org llm-provider`
 
 External OpenAI-compatible endpoints whose models zwrm-runtime and OpenCode agents can use as `ext/<provider>/<model-id>`. Runs on your credential and is billed by your vendor, not against credits. [Guide →](/agents/external-providers)
@@ -540,8 +550,8 @@ zwrm transfer --app <name> --to-org <org>
 Manage sandboxes. [Guide →](/sandbox)
 
 ```bash
-zwrm sandbox create --template <name> [--size <preset>] [--timeout <dur>] [--persistent] [--idle-timeout <dur>] [--env KEY=VALUE ...] [--egress-mode allow_all|deny_all] [--egress-allow-cidr <cidr>] [--egress-deny-cidr <cidr>] [--egress-allow-port <port>] [--disk-size-mb <n>] [--bandwidth-mbps <n>] [--ops-per-sec <n>] [--burst-mbps <n>] [--burst-ops <n>]
-zwrm sandbox run --template <name> [--size <preset>] [--timeout <dur>] [--exec-timeout <dur>] [--wait-timeout <dur>] [--workdir <dir>] [--env KEY=VALUE ...] [--egress-mode allow_all|deny_all] [--egress-allow-cidr <cidr>] [--egress-deny-cidr <cidr>] [--egress-allow-port <port>] -- <command>   # create, run, destroy
+zwrm sandbox create --template <name> [--size <preset>] [--timeout <dur>] [--persistent] [--idle-timeout <dur>] [--env KEY=VALUE ...] [--egress-mode allow_all|deny_all] [--egress-allow-cidr <cidr>] [--egress-deny-cidr <cidr>] [--egress-allow-port <port>] [--egress-allow-domain <site>] [--egress-deny-domain <site>] [--disk-size-mb <n>] [--bandwidth-mbps <n>] [--ops-per-sec <n>] [--burst-mbps <n>] [--burst-ops <n>]
+zwrm sandbox run --template <name> [--size <preset>] [--timeout <dur>] [--exec-timeout <dur>] [--wait-timeout <dur>] [--workdir <dir>] [--env KEY=VALUE ...] [--egress-mode allow_all|deny_all] [--egress-allow-cidr <cidr>] [--egress-deny-cidr <cidr>] [--egress-allow-port <port>] [--egress-allow-domain <site>] [--egress-deny-domain <site>] -- <command>   # create, run, destroy
 zwrm sandbox exec <id> -- <command> [--timeout 30s] [--workdir <dir>]
 zwrm sandbox list [--status running|creating|suspended|destroyed]
 zwrm sandbox status <id>
@@ -567,7 +577,7 @@ Manage agent and sandbox VM templates. [Guide →](/agents/templates)
 
 ```bash
 zwrm templates list
-zwrm templates create <name> --dockerfile <path> [--context <dir>] [--description <text>] [--env KEY=VALUE ...] [--egress-mode allow_all|deny_all] [--egress-allow-cidr <cidr>] [--egress-deny-cidr <cidr>] [--egress-allow-port <port>] [--disk-size-mb <n>] [--bandwidth-mbps <n>] [--ops-per-sec <n>] [--burst-mbps <n>] [--burst-ops <n>]
+zwrm templates create <name> --dockerfile <path> [--context <dir>] [--description <text>] [--env KEY=VALUE ...] [--egress-mode allow_all|deny_all] [--egress-allow-cidr <cidr>] [--egress-deny-cidr <cidr>] [--egress-allow-port <port>] [--egress-allow-domain <site>] [--egress-deny-domain <site>] [--disk-size-mb <n>] [--bandwidth-mbps <n>] [--ops-per-sec <n>] [--burst-mbps <n>] [--burst-ops <n>]
 zwrm templates rebuild <name>
 zwrm templates update-quota <name-or-id> [--disk-size-mb <n>] [--bandwidth-mbps <n>] [--ops-per-sec <n>] [--burst-mbps <n>] [--burst-ops <n>] [--clear-rate-limit]
 zwrm templates delete <name> [-f]
@@ -668,6 +678,16 @@ Show or set daily caps. [Guide →](/agents/budgets)
 
 ```bash
 zwrm agent budget [instance] [--daily-usd <n>] [--max-runs <n>]
+```
+
+### `zwrm agent egress`
+
+The agent's own network policy, which narrows the organization's. Without a subcommand, shows the organization's policy, the agent's, what's in effect, and the names that always stay reachable. [Guide →](/agents/network-policy)
+
+```bash
+zwrm agent egress [instance]
+zwrm agent egress set [instance] [--allow <site>]... [--block <site>]... [--allow-cidr <cidr>]... [--block-cidr <cidr>]... [--allow-port <port>]... [--mode deny_all|allow_all]
+zwrm agent egress clear [instance]
 ```
 
 ### `zwrm agent resize`
