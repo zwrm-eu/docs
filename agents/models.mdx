@@ -53,13 +53,16 @@ If both are set, the **subscription wins** so a leftover API key can't quietly s
 
 | Alias | Model | Effort |
 |-------|-------|--------|
-| `sol` (default) | GPT-5.6 Sol | low → max |
-| `terra` | GPT-5.6 Terra | low → max |
-| `luna` | GPT-5.6 Luna | low → max |
+| `sol` (default) | GPT-6.1-Sol | low → max |
+| `astra` | GPT-6-Astra | low → max |
+| `gpt-6-sol` | GPT-6-Sol | low → max |
+| `luna` | GPT-6-Luna | low → max |
+| `gpt-5.6-sol` | GPT-5.6-Sol | low → max |
+| `terra` | GPT-5.6-Terra | low → max |
+| `gpt-5.6-luna` | GPT-5.6-Luna | low → max |
 | `gpt-5.5` | GPT-5.5 | low → xhigh |
-| `gpt-5.2` | GPT-5.2 | low → xhigh |
 
-Codex runs on your own OpenAI account, so ZWRM does not meter its cost: the per-agent **daily spend** budget never bites on codex — only the **run-count** cap does. Codex agents express two permission modes (Ask and Bypass). On `gpt-5.5`/`gpt-5.2`, an effort of `max` is clamped down to `xhigh`. Attaching or detaching a connector forces a fresh Codex thread on the next session (Codex freezes its tool set at thread creation).
+Codex runs on your own OpenAI account, so ZWRM does not meter its cost: the per-agent **daily spend** budget never bites on codex — only the **run-count** cap does. Codex agents express two permission modes (Ask and Bypass). On `gpt-5.5`, an effort of `max` is clamped down to `xhigh`. Attaching or detaching a connector forces a fresh Codex thread on the next session (Codex freezes its tool set at thread creation).
 
 ## The zwrm runtime (`pi`)
 
