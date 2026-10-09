@@ -36,7 +36,7 @@ zwrm triggers create "Stripe orders" \
 | `--routes` | JSON | — | Routing rules: `[{agent_id,when?}]` |
 | `--rate-per-day` | int | `0` | Daily delivery cap (`0` = unlimited) |
 | `--no-secret` | bool | `false` | Create a slug-gated trigger with no secret |
-| `--secret` | string | — | Import a provider-minted signing secret (Linear, Shopify, Sentry) instead of generating one |
+| `--secret` | string | — | Import a provider-minted signing secret (Linear, Shopify, Sentry, Front) instead of generating one |
 
 On success the CLI prints the hook URL and — **exactly once** — the secret. Store it immediately. (`--secret` and `--no-secret` are mutually exclusive.)
 
@@ -65,16 +65,42 @@ Most providers can't send custom headers — they sign with their own fixed head
 | Linear | `Linear-Signature` | Bare hex — import the secret with `--secret` |
 | Shopify | `X-Shopify-Hmac-Sha256` | Base64 — import the secret with `--secret` |
 | Sentry | `Sentry-Hook-Signature` | Bare hex — import the secret with `--secret` |
+| Front | `X-Front-Signature` | Base64, signed over `X-Front-Request-Timestamp` and the body — import the secret with `--secret` (see [Front](#front)) |
 
-For GitHub, paste the secret into the webhook's *Secret* field and set the content type to `application/json`. Linear, Shopify, and Sentry mint their **own** signing secret — copy it from the provider and pass it to `--secret` so ZWRM verifies against the same value.
+For GitHub, paste the secret into the webhook's *Secret* field and set the content type to `application/json`. Linear, Shopify, Sentry, and Front mint their **own** signing secret — copy it from the provider and pass it to `--secret` so ZWRM verifies against the same value.
 
-Verification is accept-if-any: an unmatched header never vetoes one that verifies. Providers whose signatures cover a timestamped string (Stripe, Slack, Svix-based) or that require a validation handshake (Microsoft Graph, Event Grid, Zoom) are not supported by header aliasing — send those with an explicit `X-Webhook-Secret`/`X-Webhook-Signature` header, or use the `msteams` provider for Teams.
+Verification is accept-if-any: an unmatched header never vetoes one that verifies. Apart from Front, providers whose signatures cover a timestamped string (Stripe, Slack, Svix-based) or that require a validation handshake (Microsoft Graph, Event Grid, Zoom) are not supported by header aliasing — send those with an explicit `X-Webhook-Secret`/`X-Webhook-Signature` header, or use the `msteams` provider for Teams.
+
+### Front
+
+Front's [AI agents](https://dev.frontapp.com/docs/ai-agents) and [application webhooks](https://dev.frontapp.com/docs/application-webhooks) work without extra setup. ZWRM verifies each delivery's signature and answers Front's `X-Front-Challenge` check when you save the webhook URL. If Front reports that validating the URL failed, the trigger has the wrong secret: it needs Front's **signing secret**, not the client secret. AI-agent deliveries are deduplicated on their `event_id`, since Front can deliver an event more than once. Front's older rule webhooks, signed with HMAC-SHA1, aren't supported.
+
+To connect a Front AI agent:
+
+1. In Front, open **Settings → Company → Agents → Create AI agent**. On the **AI Engine** step, copy the **signing secret**, **OAuth URL**, **client ID** and **client secret** — Front shows the client secret only once.
+2. Create the trigger with Front's signing secret. Keying sessions on `conversation_id` keeps each conversation in one workspace; the match condition drops `unassign` events:
+
+   ```bash
+   zwrm triggers create "Front support" \
+     --default-agent support-bot \
+     --secret <front-signing-secret> \
+     --session-key-path conversation_id \
+     --match '[{"path":"type","op":"not_equals","value":"unassign"}]' \
+     --instruction "Front assigned or mentioned you on this conversation. Read it with the Front connector, then draft a reply."
+   ```
+
+3. Back in Front, set the agent's **Webhook URL** to the trigger's hook URL and finish the wizard. If you already saved the agent, edit its webhook URL instead.
+4. Give the agent Front's MCP server as a connector with **App credentials shared by everyone** (`oauth_client_credentials`): the OAuth URL is the token URL, plus the client ID and client secret. The agent then acts in Front as the AI agent, never as a teammate.
+
+<Warning>
+Front's AI agent sees every conversation in the Front workspaces you grant it, whoever assigns or mentions it — Front's webhook doesn't say who asked, so nothing can narrow its access to that person. Grant only workspaces whose contents everyone who can reach the agent may see, and start with draft-only permissions. Trigger runs are visible to the whole ZWRM organization.
+</Warning>
 
 Bodies are parsed as JSON (up to 1 MiB). The agent's prompt is built from the trigger's instruction plus the rendered body (via `--message-template`, or the raw body if no template is set).
 
 ### Idempotency
 
-Send an `Idempotency-Key` header to make retries safe: a key that was already accepted returns `{"status":"duplicate"}` without dispatching a second run.
+Send an `Idempotency-Key` header to make retries safe: a key that was already accepted returns `{"status":"duplicate"}` without dispatching a second run. Front AI-agent deliveries are deduplicated on their signed `event_id` instead.
 
 ### Session continuity
 
