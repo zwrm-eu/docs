@@ -73,12 +73,12 @@ Verification is accept-if-any: an unmatched header never vetoes one that verifie
 
 ### Front
 
-Front's [AI agents](https://dev.frontapp.com/docs/ai-agents) and [application webhooks](https://dev.frontapp.com/docs/application-webhooks) work without extra setup. ZWRM verifies each delivery's signature and answers Front's `X-Front-Challenge` check when you save the webhook URL. If Front reports that validating the URL failed, the trigger has the wrong secret: it needs Front's **signing secret**, not the client secret. AI-agent deliveries are deduplicated on their `event_id`, since Front can deliver an event more than once. Front's older rule webhooks, signed with HMAC-SHA1, aren't supported.
+ZWRM accepts Front's [AI agents](https://dev.frontapp.com/docs/ai-agents) and [application webhooks](https://dev.frontapp.com/docs/application-webhooks) with no Front-specific trigger option; application webhooks need a Front app whose application webhook points at the trigger's hook URL. ZWRM verifies each delivery's signature and answers Front's `X-Front-Challenge` check when you save the webhook URL. If Front reports that validating the URL failed, the trigger has the wrong secret: it needs Front's **signing secret**, not the client secret. AI-agent deliveries are deduplicated on their `event_id`, since Front can deliver an event more than once. Front's older rule webhooks, signed with HMAC-SHA1, aren't supported.
 
 To connect a Front AI agent:
 
 1. In Front, open **Settings → Company → Agents → Create AI agent**. On the **AI Engine** step, copy the **signing secret**, **OAuth URL**, **client ID** and **client secret** — Front shows the client secret only once.
-2. Create the trigger with Front's signing secret. Keying sessions on `conversation_id` keeps each conversation in one workspace; the match condition drops `unassign` events:
+2. Create the trigger with Front's signing secret. Keying sessions on `conversation_id` keeps each conversation in one workspace. The match condition drops `unassign` events, so unassigning the agent never starts a run; it doesn't stop a run already in progress — cancel that with `zwrm agent run cancel <run-id>`:
 
    ```bash
    zwrm triggers create "Front support" \
