@@ -18,7 +18,7 @@ External events → agent runs. See the [Triggers guide](/automations/triggers) 
 | `DELETE` | `/v1/triggers/{trigger_id}` | Delete (with its delivery log; drops the Graph subscription first) |
 | `GET` | `/v1/triggers/{trigger_id}/deliveries` | Delivery log (`?limit=`, max 500) |
 
-A trigger's `provider` is one of `webhook` (default; any system POSTing JSON, with provider-header recognition for GitHub/GitLab/Linear/Shopify/Sentry and more) or `msteams` (a Microsoft Graph chat-message subscription — API/dashboard only, no CLI).
+A trigger's `provider` is one of `webhook` (default; any system POSTing JSON, with provider-header recognition for GitHub/GitLab/Linear/Shopify/Sentry/Front and more) or `msteams` (a Microsoft Graph chat-message subscription — API/dashboard only, no CLI).
 
 Create and `PATCH` bodies share these fields (on `PATCH`, omitted fields are unchanged):
 
