@@ -117,7 +117,7 @@ They're selectable anywhere a zwrm-runtime or OpenCode model is, grouped under *
 
 Only the gateway runtimes — the zwrm runtime and OpenCode — can use them: `claude` and `codex` agents reach their vendors directly rather than through the gateway. `zwrm/auto` never routes to an external model — it picks from the platform catalog only, so pin the model explicitly when you want yours.
 
-New providers reach a running agent VM on its **next boot**; the API and the dashboard see them immediately.
+The API and the dashboard see a new provider immediately. Inside a running agent VM it reaches the **zwrm runtime on the VM's next boot**, and **OpenCode from the agent's next session** — each OpenCode session carries the organization's current external catalog, so no reboot is needed.
 
 ## Billing and policy
 
