@@ -41,6 +41,21 @@ Shows connection details and ready-to-use `psql` commands. The database must be 
 
 When a connection pooler (PgBouncer) is enabled for the database, the connection string routes through it by default. Use `--direct` for admin tasks that need session-level features the pooler doesn't support in transaction mode.
 
+### External connections
+
+The external connection string (`<id>.postgres.zwrm.io:5432`, `sslmode=require`) reaches the database from outside ZWRM. It needs TLS: the server name in the TLS handshake picks the database, so a client connecting with `sslmode=disable` is turned away.
+
+An open external connection is not cut by ZWRM platform updates. It does end when:
+
+- the database restarts, is stopped, or fails over to a replica;
+- it has sent and received nothing for **1 hour**.
+
+Design long-running clients for both:
+
+- Have your connection pool check connections on checkout, or recycle them before they reach an hour of idle time.
+- Reconnect and retry when a connection drops mid-query.
+- Session-level state goes with the connection: advisory locks, temporary tables, `SET` parameters and prepared statements. A job that relies on a session-level advisory lock should treat a lost connection as a lost lock.
+
 ## List databases
 
 ```bash
