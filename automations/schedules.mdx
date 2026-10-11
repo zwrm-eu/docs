@@ -19,13 +19,13 @@ zwrm schedules create "Morning digest" \
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
 | `--agent` | string | — | Agent to run, by ID or name (required) |
-| `--cron` | string | — | Standard 5-field cron in **UTC**, or `@hourly` / `@daily` / `@weekly` / `@monthly` (required) |
+| `--cron` | string | — | Standard 5-field cron in **UTC**, `CRON_TZ=<zone>` in front for a time zone, or `@hourly` / `@daily` / `@weekly` / `@monthly` (required) |
 | `--prompt` | string | — | The prompt for each run (required) |
 | `--session-key` | string | — | Workspace continuity key (blank = fresh workspace per run) |
 | `--metadata` | list | — | Tag the schedule with `key=value` (repeatable) |
 | `--paused` | bool | `false` | Create the schedule disabled |
 
-- Cron is always interpreted in **UTC**; minimum granularity is one minute. Seconds fields and `@every` are not supported.
+- Cron is interpreted in **UTC** unless it starts with a time zone: `CRON_TZ=Europe/Berlin 0 9 * * 1-5` runs at 9:00 Berlin time in summer and in winter. On the night the clocks change, a time in the skipped hour doesn't fire and one in the repeated hour fires twice. Minimum granularity is one minute; seconds fields and `@every` are not supported.
 - With a `--session-key`, every firing continues the same workspace — same conversation, same files. Without one, each firing is a one-shot run.
 - The agent binding is immutable. Everything else can be [changed in place](#change-a-schedule).
 - Up to **20 schedules per agent**; prompts up to 16 KiB.

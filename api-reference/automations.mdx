@@ -45,10 +45,19 @@ Cron → agent runs. See the [Schedules guide](/automations/schedules).
 | `PATCH` | `/v1/schedules/{schedule_id}` | Update (pause/resume, name, cron, prompt, `session_key`, `metadata` — the agent binding is immutable) |
 | `DELETE` | `/v1/schedules/{schedule_id}` | Delete (with its firing log) |
 | `GET` | `/v1/schedules/{schedule_id}/firings` | Firing log (`?limit=`, default 100) |
+| `GET` | `/v1/automation-activity` | How the organization's scheduled and event-started runs went, per hour or day (see below) |
 
 `session_key` (create and update, max 256 characters) is the workspace-continuity key for the runs the schedule fires — same key = same workspace, so state carries across firings, like a run's session key.
 
 `metadata` is an opaque string map (max 20 entries, 64-character keys, 256-character values) accepted on create and update. On update it replaces the whole map: `{}` clears it, and `null` or an absent field leaves it unchanged. A malformed `metadata.` filter returns `400` rather than silently widening the listing.
+
+`cron` is UTC unless it starts with `CRON_TZ=<zone>` (`CRON_TZ=Europe/Berlin 0 9 * * 1-5`), which keeps a schedule at the same local time across daylight saving.
+
+`GET /v1/automation-activity?from=<RFC 3339>&to=<RFC 3339>&tz=<IANA>&bucket=hour|day` counts, per automation, agent and bucket, the runs that were `done`, `failed`, `skipped` or still `running` in `[from, to)`. It is meant for a calendar.
+- **Range:** at most 43 days. `tz` defaults to `UTC` and buckets are counted in it; `bucket` defaults to `day`. A bucket's `at` is its local start (`2026-10-14` or `2026-10-14T09:00`).
+- **`problems`:** the failed and skipped runs themselves, newest first, at most 500 (`problems_truncated` says when more were cut). A run in someone's private chat shows its error only to its owner and admins.
+- **`kept_since`:** firings and deliveries are kept for 14 days. Before `kept_since` an empty bucket means the log was pruned, not that nothing ran.
+- **Left out:** personal messaging triggers, duplicate and ignored deliveries, and failed webhook authentication.
 
 ## Outbound webhooks
 
