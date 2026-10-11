@@ -33,7 +33,7 @@ An unknown scope returns `400`; an org you aren't a member of returns `403`. The
 | `POST` | `/v1/orgs` | Create an organization |
 | `GET` | `/v1/orgs` | List your organizations |
 | `GET` | `/v1/org/settings` | Org settings |
-| `PUT` | `/v1/org/settings` | Update org settings (partial; e.g. `{"require_eu_models": true}` — admin/owner only, see [EU residency](/agents/openai-api#eu-residency)) |
+| `PUT` | `/v1/org/settings` | Update org settings (partial; e.g. `{"require_eu_models": true}` — admin/owner only, see [EU residency](/agents/openai-api#eu-residency)). `builders_may_add_custom_tools` (default `true`; admin/owner only) lets operators add MCP servers outside the catalog, see [Who may add servers](/context/mcp-gateway#who-may-add-servers) |
 
 ## Credits
 

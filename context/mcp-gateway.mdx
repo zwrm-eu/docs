@@ -41,7 +41,16 @@ zwrm mcp upstream rm github [--force]
 
 The auth flags are mutually exclusive — see [Connector identity](/context/credentials) for which to pick and how per-user accounts work.
 
-In the dashboard, the gateway page has a **Quick connect** grid of branded cards that pre-fills the registration form so you only supply credentials. Some presets — including [Microsoft 365](/context/shared-connectors) — are platform-hosted servers you point at with your own OAuth app.
+In the dashboard, the gateway page has a **Quick connect** grid of branded cards that pre-fills the registration form so you only supply credentials. Some presets — including [Microsoft 365](/context/shared-connectors) — are platform-hosted servers you point at with your own OAuth app. The cards come from the connector catalog, `GET /v1/mcp/connectors`.
+
+### Who may add servers
+
+Operators may connect any server, from the catalog or not. An organization admin can limit operators to the catalog with the **custom tools** setting (`builders_may_add_custom_tools`, on by default; `PUT /v1/org/settings`). With it off:
+- adding a server outside the catalog, or pointing an existing one at a new address, takes an admin or owner;
+- an OAuth sign-in may only use an issuer the catalog lists for that server, so members' sign-ins can't be sent to another authorization server;
+- operators get `403` with `error_code: custom_tools_disabled`.
+
+Admins and owners may always add any server.
 
 ### Scope-aware tool exposure
 
@@ -112,6 +121,8 @@ curl -s -X POST \
 - Argument bodies are capped at 1 MiB.
 
 For **Custom GPTs** (`zwrm mcp install <server> --client custom-gpt`): fetch the OpenAPI schema with curl and paste it into the GPT editor's Actions configuration, with Bearer auth. The schema importer can't send headers — the `?token=<key>` URL form exists for import-by-URL, but it embeds your API key in the URL, so prefer curl-and-paste or use a key you can revoke.
+
+Servers that hold one agent's own tools (see [Choose an agent's tools](/context/connectors#choose-an-agents-tools)) are left out of the server list (`?include_agent_owned=true` shows them, each with its `owner_agent_id`) and can't be changed or deleted here; change the agent's tools instead.
 
 ## Agents and the gateway
 
