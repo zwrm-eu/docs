@@ -14,6 +14,9 @@ Agents have full access to the ZWRM platform — the `zwrm` CLI is pre-installed
 # Create the agent — the runtime is stored on it (--runtime is required)
 zwrm agent create my-project --runtime claude
 
+# …or start from a ready-made one (see Presets)
+zwrm agent create --preset finance
+
 # Boot into an interactive workspace session
 zwrm agent connect my-project
 
@@ -51,7 +54,9 @@ The runtime is set once, at creation (`zwrm agent create <name> --runtime <zwrm|
 
 Each harness exposes its own model catalog and reasoning-effort ladder — see [Models](/agents/models). claude and codex run on credentials you bring; the zwrm runtime and OpenCode are metered against prepaid credits with no key to manage for catalog models (their [external-provider](/agents/external-providers) models run on your credential and are billed by your vendor).
 
-Agent names are **unique per organization, across runtimes**: `default` can name a claude agent *or* a codex agent in an org, not both. `zwrm agent connect` resolves the stored agent by name or ID — you never repeat the runtime. Connecting to a name that doesn't exist offers to create it (asking for the runtime) in an interactive terminal; non-interactive use never creates implicitly.
+An agent's **handle** (`my-project`) is its permanent reference in the CLI, links and its mailbox. Its **display name** (`--name`, up to 40 characters, e.g. `Hedi`) and **avatar** (`--avatar`, one of the birds `zwrm`, `woodpecker`, `eagle`, `owl`, `toucan`, `cardinal`, `hummingbird`, `duck`, `parrot`, `heron`) are what people see, and can change any time; without a name, the handle shows. Names refuse line breaks and invisible characters.
+
+Agent handles are **unique per organization, across runtimes**: `default` can name a claude agent *or* a codex agent in an org, not both. `zwrm agent connect` resolves the stored agent by name or ID — you never repeat the runtime. Connecting to a name that doesn't exist offers to create it (asking for the runtime) in an interactive terminal; non-interactive use never creates implicitly.
 
 ## Configuring an agent
 
@@ -63,6 +68,8 @@ zwrm agent update my-project --model opus --effort high --size performance-2x
 
 | Flag | Description |
 |------|-------------|
+| `--name` | Display name (up to 40 characters; `""` clears it and the handle shows) |
+| `--avatar` | Bird avatar (`""` lets the client pick) |
 | `--size` | Default VM size preset (e.g. `performance-2x`) |
 | `--model` | Default model — harness-specific (`opus`/`sonnet`/`fable` for claude, catalog aliases for codex, the zwrm runtime and OpenCode). See [Models](/agents/models) |
 | `--effort` | Default reasoning effort: `low`, `medium`, `high`, `xhigh`, `max` |

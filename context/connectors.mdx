@@ -6,6 +6,32 @@ icon: "plug"
 
 Connectors give an agent tools from the [MCP gateway](/context/mcp-gateway). Attaching a virtual server to an agent makes its tools available in every session as `mcp__<server>__<tool>` — while the upstream credentials stay at the gateway.
 
+## Choose an agent's tools
+
+The short way: say which tools of each connected integration the agent may use, and which of them ask first.
+
+```bash
+zwrm agent tools set finance ms365 --all --ask-first send-mail,reply-mail-message
+zwrm agent tools set finance hubspot --tools search-objects,get-object
+zwrm agent tools list finance
+zwrm agent tools remove finance hubspot
+```
+
+| Flag (`set`) | Description |
+|------|-------------|
+| `--all` | Every tool the integration has, including tools it gains later (as long as none asks first) |
+| `--tools` | The tools named |
+| `--ask-first` | Tools that wait for a person's approval on unattended runs. A tool named only here is allowed too |
+
+ZWRM keeps the virtual servers this takes on the agent's behalf: `<agent>-<integration>`, and `<agent>-<integration>-ask` for the tools that ask first. They belong to the agent:
+- the server and connector commands refuse to change them;
+- the gateway's server list leaves them out;
+- they go when the agent is deleted.
+
+`list` also shows servers you attached by hand that give the agent tools as well. With `--all` and some tools asking first, the agent gets the integration's other tools as they are now; a tool the integration adds later stays off until you pick it.
+
+An agent may add tools to its own ask-first list but never take one off, and may not let a tool another ask-first connector covers run unattended. Setting tools also needs the `mcp:write` [capability](/agents/capabilities), because it composes servers.
+
 ## Manage connectors
 
 ```bash
@@ -24,7 +50,7 @@ zwrm agent connectors copy new-agent --from my-project
 | `attach` | Attach a virtual server. `--disabled` attaches without enabling; `--escalate` requires human approval for the connector's tools during autonomous runs |
 | `detach` | Remove the attachment |
 | `verify` | Live-test the connector (initialize → tools/list against its upstream) |
-| `copy --from <agent>` | Copy another agent's connectors with their enabled/escalate flags |
+| `copy --from <agent>` | Copy another agent's connectors with their enabled/escalate flags, and its own tools as the target's own |
 
 Disabling a virtual server at the gateway (`server-disabled`) is the org-wide kill switch — it overrides every agent's attachment.
 

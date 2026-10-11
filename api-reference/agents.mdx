@@ -27,13 +27,16 @@ An agent is [pure configuration](/agents/overview); these endpoints manage the d
 | `GET` | `/v1/agents/{agent_id}/egress-policy` | The agent's [network policy](/agents/network-policy): its own, the organization's, the combination in effect, and the names that always stay reachable |
 | `PUT` | `/v1/agents/{agent_id}/egress-policy` | Replace the agent's own network policy (`{"policy": {...}}`, or `null` to clear). Admins and owners only |
 | `GET` | `/v1/agents/{agent_id}/logs` | Connect/disconnect activity log |
+| `GET` | `/v1/agent-activity?hours=1..168` | Sessions per agent per UTC hour over the last `hours` (default 24), for an activity chart. Private chats count only for their owner and org admins |
 
 `POST /v1/agents` and `POST /v1/agents/connect` take the same body shape; every field is optional (an empty body creates a default `claude` agent):
 
 | Field | Description |
 |-------|-------------|
 | `agent_type` | `claude` (default), `codex`, `pi`, or `opencode` (beta; enabled per organization) |
-| `instance` | Agent name, unique per org (default `default`) |
+| `instance` | Agent handle, unique per org (default `default`) |
+| `name` | Display name, up to 40 characters; no line breaks or invisible characters. Empty shows the handle |
+| `avatar` | Bird: `zwrm`, `woodpecker`, `eagle`, `owl`, `toucan`, `cardinal`, `hummingbird`, `duck`, `parrot`, `heron`; empty lets the client pick |
 | `size` | VM size preset (default `performance-2x`, or `shared-cpu-4x` when the organization's plan allows `shared-cpu-*` sizes only, as every trial does; an explicit `performance-*` size on such a plan is a `402`) |
 | `template` | Stored template name/ID or public GitHub repository for the agent image. Runs and sessions inherit it from the agent |
 | `instructions` | Per-agent system-prompt append. On connect, an absent field leaves the stored value untouched |
@@ -42,7 +45,18 @@ An agent is [pure configuration](/agents/overview); these endpoints manage the d
 | `boot_token_disabled` | Not on connect — `true` creates the agent with no management capabilities: every management call from its VMs is refused and its skill and memory write tools are off, while model access and connectors keep working. Distinct from empty `allowed_scopes`, which means the platform default set |
 | `cmd` | Connect only — override the login command for this boot (e.g. `aider`) |
 
-`PATCH /v1/agents/{agent_id}` also accepts `allowed_scopes`: omitted leaves the set unchanged, an empty array (`[]`) resets it to the platform default, and each value must be a configurable scope. It likewise accepts `boot_token_disabled`: `true` turns the agent's management capabilities off (the stored scope set is preserved), `false` restores them. Both apply to the agent's next request, running sessions included, and both fields surface on the agent response.
+`PATCH /v1/agents/{agent_id}` accepts `name` and `avatar` (`""` clears either). A Cowork rename, written to the client metadata as `cowork.title` and `cowork.icon`, carries into them unless the same request sets them. It also accepts `allowed_scopes`: omitted leaves the set unchanged, an empty array (`[]`) resets it to the platform default, and each value must be a configurable scope. It likewise accepts `boot_token_disabled`: `true` turns the agent's management capabilities off (the stored scope set is preserved), `false` restores them. Both apply to the agent's next request, running sessions included, and both fields surface on the agent response.
+
+## Presets
+
+Ready-made agents. See the [Presets guide](/agents/presets).
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/v1/agent-presets` | The presets (`?locale=en\|de`), each integration marked `connected` for the organization |
+| `POST` | `/v1/agent-presets/{preset}/agents` | Create an agent from a preset, with its tools and routines, in one step (operator role). `409` if the handle is taken |
+
+The create body is optional: `instance` (handle; default the preset's id), `name`, `instructions`, `locale`, `runtime` (`agent_type`, `model`, `effort`), `limits` (`daily_budget_usd`, `max_runs_per_day`), `routines` (ids; absent = the preset's defaults, `[]` = none) and `timezone` (IANA, for the routines' times). The response is the agent, the tools it got (`connectors`), what was skipped and why (`skipped_integrations`), and the `schedules` created.
 
 ## Template gallery
 
@@ -139,6 +153,18 @@ The answer is `202`:
 - The checks that apply to starting a session apply first: the organization's harness access, the agent's budget, credits, and quotas. A plan refusal is `402` with an `error_code` (see [Plan and billing limits](/api-reference/overview#plan-and-billing-limits)), and a workspace the call itself created is removed again.
 - Calls that find a running VM are cheap. A call that has to boot a VM is rate-limited like a session create.
 - Each boot a warm starts is audited as `agent_workspace.warmed`.
+
+## Tools
+
+An agent's tools per integration, and which ask first. See [Choose an agent's tools](/context/connectors#choose-an-agents-tools).
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/v1/agents/{agent_id}/tools` | Per integration: `tools` (`"all"` or the names), `ask_first`, and the agent's own `servers` holding them; plus `elsewhere`, servers attached by hand that also give the agent tools |
+| `PUT` | `/v1/agents/{agent_id}/tools/{integration}` | Set `{"tools": "all" \| [names], "ask_first": [names]}`; both empty takes the integration away |
+| `DELETE` | `/v1/agents/{agent_id}/tools/{integration}` | Take the integration's tools away |
+
+Agent tokens need `connectors:read` to read and `connectors:write` to change; giving tools also needs `mcp:write`. An agent may add tools to its own `ask_first` but never take one off (`403`).
 
 ## Connectors
 
