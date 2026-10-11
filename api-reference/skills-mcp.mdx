@@ -31,12 +31,16 @@ Org-level upstreams and virtual servers. See the [MCP Gateway guide](/context/mc
 | `POST` | `/v1/org/mcp/upstreams/{name}/sync` | Re-sync the tool catalog |
 | `GET` | `/v1/org/mcp/upstreams/{name}/tools` | Synced tool catalog. On connector-known upstreams (vendored coverage data — currently Microsoft 365 only), each tool carries `required_scopes` (alternative groups) and `covered` (whether the configured OAuth scope satisfies one; omitted when coverage isn't computable). Both fields are absent for all other upstreams |
 | `GET` | `/v1/org/mcp/discover-scopes?url=<url>` | Probe a server's advertised OAuth scopes before registering it |
+| `GET` | `/v1/mcp/connectors` | The connector catalog: the servers the dashboard's Quick connect offers, with their auth and setup hints |
+| `GET` | `/v1/org/mcp/agent-connectors` | Every agent's attached servers in the organization, in one call |
 | `POST` | `/v1/org/mcp/servers` | Create a virtual server |
-| `GET` | `/v1/org/mcp/servers` | List virtual servers |
+| `GET` | `/v1/org/mcp/servers` | List virtual servers. Servers holding an agent's own tools are left out unless `?include_agent_owned=true`; those carry `owner_agent_id` and are refused by update and delete (`409`) |
 | `GET` | `/v1/org/mcp/servers/{name}` | Get a virtual server and its exposed tools |
 | `PUT` | `/v1/org/mcp/servers/{name}` | Update composition |
 | `DELETE` | `/v1/org/mcp/servers/{name}` | Delete |
 | `GET` | `/v1/org/mcp/servers/{name}/config` | Client install snippet (`?client=`) |
+
+When an organization admin has turned custom tools off (`builders_may_add_custom_tools: false` in [org settings](/api-reference/platform#organizations)), an operator may only register servers from the catalog, pointed at the catalog's address and OAuth issuer, and gets `403` with `error_code: custom_tools_disabled` otherwise.
 
 A virtual server's composition (`upstreams` on create/update) is a list of selections: `{"upstream": "<name>", "tools": [...], "exposed_names": {...}}`. Empty `tools` (or `["*"]`) selects all of the upstream's tools; the optional `exposed_names` map renames selected tools (upstream tool → exposed name — an explicit name always wins over pass-through and collision prefixing).
 

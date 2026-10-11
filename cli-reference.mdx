@@ -594,14 +594,29 @@ Manage agents. [Guide →](/agents/overview)
 Create a named agent definition without booting its workspace VM. The runtime is stored on the agent and reused by connect, runs, and chat.
 
 ```bash
-zwrm agent create <name> --runtime <zwrm|claude|codex|opencode> [--size <preset>] [--template <t>]
+zwrm agent create <handle> --runtime <zwrm|claude|codex|opencode> [--name <display name>] [--avatar <bird>] [--size <preset>] [--template <t>]
+zwrm agent create [<handle>] --preset <id> [--locale en|de] [--routines <ids>] [--timezone <zone>] [--name <n>] [--runtime <r>]
 ```
 
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
-| `--runtime` | string | — (required) | Agent runtime: `zwrm`, `claude`, `codex`, or `opencode` (beta, enabled per organization; accepted but not yet listed in `--help`) |
+| `--runtime` | string | — (required without `--preset`) | Agent runtime: `zwrm`, `claude`, `codex`, or `opencode` (beta, enabled per organization; accepted but not yet listed in `--help`) |
+| `--name` | string | the handle, or the preset's name | Display name people see, up to 40 characters |
+| `--avatar` | string | — | Bird avatar: `zwrm`, `woodpecker`, `eagle`, `owl`, `toucan`, `cardinal`, `hummingbird`, `duck`, `parrot`, `heron` |
 | `--size` | string | `performance-2x` | VM size preset |
 | `--template` | string | — | Stored template name/ID or public GitHub repository |
+| `--preset` | string | — | Start from a [preset](/agents/presets) (`zwrm agent presets` lists them) |
+| `--locale` | string | `en` | With `--preset`: language of the instructions and routines |
+| `--routines` | list | the preset's defaults | With `--preset`: routine ids to schedule (`""` for none) |
+| `--timezone` | string | `Europe/Berlin` | With `--preset`: time zone of the routines' times |
+
+### `zwrm agent presets`
+
+List the [presets](/agents/presets). Tools marked `*` aren't connected in the organization yet.
+
+```bash
+zwrm agent presets [--locale en|de]
+```
 
 ### `zwrm agent connect`
 
@@ -654,7 +669,7 @@ zwrm agent delete [instance] [-f]    # delete VM, volume, and record
 Update agent configuration (only passed flags change).
 
 ```bash
-zwrm agent update <instance> [--size <preset>] [--model <m>] [--effort <e>] [--instructions <text>] [--workspace-ttl <dur>] [--daily-budget <usd>] [--max-runs-per-day <n>] [--allowed-scopes <list>] [--disable-boot-token[=false]]
+zwrm agent update <instance> [--name <n>] [--avatar <bird>] [--size <preset>] [--model <m>] [--effort <e>] [--instructions <text>] [--workspace-ttl <dur>] [--daily-budget <usd>] [--max-runs-per-day <n>] [--allowed-scopes <list>] [--disable-boot-token[=false]]
 ```
 
 `--model` is harness-specific (`opus`/`sonnet`/`fable` for claude, catalog aliases for codex, the zwrm runtime and OpenCode — see [Models](/agents/models)). `--allowed-scopes` takes a comma-separated `resource:action` list; an empty value resets to the platform default. `--disable-boot-token` turns the agent's management capabilities off, so every management call from its VM, the `zwrm` CLI included, is refused (`--disable-boot-token=false` restores them) — distinct from an empty `--allowed-scopes`, which means the default set. Both apply to the agent's next request. [Guide →](/agents/capabilities)
@@ -723,6 +738,16 @@ zwrm agent connectors attach <agent> <server> [--disabled] [--escalate]
 zwrm agent connectors detach <agent> <server>
 zwrm agent connectors verify <agent> <server>
 zwrm agent connectors copy <agent> --from <source-agent>
+```
+
+### `zwrm agent tools`
+
+Choose an agent's tools per integration, and which ask first; ZWRM keeps the virtual servers this takes. [Guide →](/context/connectors#choose-an-agents-tools)
+
+```bash
+zwrm agent tools list <agent>
+zwrm agent tools set <agent> <integration> (--all | --tools <names>) [--ask-first <names>]
+zwrm agent tools remove <agent> <integration>
 ```
 
 ### `zwrm agent skills`
@@ -845,7 +870,7 @@ zwrm schedules pause|resume <schedule-id>
 zwrm schedules delete <schedule-id>
 ```
 
-`update` changes only the flags you pass; the schedule keeps its ID and firing log, and every field you don't pass. `--session-key ""` switches to a fresh workspace per run; `--metadata` replaces all tags and `--clear-metadata` removes them.
+`--cron` is UTC unless it starts with `CRON_TZ=<zone>` (`CRON_TZ=Europe/Berlin 0 9 * * 1-5`). `update` changes only the flags you pass; the schedule keeps its ID and firing log, and every field you don't pass. `--session-key ""` switches to a fresh workspace per run; `--metadata` replaces all tags and `--clear-metadata` removes them.
 
 ---
 
