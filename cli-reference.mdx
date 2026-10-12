@@ -477,12 +477,15 @@ zwrm org list
 
 ### `zwrm org secrets`
 
-Organization-wide secrets, inherited by every app and agent. [Guide →](/secrets)
+Organization-wide secrets for every agent, or chosen agents only. [Guide →](/secrets)
 
 ```bash
 zwrm org secrets set <NAME>=<VALUE>
 printf '%s' "$VALUE" | zwrm org secrets set <NAME> --stdin   # preferred: keeps the value out of argv/history
-zwrm org secrets list
+zwrm org secrets set <NAME> --stdin --agents <agent>,<agent>  # only these agents
+zwrm org secrets agents <NAME> <agent>...                     # choose the agents
+zwrm org secrets agents <NAME> --all                          # every agent again
+zwrm org secrets list                                         # with which agents get each
 zwrm org secrets unset <NAME>
 zwrm org secrets add --from-file <path>
 ```
