@@ -56,7 +56,33 @@ Each harness exposes its own model catalog and reasoning-effort ladder — see [
 
 An agent's **handle** (`my-project`) is its permanent reference in the CLI, links and its mailbox. Its **display name** (`--name`, up to 40 characters, e.g. `Hedi`) and **avatar** (`--avatar`, one of the birds `zwrm`, `woodpecker`, `eagle`, `owl`, `toucan`, `cardinal`, `hummingbird`, `duck`, `parrot`, `heron`) are what people see, and can change any time; without a name, the handle shows. Names refuse line breaks and invisible characters.
 
-Agent handles are **unique per organization, across runtimes**: `default` can name a claude agent *or* a codex agent in an org, not both. `zwrm agent connect` resolves the stored agent by name or ID — you never repeat the runtime. Connecting to a name that doesn't exist offers to create it (asking for the runtime) in an interactive terminal; non-interactive use never creates implicitly.
+Agent handles are **unique among your own agents and among shared ones, across runtimes**: you can't have a claude agent *and* a codex agent both called `default`, and no two shared agents carry the same handle. Another member's private agent never blocks a handle. When a handle names both your own agent and a shared one, it means your own. `zwrm agent connect` resolves the stored agent by name or ID — you never repeat the runtime. Connecting to a name that doesn't exist offers to create it (asking for the runtime) in an interactive terminal; non-interactive use never creates implicitly.
+
+## Private and shared agents
+
+Any member of an organization can create agents. A new agent is **private** to the member who created it, its owner:
+
+- Other members don't see it at all: it isn't in their lists, and its address is a `404` for them.
+- Every chat and run with it is the owner's, and so are its routines and event triggers.
+- Org admins see it and can delete it, but they can't use it or change it.
+
+The owner can **share** it with the organization, and take it back:
+
+```bash
+zwrm agent share my-project
+zwrm agent unshare my-project
+```
+
+| | Private agent | Shared agent |
+|---|---|---|
+| Its owner | Uses it, changes it, shares it, deletes it | The same |
+| Other members | Don't see it | Chat with it and run it; their chats stay private to them |
+| Operators | Don't see it | Also change it: instructions, settings, secrets, connectors, skills, its own memories |
+| Org admins | See it and delete it | Also take it back private and delete it |
+
+A shared agent's handle must be free among shared agents: sharing onto a handle another shared agent already has is refused. Taking an agent back leaves its chats as they are: other members' chats stay theirs, but are out of reach until it is shared again, and their routines and triggers on it stop firing. An agent that the GitHub or Notion app hands its events to serves the whole organization, so it must be shared; connect the app to another agent before making it private.
+
+The agent works with its owner's role, so a member's agent can't do what only an operator may. Credit and VM limits are the organization's, whoever owns the agent, and each agent keeps its own daily limits.
 
 ## Configuring an agent
 

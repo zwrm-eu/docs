@@ -25,6 +25,8 @@ zwrm credits usage        # per-agent zwrm-runtime / OpenCode consumption (today
 
 `history` pages newest-first — `--limit` (max 200) and `--before <ledger-id>` walk older entries.
 
+Usage lists the agents you can see. Other members' [private agents](/agents/overview#private-and-shared-agents) show as one sum (`private_credit_cents_*` in `GET /v1/credits/usage`), so the rows still add up to the balance.
+
 ### Buying credits
 
 Credits are bought in the **dashboard → Settings → Credits**. You pick a one-time EUR credit pack; checkout runs through Stripe, and the purchased cents land in your ledger as a `purchase` entry once payment settles. Stripe issues the receipt/invoice. Available pack amounts (and the minimum) are set per deployment.
