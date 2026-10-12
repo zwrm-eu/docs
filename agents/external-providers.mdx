@@ -141,6 +141,15 @@ X-ZWRM-Session-Id: 7b21…
 
 The OpenAI `user` field is filled only when you didn't send one — your own value always wins. It degrades to `zwrm:agent:<id>` when no session is known, and is absent entirely for a plain API-key call, which has no session behind it.
 
+## Your own providers
+
+Each member can register providers of their own, for their own private chats and runs: under **Account → Your model providers** in the dashboard, with `zwrm org llm-provider --mine`, or at `/v1/me/llm-providers`, which takes the same calls as `/v1/org/llm-providers`.
+
+- **Where they reach.** Their `ext/<provider>/<model-id>` models are offered only in your own private chats and runs, on any agent you can use. A shared chat refuses one: others would be running on your account.
+- **Names.** A provider of yours named like one of the organization's takes its place in your chats.
+- **The org can turn them off.** An org admin who turns members' [own keys](/agents/secrets#your-own-keys) off turns members' own providers off too. They stay saved, but no chat gets their models.
+- **Billing.** Your provider bills you directly, as an organization provider bills the organization.
+
 ## Availability and removal
 
 Disabling or deleting a provider makes runs and sessions pinned to its models **fail with a clear error**. They deliberately don't fall back to a platform model — a silent fallback would move the work onto billed credits without telling you. Update each agent's model first, then remove the provider.
