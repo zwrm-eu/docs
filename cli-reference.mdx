@@ -490,6 +490,17 @@ zwrm org secrets unset <NAME>
 zwrm org secrets add --from-file <path>
 ```
 
+### `zwrm keys`
+
+Your own keys and subscriptions, for your own private chats and runs. [Guide →](/agents/secrets#your-own-keys)
+
+```bash
+printf '%s' "$VALUE" | zwrm keys set <NAME> --stdin
+zwrm keys set <NAME>=<VALUE>
+zwrm keys list
+zwrm keys unset <NAME>
+```
+
 ### `zwrm org egress`
 
 The network policy every agent in the organization runs under: a block list or an allow list of sites and IP addresses. Admins and owners only. [Guide →](/agents/network-policy)
