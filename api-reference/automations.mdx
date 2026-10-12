@@ -57,7 +57,7 @@ Cron → agent runs. See the [Schedules guide](/automations/schedules).
 - **Range:** at most 43 days. `tz` defaults to `UTC` and buckets are counted in it; `bucket` defaults to `day`. A bucket's `at` is its local start (`2026-10-14` or `2026-10-14T09:00`).
 - **`problems`:** the failed and skipped runs themselves, newest first, at most 500 (`problems_truncated` says when more were cut). A run in someone's private chat shows its error only to its owner and admins.
 - **`kept_since`:** firings and deliveries are kept for 14 days. Before `kept_since` an empty bucket means the log was pruned, not that nothing ran.
-- **Left out:** personal messaging triggers, duplicate and ignored deliveries, and failed webhook authentication.
+- **Left out:** duplicate and ignored deliveries, and failed webhook authentication.
 
 ## Outbound webhooks
 
