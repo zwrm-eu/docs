@@ -184,10 +184,15 @@ Durable per-agent entries. See the [Memory guide](/context/memory).
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/v1/agents/{agent_id}/memories` | List entries (metadata only; includes the entry `limit`) |
+| `GET` | `/v1/agents/{agent_id}/memories` | List the agent's entries and the caller's own (org admins: every member's too). Metadata only, with `scope` (`agent`, `own`, `member`), `owner_user_id`, `visibility`, and the per-set `limit` |
 | `GET` | `/v1/agents/{agent_id}/memories/{slug}` | Get one entry with its body |
 | `PUT` | `/v1/agents/{agent_id}/memories/{slug}` | Create or replace an entry |
 | `DELETE` | `/v1/agents/{agent_id}/memories/{slug}` | Delete an entry |
+| `PATCH` | `/v1/agents/{agent_id}/memories/{slug}` | Share an entry with the organization or take it back: `{"visibility": "org"}` or `"private"`. People only |
+| `POST` | `/v1/agents/{agent_id}/memories/import` | Copy a memory you can see into the agent's set or your own: `{"memory_id": "...", "to": "agent" \| "own"}`. People only; `409` when the slug is taken |
+| `GET` | `/v1/org/shared-memories?q=` | The memories members shared with the organization, on any agent |
+
+The entry routes take `?owner=` to pick the set: omit it for the agent's memories (writes need the operator role), `me` for your own, or a user id for that member's (org admins may read and delete, never change).
 
 `PUT` body: `description` (required), `body` (required), `kind` (`user`, `project`, `reference`, `feedback`), plus two optional guards:
 
