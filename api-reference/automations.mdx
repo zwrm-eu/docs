@@ -28,7 +28,7 @@ Create and `PATCH` bodies share these fields (on `PATCH`, omitted fields are unc
 | `default_agent` | Catch-all agent (ID or instance name) when no route matches; omit to drop unrouted events. `PATCH` takes a JSON `null` to clear it |
 | `instruction` | Standing text that opens every fired run's prompt |
 | `message_template` | Renders the event into the prompt via `{dot.path}` tokens (an unresolved token renders empty); without it, the raw body is appended |
-| `session_key_path` | Dot-path into the payload whose value becomes the fired run's workspace key; empty = a fresh one-shot workspace per delivery |
+| `session_key_path` | Dot-path into the payload whose value becomes the fired run's workspace key, kept at most 6h after its last delivery; empty = a fresh one-shot workspace per delivery, deleted once its run finishes |
 | `match_conditions` / `routes` | Payload match gate and per-route agent dispatch (shared condition grammar — see the [guide](/automations/triggers)). On `PATCH` each replaces the whole list; `[]` removes it, and `null` leaves it unchanged |
 | `rate_per_day` | Daily firing cap; over-cap deliveries are dropped and logged |
 | `with_secret` / `secret` | Create only: `with_secret` (default `true`) generates the shared secret, returned once; `secret` imports a provider-minted one instead (never echoed; conflicts with `with_secret: false`) |

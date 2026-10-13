@@ -109,7 +109,9 @@ Deliveries can share a workspace (conversation + files) with either:
 - `--session-key-path data.customer.id` — extract the key from the payload, or
 - an `X-Session-Key` header on the request (wins over the path).
 
-Blank = every delivery is a one-shot run on a fresh workspace.
+Blank = every delivery is a one-shot run on a fresh workspace, deleted about a minute after the run finishes. Its files go with it, so deliver results through the run itself: a reply, a connector, or a callback URL from the payload.
+
+A trigger's keyed workspace is kept for at most **6 hours** after its last delivery, whatever the agent's workspace TTL. After that its volume is reclaimed and the conversation is archived: the next delivery with the same key resumes the conversation on a fresh volume, without the earlier files. A key that already belongs to a chat keeps that chat's TTL.
 
 ## Matching and routing
 
