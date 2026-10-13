@@ -34,7 +34,7 @@ An agent is [pure configuration](/agents/overview); these endpoints manage the d
 | Field | Description |
 |-------|-------------|
 | `agent_type` | `claude` (default), `codex`, `pi`, or `opencode` (beta; enabled per organization) |
-| `instance` | Agent handle, unique per org (default `default`) |
+| `instance` | Agent handle, unique among the caller's own agents and among shared ones (default `default`) |
 | `name` | Display name, up to 40 characters; no line breaks or invisible characters. Empty shows the handle |
 | `avatar` | Bird: `zwrm`, `woodpecker`, `eagle`, `owl`, `toucan`, `cardinal`, `hummingbird`, `duck`, `parrot`, `heron`; empty lets the client pick |
 | `size` | VM size preset (default `performance-2x`, or `shared-cpu-4x` when the organization's plan allows `shared-cpu-*` sizes only, as every trial does; an explicit `performance-*` size on such a plan is a `402`) |
@@ -45,6 +45,16 @@ An agent is [pure configuration](/agents/overview); these endpoints manage the d
 | `boot_token_disabled` | Not on connect — `true` creates the agent with no management capabilities: every management call from its VMs is refused and its skill and memory write tools are off, while model access and connectors keep working. Distinct from empty `allowed_scopes`, which means the platform default set |
 | `cmd` | Connect only — override the login command for this boot (e.g. `aider`) |
 
+Any member creates agents with either call, and a new agent is **private** to its creator ([Private and shared agents](/agents/overview#private-and-shared-agents)). Connect finds the caller's own agent of that name, else the shared one, and creates a private agent when there is neither. A name the caller already uses is a `409`. Agent responses carry `owner_user_id` and `visibility` (`private` or `org`). Every `/v1/agents/{agent_id}` route, and every list, finds only the agents the caller can see: another member's private agent is a `404`, and so are its runs, chats, schedules and triggers. An org admin sees private agents but gets a `403` for using or changing one.
+
+`PATCH /v1/agents/{agent_id}` with `{"visibility": "org"}` shares an agent, and `{"visibility": "private"}` takes it back. Its owner does either; an org admin can only take a shared agent back. Agent credentials can't. It is refused with a `409`:
+
+- when sharing onto a handle another shared agent has;
+- for the platform assistant, which is always shared;
+- when taking back an agent that the GitHub or Notion app hands its events to.
+
+Changing a shared agent needs its owner or the operator role; changing a private one, its owner. Deleting needs its owner or an org admin.
+
 `PATCH /v1/agents/{agent_id}` accepts `name` and `avatar` (`""` clears either). A Cowork rename, written to the client metadata as `cowork.title` and `cowork.icon`, carries into them unless the same request sets them. It also accepts `allowed_scopes`: omitted leaves the set unchanged, an empty array (`[]`) resets it to the platform default, and each value must be a configurable scope. It likewise accepts `boot_token_disabled`: `true` turns the agent's management capabilities off (the stored scope set is preserved), `false` restores them. Both apply to the agent's next request, running sessions included, and both fields surface on the agent response.
 
 ## Presets
@@ -54,7 +64,7 @@ Ready-made agents. See the [Presets guide](/agents/presets).
 | Method | Path | Description |
 |--------|------|-------------|
 | `GET` | `/v1/agent-presets` | The presets (`?locale=en\|de`), each integration marked `connected` for the organization |
-| `POST` | `/v1/agent-presets/{preset}/agents` | Create an agent from a preset, with its tools and routines, in one step (operator role). `409` if the handle is taken |
+| `POST` | `/v1/agent-presets/{preset}/agents` | Create an agent from a preset, with its tools and routines, in one step (operator role, since it also creates routines). The agent is private to its creator. `409` if the handle is taken |
 
 The create body is optional: `instance` (handle; default the preset's id), `name`, `instructions`, `locale`, `runtime` (`agent_type`, `model`, `effort`), `limits` (`daily_budget_usd`, `max_runs_per_day`), `routines` (ids; absent = the preset's defaults, `[]` = none) and `timezone` (IANA, for the routines' times). The response is the agent, the tools it got (`connectors`), what was skipped and why (`skipped_integrations`), and the `schedules` created.
 
