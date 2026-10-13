@@ -64,7 +64,7 @@ On `claude`, a session can move from `idle` to `working` without a message. When
 | `cwd` | string | Working directory for the session |
 | `append_system_prompt` | string | Extra system-prompt text for this session |
 | `resume_session_id` | string | A prior session of this agent to resume explicitly. It must belong to the workspace the `session_key` resolves to — transcripts live on the workspace volume and cannot be resumed elsewhere (`400`). |
-| `visibility` | string | `private` (the workspace's owner and org admins) or `org` (every member). Empty keeps the existing workspace's visibility, or uses the organization's default (`private` unless the organization set `org`); scoped API keys always get `org`. Asking a private workspace for `org`, or a shared one for `private`, is a `409`: choose a new `session_key` |
+| `visibility` | string | `private` (the workspace's owner and org admins) or `org` (every member). Empty keeps the existing workspace's visibility, or uses the organization's default (`private` unless the organization set `org`); scoped API keys always get `org`. Asking a private workspace for `org`, or a shared one for `private`, is a `409`: share the chat first (below) or choose a new `session_key` |
 | `fresh` | boolean | Start a **new conversation on the same workspace**: same files, empty transcript. The workspace's automatic resume is skipped and its resume handle cleared, so later keyed sessions continue this conversation; the prior session stays in history and resumable by `resume_session_id`. Cannot be combined with `resume_session_id` (`400`). This is the safe form of `/clear` and `/new`. |
 
 - Sessions on **different** keys run in parallel, each in its own workspace. One live session per workspace: starting a session on a key whose workspace already has one returns `409` — `fresh` does not end it for you; end the session first.
@@ -72,6 +72,23 @@ On `claude`, a session can move from `idle` to `working` without a message. When
 - A keyed workspace resumes its own last conversation automatically (when it was recorded by the same harness); `resume_session_id` is only needed to pick an older session.
 - The response includes the resolved `workspace_id`.
 - To take the boot off the first message, [warm the workspace](/api-reference/agents#warm-a-workspace) with the same `session_key` and `visibility` when the user opens the conversation; the session create then finds the VM running.
+
+### Sharing a chat
+
+A chat is private to the member who started it until they share it:
+
+```http
+PATCH /v1/agents/{agent_id}/workspaces/{workspace_ref}
+{"visibility": "org"}
+```
+
+- **Who:** the chat's owner shares it and takes it back (`"private"`). An org admin can take any chat back, but never shares a member's private chat. Agents never change a chat's visibility. The owner stays the owner either way.
+- **What follows:** the chat's sessions take the new visibility. Taken back, every session in it belongs to the owner again.
+- **A fresh session:** end the chat's current session first (`409` otherwise). Sharing starts the next session fresh rather than resuming the old transcript, which carried the owner's own [memories](/context/memory) and [skills](/context/skills). A shared chat loads only the agent's.
+- **Who is speaking:** in a shared chat every message, answer and approval records who sent it, and the agent is told who is talking. One sent with an [integration token](/auth#integration-tokens), which an app uses for many people, names nobody.
+- **Fixed workspaces:** the `default` workspace, assistant chats (`assistant-…`), `private-…` workspaces and anonymous run workspaces keep their visibility (`409`).
+
+From the CLI: `zwrm agent chat share <agent> <chat>` and `zwrm agent chat unshare <agent> <chat>`.
 
 ### Messages, permissions, mode, model
 
