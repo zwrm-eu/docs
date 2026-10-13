@@ -59,8 +59,8 @@ Disabling a virtual server at the gateway (`server-disabled`) is the org-wide ki
 Attaching a connector to an agent takes the right to change the agent, and:
 
 - **Your own connectors**, any time; a private one only to a private agent, since every member uses a shared agent's connectors.
-- **A shared connector where each member signs in with their own account** (per-user OAuth with the default *user* identity policy): any member.
-- **A shared connector that acts as one account** (a stored key, or an account connected for the agent): operators and above. A plain member gets `403` with `error_code: shared_login_needs_operator`.
+- **A shared connector that needs no login, or where each member signs in with their own account** (per-user OAuth with the default *user* identity policy): any member.
+- **A connector that acts as one account** (a stored key, or an account connected for the agent): operators and above, unless the connection is your own. This is decided per connection, so a virtual server of your own over the organization's stored key still takes an operator. A plain member gets `403` with `error_code: shared_login_needs_operator`, naming the connection.
 
 The agent's connectors (`GET /v1/agents/{id}/connectors`, and the agent page) say whose account each connection acts as: each member's own, or one shared login and its account.
 
@@ -69,7 +69,7 @@ The agent's connectors (`GET /v1/agents/{id}/connectors`, and the agent page) sa
 Sharing an agent hands its connectors to every member. So:
 
 - an agent with a **private** connector on it can't be shared: share the connector first, or take it off;
-- an agent whose connectors act as **one account** asks you to confirm: the share is a `409` with `error_code: agent_shared_logins` naming them, until you share again with `confirm_shared_logins: true` (`zwrm agent share <agent> --yes`, or **Share anyway** in the dashboard).
+- an agent whose connectors act as **one account** asks you to confirm (an account connected for the agent counts on any OAuth connection: it's what shared chats and runs act as): the share is a `409` with `error_code: agent_shared_logins` naming them, until you share again with `confirm_shared_logins: true` (`zwrm agent share <agent> --yes`, or **Share anyway** in the dashboard).
 
 ## Escalations
 
