@@ -70,10 +70,14 @@ The [network policy](/agents/network-policy) every agent in the organization run
 
 ## Audit logs
 
+The audit log is for an organization's owners and admins. Its entries include the start of each chat message, private chats included, so other members get `403`. Someone who is an admin in one organization and a member in another sees only the first organization's entries.
+
+When an admin reads a member's private chat, that is recorded too: an `agent_session.admin_override` event with `"action": "read"`, at most once an hour per admin and chat.
+
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/v1/org/audit-logs` | List audit events (`?page=`, `?per_page=`) |
-| `GET` | `/v1/org/audit-logs/export` | Export (`?format=`) |
+| `GET` | `/v1/org/audit-logs` | List audit events (`?page=`, `?per_page=`). Owners and admins only |
+| `GET` | `/v1/org/audit-logs/export` | Export (`?format=`). Owners and admins only |
 
 ## Transcription
 
