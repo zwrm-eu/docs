@@ -209,9 +209,9 @@ Toggle [skills](/context/skills) for this agent; the library itself lives under 
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/v1/agents/{agent_id}/skills` | Effective per-agent skill state |
-| `PUT` | `/v1/agents/{agent_id}/skills/{skill_ref}` | Enable or disable a skill |
-| `DELETE` | `/v1/agents/{agent_id}/skills/{skill_ref}` | Detach (a built-in resets to default-enabled) |
+| `GET` | `/v1/agents/{agent_id}/skills` | The agent's switches and the caller's own, each with `for` (`agent` or `me`) |
+| `PUT` | `/v1/agents/{agent_id}/skills/{skill_ref}` | Enable or disable a skill for the agent (operator role; the skill must be shared or built in, else `409`). With `?for=me`, for the caller's own private chats with the agent |
+| `DELETE` | `/v1/agents/{agent_id}/skills/{skill_ref}` | Detach (a built-in resets to default-enabled). With `?for=me`, the caller's own switch |
 
 ## Terminal
 

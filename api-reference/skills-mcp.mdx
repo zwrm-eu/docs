@@ -10,10 +10,10 @@ Org-scoped skill bundles. See the [Skills guide](/context/skills). Per-agent ena
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `POST` | `/v1/skills` | Create a skill |
-| `GET` | `/v1/skills` | List skills (org + built-ins) |
-| `GET` | `/v1/skills/{skill_ref}` | Get by ID or slug |
-| `PATCH` | `/v1/skills/{skill_ref}` | Update name/description/status |
+| `POST` | `/v1/skills` | Create a skill. It is the caller's own and private unless `"visibility": "org"` |
+| `GET` | `/v1/skills` | List the skills you can see: shared ones, your own, and the built-ins (org admins: every member's too). Each has `owner_user_id`, `visibility` and `mine` |
+| `GET` | `/v1/skills/{skill_ref}` | Get by ID or slug (a slug finds your own first, then the shared one) |
+| `PATCH` | `/v1/skills/{skill_ref}` | Update name/description/status (owner; operators on shared skills), or `visibility` to share or take back (owner; org admins may take any back). Sharing onto a slug a shared skill has is `409` |
 | `DELETE` | `/v1/skills/{skill_ref}` | Delete (built-ins are read-only) |
 | `POST` | `/v1/skills/{skill_ref}/version` | Upload a bundle zip as the next version (`Content-Type: application/zip`, raw body) |
 
