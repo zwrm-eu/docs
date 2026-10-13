@@ -111,6 +111,32 @@ Deliveries can share a workspace (conversation + files) with either:
 
 Blank = every delivery is a one-shot run on a fresh workspace.
 
+## Private and shared triggers
+
+Every member can create triggers (webhook, Front and Microsoft Teams) on any agent they can use. A trigger belongs to the member who created it, and its runs act as them.
+
+A new trigger is **private** to you unless you share it: pass `--share` (`"visibility": "org"` in the API), or share it later. A trigger feeding your [private agent](/agents/overview) is always private.
+
+```bash
+zwrm triggers create "Orders" --default-agent support-bot --session-key-path order   # private to you
+zwrm triggers share <trigger-id>      # share it with the organization
+zwrm triggers unshare <trigger-id>    # private to you again
+```
+
+| | Private | Shared |
+|---|---|---|
+| Its owner | Sees, changes, pauses, deletes and shares it, and reads its events and runs | The same, and takes it back |
+| Other members | Don't see it, its events or its runs | See it, its events and its runs |
+| Builders | Don't see it | Also change and pause it |
+| Org admins | See it, its events and its runs, pause and delete it, but don't change it | Also take it back and delete it |
+
+- **A private trigger's runs are yours.** They act as you, in chats of your own: each event's session key becomes the trigger's own key, so it never lands in another chat of yours or in another member's trigger's chats. The runs are private.
+- **A shared trigger's runs go only into shared chats.** An event, or an `X-Session-Key` header, naming a private chat is refused (`422`, logged as `rejected_placement`) instead of running there.
+- **A private trigger runs only on what its owner wrote.** If someone else changed what a shared trigger does (its instruction, template, key path, conditions or routing), it pauses when it becomes private, and resuming it takes saving its instruction again. A delivery to such a trigger pauses it too (`rejected_review`).
+- **An admin's take-back pauses it**, for its owner to look at before resuming it.
+- **Agents** count with their creator's role: creating, changing or deleting triggers takes a builder behind them, and an agent never changes who sees one. An agent working in a shared chat makes the organization's triggers.
+- **The GitHub and Notion apps' triggers** stay the organization's, set up from their integration pages.
+
 ## Matching and routing
 
 **Match conditions** (`--match`) gate the trigger — every condition must hold or the delivery is ignored (with a `200 ignored` response, so providers stop retrying):
@@ -158,6 +184,7 @@ ZWRM manages the Graph subscription for you (create on activate, renew before it
 | `200 {"status":"duplicate"}` | Idempotency key already processed |
 | `401` | Invalid or missing secret/signature |
 | `404` | Unknown or inactive slug — also returned when a matched route's agent is unusable (fail-closed) |
+| `422` | The event names a chat this trigger's runs don't go into, or the agent has no shared credential — stop retrying; see the delivery log |
 | `409` | Same idempotency key currently in flight — retry shortly |
 | `413` | Body over 1 MiB |
 | `429` | Daily rate cap or [agent budget](/agents/budgets) exceeded — retry later |
