@@ -4,7 +4,19 @@ description: "Reusable instruction bundles that agents discover in their workspa
 icon: "wand-magic-sparkles"
 ---
 
-A **skill** is a named, org-scoped instruction bundle that ZWRM materializes into the agent's workspace at `~/.claude/skills/<slug>/`, where the agent auto-discovers it. Skills let you package "how we do X here" once and reuse it across agents.
+A **skill** is a named instruction bundle that ZWRM materializes into the agent's workspace at `~/.claude/skills/<slug>/`, where the agent auto-discovers it. Skills let you package "how we do X here" once and reuse it across agents.
+
+## Your skills and shared skills
+
+Every member can create skills. A skill you create is **yours and private**: other members don't see it, and it loads only in your own private chats, on the agents where you switch it on for yourself.
+
+**Share** a skill and it joins the organization's library: every member can switch it on for themselves, and operators can switch it on for an agent, so every chat with that agent loads it. Sharing doesn't load it anywhere by itself. Agents can look shared skills up with `find_shared_skills` and `read_shared_skill`; each result says who shared it and that it was written for someone else's work. Sharing keeps you as the owner, and you can take it back at any time. An org admin can take it back too.
+
+| | Who sees it | Who changes it |
+|---|---|---|
+| Your private skill | You (org admins can see it and delete it) | You |
+| A shared skill | Every member | Its owner, and operators and above |
+| A built-in | Everyone | Nobody: it comes with platform releases |
 
 ## The skill library
 
@@ -12,10 +24,13 @@ A **skill** is a named, org-scoped instruction bundle that ZWRM materializes int
 zwrm skills list
 zwrm skills create translate --name "Translate" --description "Use when translating documents"
 zwrm skills upload translate ./translate-bundle.zip
+zwrm skills share translate
+zwrm skills unshare translate
 zwrm skills delete translate
 ```
 
-- `create` registers the skill; `--description` is the when-to-use hint shown to agents and humans.
+- `create` registers the skill as your own, private one (`--share` shares it right away); `--description` is the when-to-use hint shown to agents and humans.
+- `share` and `unshare` put it in the organization's library or take it back.
 - `upload` publishes a **bundle** (zip) as the skill's next version and live-pushes it to running workspaces of agents that have the skill enabled. Agents always track the latest version — there is no per-agent pinning.
 - `delete` removes the skill from agents and live workspaces.
 
@@ -27,15 +42,18 @@ Zipping the skill folder itself works — a single wrapper directory is unwrappe
 
 ### Limits
 
-Up to **50 skills per organization** and **20 enabled skills per agent**.
+Up to **100 shared skills per organization**, **100 private skills per member**, and **100 skills switched on per agent**, for the agent and for each member.
 
 ## Enabling skills per agent
 
 ```bash
 zwrm agent skills list my-project
-zwrm agent skills enable my-project translate
+zwrm agent skills enable my-project translate --mine   # for your own private chats with it
+zwrm agent skills enable my-project translate          # for the agent: every chat with it
 zwrm agent skills disable my-project translate
 ```
+
+A skill switched on **for the agent** loads in every chat and run with it. That needs the operator role, and the skill must be shared or built in, since everyone using the agent gets it. A skill switched on **with `--mine`** loads only in your own private chats with the agent and runs in your own workspaces. Your own switch wins over the agent's on the same slug, and the agent's wins over a built-in.
 
 Enable/disable live-syncs running workspaces; suspended or cold workspaces pick up changes at the next session start.
 
@@ -60,12 +78,17 @@ The four document skills (`xlsx`, `docx`, `pptx`, `pdf`) are licensed for instal
 
 ## Agent-managed skills
 
-Agents can write skills too. Inside a session an agent has `save_skill`, `update_skill`, and `delete_skill` tools: a skill it authored in its workspace can be persisted straight into the org's library under the agent's own identity — validated like any bundle upload, versioned, auto-enabled for that agent, and synced into its running workspaces.
+Agents can write skills too. Inside a session an agent has `save_skill`, `update_skill`, and `delete_skill` tools: a skill it authored in its workspace is persisted, validated like any bundle upload, versioned, and synced into its running workspaces.
+
+- **In your private chat**, `save_skill` makes **your own private skill**, switched on for you on that agent. From there the agent can change only your own private skills, never shared ones.
+- **In a shared chat or another run**, it adds a skill to the organization's library under the agent's identity, switched on for the agent. That needs the operator role; the agent counts with its creator's role.
+
+An agent never shares a skill or switches one on for the agent from a private chat: people do that.
 
 Ask an agent to "turn this workflow into a skill and save it" and it can, with the built-in `skill-creator` guiding the authoring, test prompts, and iteration.
 
 <Note>
-The session tools need the agent's `skills:write` [capability](/agents/capabilities), and they only mutate skills the calling agent created; built-ins are read-only to everyone. But that is not a library-wide guarantee: the REST skill endpoints have no ownership check, and `skills:write` is in the default capability set — so a default-scoped agent **can** modify or delete any org skill, including ones humans uploaded. If agents shouldn't have that authority, narrow `skills:write` out of their [allowed scopes](/agents/capabilities); that turns the session tools off too.
+The session tools need the agent's `skills:write` [capability](/agents/capabilities), and they only change skills the calling agent created (in a shared chat) or the member's own (in a private chat); built-ins are read-only to everyone. Over the REST API an agent credential counts with its creator's role in shared chats and runs, so an agent whose creator is an operator can change shared skills there. If agents shouldn't have that authority, narrow `skills:write` out of their [allowed scopes](/agents/capabilities); that turns the session tools off too.
 </Note>
 
 ## Hand-dropped skills
