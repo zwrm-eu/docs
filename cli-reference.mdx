@@ -497,6 +497,16 @@ zwrm org egress set [--allow <site>]... [--block <site>]... [--allow-cidr <cidr>
 zwrm org egress clear
 ```
 
+### `zwrm org departures`
+
+Members who left the organization, and what they still own. Org admins and owners only, with their own login. [Guide →](/api-reference/platform#members-who-leave)
+
+```bash
+zwrm org departures list
+zwrm org departures reassign <user-id> --to <member-user-id>
+zwrm org departures delete <user-id> --yes
+```
+
 ### `zwrm org llm-provider`
 
 External OpenAI-compatible endpoints whose models zwrm-runtime and OpenCode agents can use as `ext/<provider>/<model-id>`. Runs on your credential and is billed by your vendor, not against credits. [Guide →](/agents/external-providers)
