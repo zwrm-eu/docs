@@ -30,6 +30,22 @@ zwrm schedules create "Morning digest" \
 - The agent binding is immutable. Everything else can be [changed in place](#change-a-schedule).
 - Up to **20 schedules per agent**; prompts up to 16 KiB.
 
+## Private and shared schedules
+
+A schedule belongs to the member who created it, and it fires as them. It is **private** when its runs go to that member alone: when it is on their [private agent](/agents/overview), or its `--session-key` names their own private chat. Every other schedule is **shared** with the organization.
+
+| | Private | Shared |
+|---|---|---|
+| Its owner | Sees, changes, pauses and deletes it, and reads its runs | The same |
+| Other members | Don't see it or its runs | See it and its runs |
+| Org admins | See it and its runs, pause and delete it, but don't change it | Also change it |
+
+- **Its runs stay private too.** A private schedule's runs go into its owner's own workspace. When one has to be made (a new key, or a fresh workspace per firing), it is the owner's private one. The run's record stays private even in a chat the owner later shared. Other members don't find it in run lists, the Automations calendar or webhooks, and webhooks for it carry `private: true` and no summary.
+- **Only your own chat.** A `--session-key` that names another member's private chat is refused (`409`): the runs would never be allowed into it.
+- **Changing the key changes who sees it.** Pointing a schedule at a shared chat makes it shared; pointing it back at your private chat makes it private again.
+
+`zwrm schedules list` shows a `SHARED` and a `MINE` column; the API returns `owner_user_id`, `visibility` and `mine` on each schedule, and `private` on each run.
+
 ## Metadata tags
 
 Schedules carry an opaque `key=value` map you can filter on — useful when something else creates schedules on your behalf and needs to find its own again:
