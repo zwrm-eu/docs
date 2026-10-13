@@ -45,12 +45,37 @@ In the dashboard, the gateway page has a **Quick connect** grid of branded cards
 
 ### Who may add servers
 
-Operators may connect any server, from the catalog or not. An organization admin can limit operators to the catalog with the **custom tools** setting (`builders_may_add_custom_tools`, on by default; `PUT /v1/org/settings`). With it off:
+Any member adds connections and virtual servers of their own. A member's are private to them until they share them; a member adds connections from the catalog only. Operators may connect any server, from the catalog or not. An organization admin can limit operators to the catalog with the **custom tools** setting (`builders_may_add_custom_tools`, on by default; `PUT /v1/org/settings`). With it off:
 - adding a server outside the catalog, or pointing an existing one at a new address, takes an admin or owner;
 - an OAuth sign-in may only use an issuer the catalog lists for that server, so members' sign-ins can't be sent to another authorization server;
 - operators get `403` with `error_code: custom_tools_disabled`.
 
 Admins and owners may always add any server.
+
+### Private and shared connectors
+
+A connection or virtual server you make is **private** to you; share it with the organization, and take it back, whenever you like:
+
+```bash
+zwrm mcp upstream add linear https://mcp.linear.app/mcp --oauth            # private to you
+zwrm mcp upstream add linear https://mcp.linear.app/mcp --oauth --share    # shared at once
+zwrm mcp upstream share linear
+zwrm mcp upstream unshare linear
+zwrm mcp server share eng-tools
+```
+
+| | Private | Shared |
+|---|---|---|
+| Its owner | Uses, changes, shares and deletes it | The same |
+| Other members | Don't see it | See and use it |
+| Operators | Don't see it | Also change it |
+| Org admins | See and delete it | Also take it back private and delete it |
+
+- **The organization's connectors.** Connections and servers added before members could add their own belong to the organization: shared, with no owner, and they stay shared.
+- **Shared servers use shared connections.** A shared virtual server can only compose shared connections. A connection can't be taken back private while a shared connector, or another member's, still uses it.
+- **Repointing a shared connection.** When someone other than an operator points a shared connection at a new address, every member's connected account on it is dropped, and members connect again.
+
+Names stay unique across the organization: an upstream's or server's name is part of its address (`/{org}/{server}`).
 
 ### Scope-aware tool exposure
 
