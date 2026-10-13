@@ -85,7 +85,7 @@ PATCH /v1/agents/{agent_id}/workspaces/{workspace_ref}
 - **Who:** the chat's owner shares it and takes it back (`"private"`). An org admin can take any chat back, but never shares a member's private chat. Agents never change a chat's visibility. The owner stays the owner either way.
 - **What follows:** the chat's sessions take the new visibility. Taken back, every session in it belongs to the owner again.
 - **A fresh session:** end the chat's current session first (`409` otherwise). Sharing starts the next session fresh rather than resuming the old transcript, which carried the owner's own [memories](/context/memory) and [skills](/context/skills). A shared chat loads only the agent's.
-- **Who is speaking:** in a shared chat every message, answer and approval records who sent it, and the agent is told who is talking.
+- **Who is speaking:** in a shared chat every message, answer and approval records who sent it, and the agent is told who is talking. One sent with an [integration token](/auth#integration-tokens), which an app uses for many people, names nobody.
 - **Fixed workspaces:** the `default` workspace, assistant chats (`assistant-…`), `private-…` workspaces and anonymous run workspaces keep their visibility (`409`).
 
 From the CLI: `zwrm agent chat share <agent> <chat>` and `zwrm agent chat unshare <agent> <chat>`.
