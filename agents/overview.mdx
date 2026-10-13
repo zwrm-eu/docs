@@ -60,7 +60,7 @@ Agent handles are **unique among your own agents and among shared ones, across r
 
 ## Private and shared agents
 
-Any member of an organization can create agents. A new agent is **private** to the member who created it, its owner:
+Any member of an organization can create agents. A new agent is **private** to the member who created it, its owner, unless it is created shared. The dashboard's set-up dialog asks who can use it: everyone in the organization (the default) or only you. Through the API, pass `"visibility": "org"` when creating it. A private agent:
 
 - Other members don't see it at all: it isn't in their lists, and its address is a `404` for them.
 - Every chat and run with it is the owner's, and so are its routines and event triggers.
