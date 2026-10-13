@@ -446,8 +446,9 @@ zwrm auth token
 Manage long-lived API tokens.
 
 ```bash
-zwrm auth tokens create [--name <name>] [--expiry <duration>] [--scopes <list>] [--org <org>]
+zwrm auth tokens create [--name <name>] [--expiry <duration>] [--scopes <list>] [--org <org>] [--integration]
 zwrm auth tokens list
+zwrm auth tokens update <token-id> --integration[=false]
 zwrm auth tokens revoke <token-id>
 ```
 
@@ -457,10 +458,14 @@ zwrm auth tokens revoke <token-id>
 | `--expiry` | string | no expiry | Expiry duration (e.g. `8760h` for one year) |
 | `--scopes` | list | — | Capability set (comma-separated `resource:action`); empty = unrestricted |
 | `--org` | string | target org | Organization a scoped token is bound to |
+| `--integration` | bool | `false` | An app uses the token for many people; what it sends into a shared chat names nobody. Can't be combined with `--scopes` |
 
 ```bash
 zwrm auth tokens create --name ci --scopes apps:read,deploy --org acme --expiry 8760h
+zwrm auth tokens create --name helpdesk --integration
 ```
+
+`zwrm auth tokens update <token-id> --integration` marks an existing token as an [integration token](/auth#integration-tokens), and `--integration=false` clears the mark. `zwrm auth tokens list` shows which tokens are marked.
 
 See [Capabilities](/agents/capabilities) for the scope vocabulary.
 

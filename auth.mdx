@@ -68,6 +68,27 @@ zwrm auth tokens list
 zwrm auth tokens revoke <token-id>
 ```
 
+## Integration tokens
+
+In a [shared chat](/api-reference/runs-sessions), every message names the member who sent it, and the agent is told who is talking. With a token, the named member is the token's owner.
+
+An app that sends many people's messages through one token, such as a helpdesk or a chat front end, can't say who is speaking, so every message would name you. Mark such a token as an integration token, and what it sends into a shared chat names nobody:
+
+```bash
+# a new token for the app
+zwrm auth tokens create --name helpdesk --integration
+
+# or mark one the app already uses
+zwrm auth tokens update <token-id> --integration
+```
+
+- Members' own messages in the same chat keep their names.
+- The agent is told that a message naming nobody came through an app or an automation.
+- Only the token's owner can mark it. `--integration=false` clears the mark.
+- A scoped token can't be an integration token, because scoped tokens don't send chat messages.
+
+Over the API, set `"integration": true` when creating a token (`POST /v1/auth/tokens`), or send `PATCH /v1/auth/tokens/{token_id}` with `{"integration": true}`.
+
 ## Token resolution
 
 ZWRM looks for your API token in this order:
