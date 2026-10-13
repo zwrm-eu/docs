@@ -40,9 +40,11 @@ A schedule belongs to the member who created it, and it fires as them. It is **p
 | Other members | Don't see it or its runs | See it and its runs |
 | Org admins | See it and its runs, pause and delete it, but don't change it | Also change it |
 
-- **Its runs stay private too.** A private schedule's runs go into its owner's own workspace. When one has to be made (a new key, or a fresh workspace per firing), it is the owner's private one. The run's record stays private even in a chat the owner later shared. Other members don't find it in run lists, the Automations calendar or webhooks, and webhooks for it carry `private: true` and no summary.
-- **Only your own chat.** A `--session-key` that names another member's private chat is refused (`409`): the runs would never be allowed into it.
-- **Changing the key changes who sees it.** Pointing a schedule at a shared chat makes it shared; pointing it back at your private chat makes it private again.
+- **Its runs stay private too.** A private schedule's runs go only into its owner's own private chats. When one has to be made (a new key, or a fresh workspace per firing), it is the owner's private one. Other members don't find its runs in run lists, the Automations calendar or webhooks, and webhooks for them carry `private: true` and no summary.
+- **Runs go where the schedule says.** A private schedule never runs in a shared chat, and a shared one never runs in a private chat. If its chat is shared or taken private later, the schedule is paused, with the reason in its firing log; point it at the right chat and resume it.
+- **Only your own chat.** A `--session-key` that names another member's private chat is refused (`409`), and so is a shared chat on your private agent.
+- **Changing the key changes who sees it, and that is the owner's call.** Pointing a schedule at a shared chat makes it shared; pointing it at your private chat makes it private. Only the schedule's owner can make that change. An edit that keeps the same key, or moves it to a key no chat has yet, keeps it as it was.
+- **Sharing a private agent** moves your schedules into its default chat to your own private chat, since the shared agent's default chat is everyone's.
 
 `zwrm schedules list` shows a `SHARED` and a `MINE` column; the API returns `owner_user_id`, `visibility` and `mine` on each schedule, and `private` on each run.
 
