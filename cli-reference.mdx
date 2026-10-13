@@ -529,6 +529,13 @@ zwrm org llm-provider remove <name>
 
 `--api-key -` reads the key from stdin, keeping it out of argv and shell history. Changing `--base-url` clears the stored credential unless `--api-key` rides the same command.
 
+With `--mine`, every subcommand manages your own providers instead of the organization's: their models serve only your own private chats and runs. [Your own providers →](/agents/external-providers#your-own-providers)
+
+```bash
+zwrm org llm-provider --mine add my-vllm --base-url https://vllm.example.com/v1 --api-key -
+zwrm org llm-provider --mine list
+```
+
 ---
 
 ## `zwrm credits`
