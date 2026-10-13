@@ -4,21 +4,38 @@ description: "Durable per-agent knowledge that survives sessions and workspaces.
 icon: "brain"
 ---
 
-Memory is what an agent knows about you and your work, kept across every session and workspace. Each entry is a slug-keyed markdown note living on the **agent identity** — not the workspace volume — so it outlives workspace TTLs, ended sessions, and finished runs.
+Memory is what an agent knows about you and your work, kept across every session and workspace. Each entry is a slug-keyed markdown note stored with the **agent** — not the workspace volume — so it outlives workspace TTLs, ended sessions, and finished runs.
 
 | | Memory | [Skills](/context/skills) | Workspace transcript |
 |---|---|---|---|
-| Scope | Per agent | Org library, enabled per agent | One workspace |
+| Scope | Per agent: the agent's, and each member's own | Org library, enabled per agent | One workspace |
 | Author | The agent (or you) | You | The conversation |
 | Holds | Preferences, project facts, corrections | Reusable procedures | The conversation itself |
 
 Memory is agent-curated knowledge; the agent's [instructions](/agents/overview#configuring-an-agent) remain operator policy. Both are appended to the system prompt.
 
+## Whose memories a chat gets
+
+An agent keeps two kinds of memory:
+
+| | Loads in | Who changes it |
+|---|---|---|
+| **The agent's memories** | Every chat and run with the agent | Operators and above |
+| **A member's own memories** | Only that member's private chats with the agent, and runs in their own workspaces | That member |
+
+A chat loads the agent's memories plus, in a private chat, its member's own. When both hold the same slug, the member's own wins in their chats. Other members never see your own memories. Org admins can read and delete them, but can't change them.
+
+### Sharing
+
+You can share any of your own memories with the whole organization. Sharing makes it **available**, not loaded: no chat loads a shared memory by itself. Agents can look shared memories up with `find_shared_memories` and `read_shared_memory`. Every result says who shared it and that it was written for someone else's work, so the agent checks it fits before relying on it. Members can also copy a shared memory into their own set, and operators can copy one into the agent's.
+
+Sharing keeps you as the owner. You can take it back at any time, and an org admin can too.
+
 ## How recall works
 
 The system prompt carries only a **one-line index** — slug plus description, one row per entry — not the bodies. The agent reads a specific entry from `~/.claude/memory/<slug>.md` when its description looks relevant. Prompt cost therefore scales with the entry count, not the size of the corpus.
 
-Every session and run projects the agent's memory into the workspace:
+Every session and run projects its memories into the workspace:
 
 ```
 ~/.claude/memory/MEMORY.md      # the live index
@@ -29,14 +46,22 @@ Projected files carry a managed header and are rewritten on every sync — edit 
 
 ## Agents curate their own memory
 
-In a session an agent has two tools:
+In a session an agent has these tools:
 
 - **`save_memory`** — create or replace an entry (slug, description, body, optional kind). Saving an existing slug replaces it, so agents update rather than duplicate.
 - **`delete_memory`** — remove an entry by slug.
+- **`find_shared_memories`** and **`read_shared_memory`** — look up memories members shared with the organization.
 
 So "remember that we deploy on Fridays" or "you got that wrong — our staging DB is X" becomes durable without you touching anything.
 
-Both tools need the agent's `memories:write` [capability](/agents/capabilities), which is in the default set. Narrow it out, or turn off the agent's management access, and the agent can still read its memory but no longer change it.
+Where `save_memory` writes depends on the chat:
+
+- **In your private chat**, or a run in your own workspace, it writes **your own** memories. That needs no special role, since they reach only your chats. From there the agent can't change the agent's memories.
+- **In a shared chat or another run**, it writes **the agent's** memories, which every chat loads. That needs the operator role; the agent counts with its creator's role.
+
+The agent never shares a memory or copies one into the agent's set. People do that, in the dashboard or the API, so a private chat can't plant something in everyone else's chats.
+
+The write tools need the agent's `memories:write` [capability](/agents/capabilities), which is in the default set. Narrow it out, or turn off the agent's management access, and the agent can still read its memory but no longer change it.
 
 ## Curating memory yourself
 
@@ -48,7 +73,18 @@ zwrm agent memory save my-project deploy-process \
   --kind project \
   --file ./deploy-notes.md
 zwrm agent memory delete my-project deploy-process
+
+# Your own memories on the agent
+zwrm agent memory save my-project answer-style --mine \
+  --description "How I like answers" --body "Short, in German."
+zwrm agent memory share my-project answer-style --mine
+
+# What members shared, and copying one
+zwrm agent memory shared --query plunet
+zwrm agent memory copy my-project <memory-id> --to own
 ```
+
+Without `--mine` a command acts on the agent's memories. `--mine` acts on yours; `--owner <user-id>` acts on a member's, for org admins (`show` and `delete` only). `list` shows the agent's and yours, with whose each entry is and whether it is shared; org admins also see every member's.
 
 | Flag (`save`) | Description |
 |------|-------------|
@@ -57,13 +93,14 @@ zwrm agent memory delete my-project deploy-process
 | `--body` | Entry body (markdown) |
 | `--file` | Read the body from a file |
 
-Pass `--body` or `--file`, or pipe the body via stdin. The dashboard's **Context** tab has the same list-and-edit surface.
+Pass `--body` or `--file`, or pipe the body via stdin. The dashboard's **Context** tab has the same list-and-edit surface, plus the organization's shared memories.
 
 ## Limits
 
 | Limit | Value |
 |-------|-------|
-| Entries per agent | 100 |
+| The agent's entries | 100 per agent |
+| Your own entries | 100 per member per agent |
 | Body size | 8 KiB |
 | Description | 200 characters, single line |
 | Slug | Lowercase letters, digits, hyphens; max 64 characters |
