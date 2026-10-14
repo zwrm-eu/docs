@@ -62,7 +62,7 @@ Attaching a connector to an agent takes the right to change the agent, and:
 - **A shared connector that needs no login, or where each member signs in with their own account** (per-user OAuth with the default *user* identity policy): any member.
 - **A connector that acts as one account** (a stored key, or an account connected for the agent): operators and above, unless the connection is your own. This is decided per connection, so a virtual server of your own over the organization's stored key still takes an operator. A plain member gets `403` with `error_code: shared_login_needs_operator`, naming the connection. The rule holds for an attachment switched off too: it still shows to everyone who sees the agent, and can be switched on.
 
-The agent's connectors (`GET /v1/agents/{id}/connectors`, and the agent page) say whose account each connection acts as: each member's own, or one shared login and its account. In a shared chat, connections act as the agent's account unless the chat's owner has one act as [whoever started the turn](/api-reference/runs-sessions#sharing-a-chat).
+The agent's connectors (`GET /v1/agents/{id}/connectors`, and the agent page) say whose account each connection acts as: each member's own, or one shared login and its account. In a shared chat, connections act as the agent's account unless the chat's owner has one act as [whoever started the turn](/api-reference/runs-sessions#sharing-a-chat), for members who let the chat use their own sign-ins.
 
 ### Sharing an agent with connectors
 
