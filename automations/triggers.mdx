@@ -14,8 +14,9 @@ Every trigger has a **provider** — the kind of event source it ingests. It's f
 |----------|--------|--------------|
 | `webhook` (default) | Any external system that can POST JSON to a URL — including GitHub, GitLab, Stripe, Linear, Shopify, Sentry, and your own systems | CLI, API, dashboard |
 | `msteams` | A Microsoft Teams chat, via a Microsoft Graph change-notification subscription on your connected account | API, dashboard (**not** the CLI) |
+| `front` | A [Front AI agent](#front-ai-agent-triggers): mentions and assignments, answered with the access of the teammate who asked | CLI, API, dashboard |
 
-Both providers feed the same pipeline once a delivery is normalized to a JSON body: **match gate → route → dedup + rate cap → budget-gated run**.
+All providers feed the same pipeline once a delivery is normalized to a JSON body: **match gate → route → dedup + rate cap → budget-gated run**.
 
 ## Create a webhook trigger
 
@@ -75,26 +76,7 @@ Verification is accept-if-any: an unmatched header never vetoes one that verifie
 
 ZWRM accepts Front's [AI agents](https://dev.frontapp.com/docs/ai-agents) and [application webhooks](https://dev.frontapp.com/docs/application-webhooks) with no Front-specific trigger option; application webhooks need a Front app whose application webhook points at the trigger's hook URL. ZWRM verifies each delivery's signature. When you save an application webhook's URL, Front sends a signed `X-Front-Challenge` request, and ZWRM answers it once the signature verifies. If Front reports that validating the URL failed, the trigger has the wrong secret: it needs Front's **signing secret**, not the client secret. AI-agent deliveries are deduplicated on their `event_id`, since Front can deliver an event more than once. Front's older rule webhooks, signed with HMAC-SHA1, aren't supported.
 
-To connect a Front AI agent:
-
-1. In Front, open **Settings → Company → Agents → Create AI agent**. On the **AI Engine** step, copy the **signing secret**, **OAuth URL**, **client ID** and **client secret** — Front shows the client secret only once.
-2. Create the trigger with Front's signing secret. Keying sessions on `conversation_id` keeps each conversation in one workspace. The match condition drops `unassign` events, so unassigning the agent never starts a run. It also doesn't stop a run already in progress — cancel the run with `zwrm agent run cancel <run-id>`:
-
-   ```bash
-   zwrm triggers create "Front support" \
-     --default-agent support-bot \
-     --secret <front-signing-secret> \
-     --session-key-path conversation_id \
-     --match '[{"path":"type","op":"not_equals","value":"unassign"}]' \
-     --instruction "Front assigned or mentioned you on this conversation. Read it with the Front connector, then draft a reply."
-   ```
-
-3. Back in Front, set the agent's **Webhook URL** to the trigger's hook URL and finish the wizard. If you already saved the agent, edit its webhook URL instead.
-4. Give the agent Front's MCP server as a connector with **App credentials shared by everyone** (`oauth_client_credentials`): the OAuth URL is the token URL, plus the client ID and client secret. The agent then acts in Front as the AI agent, never as a teammate.
-
-<Warning>
-Front's AI agent sees every conversation in the Front workspaces you grant it, whoever assigns or mentions it — Front's webhook doesn't say who asked, so nothing can narrow its access to that person. Grant only workspaces whose contents everyone who can reach the agent may see, and start with draft-only permissions. Trigger runs are visible to the whole ZWRM organization.
-</Warning>
+To connect a Front AI agent, use a [Front AI agent trigger](#front-ai-agent-triggers): it answers each teammate with their own Front access.
 
 Bodies are parsed as JSON (up to 1 MiB). The agent's prompt is built from the trigger's instruction plus the rendered body (via `--message-template`, or the raw body if no template is set).
 
@@ -176,6 +158,54 @@ An `msteams` trigger wakes an agent on messages in a Teams chat — and, uniquel
 Each delivery defaults to one persistent session per chat (`session_key_path` = `chat_id`), so the agent keeps context across a conversation. The run prompt carries a **reply preamble**: it tells the agent this came from a Teams message and that the only way to reply is a Microsoft 365 connector tool posting back to the originating `chat_id`. The agent replies **through the connector** — there is no built-in messaging (see [Waiting & outputs](/agents/messaging)).
 
 ZWRM manages the Graph subscription for you (create on activate, renew before its ~70h expiry, drop on delete). Subscription health surfaces read-only as `subscription_active`, `subscription_expires_at`, and any `last_error` / `presence_error`.
+
+## Front AI agent triggers
+
+A `front` trigger connects a [Front AI agent](https://dev.frontapp.com/docs/ai-agents) to a ZWRM agent. When a teammate @mentions the AI agent in a Front conversation, the run acts in Front **as that teammate**, with their own Front access, if they are a member who connected their own Front account in ZWRM. A question like "which emails mention this customer?" then searches only what they can see. The answer is posted back to the conversation as an internal comment from the AI agent.
+
+Everything else acts as the **Front AI agent** itself, with the access you grant it in Front:
+
+- a teammate who hasn't connected their own Front account in ZWRM, or isn't a member;
+- an assignment to the AI agent, or a new message on a conversation assigned to it (neither names a person);
+- a mention ZWRM can't read the author of.
+
+A member whose connected Front account stopped working (revoked or expired) isn't switched to the AI agent: the answer tells them to reconnect.
+
+ZWRM learns who asked from Front itself: it reads the author of the comment that mentions the agent, as the AI agent, and matches it to the member whose Front sign-in is that teammate. It learns each member's teammate ID when they connect their Front account. The model takes no part, so nothing in a message can claim to be someone else.
+
+<Warning>
+The AI agent's own Front access is what **everyone** who can mention it gets. Grant it only the Front workspaces every teammate may see, and start with read and write permissions without send. An answer is posted to the conversation, where everyone who can see the conversation can read it, including what the asker's access found. Front conversations are untrusted input to the agent: a customer's email can try to steer it.
+</Warning>
+
+### Set it up
+
+You need the operator role, and a shared [Front connection](/context/connectors) where members sign in with their own Front accounts.
+
+1. In Front, open **Settings → Company → Agents → Create AI agent**. On the **Credentials** step, copy the **signing secret**, **OAuth URL**, **client ID** and **client secret**. Front shows the client secret only once.
+2. Give the Front connection the AI agent's credentials, as the account agents use where no member is behind a request. In the dashboard, open the Front integration and fill in **Front AI agent**. With the CLI:
+
+   ```bash
+   zwrm mcp upstream agent-credentials front \
+     --client-id <client-id> --client-secret <client-secret> \
+     --token-url https://<company>.frontapp.com/oauth/token
+   ```
+
+3. Create the trigger with Front's signing secret. In the dashboard: **Automations → New trigger → Front AI agent**. With the CLI:
+
+   ```bash
+   zwrm triggers create "Front" \
+     --front-connection front \
+     --default-agent support-bot \
+     --secret <front-signing-secret> \
+     --instruction "Answer the teammate's question about this conversation."
+   ```
+
+4. Back in Front, paste the trigger's URL as the agent's **Webhook URL**, send a test event, and finish the wizard.
+5. Attach the Front connection to the agent (**Integrations → Front → Give access**), and ask each teammate to connect their own Front account there.
+
+A Front trigger always belongs to the organization, and its agents must be shared: every member who mentions it uses them. Each Front conversation keeps one workspace per member who asks there, and one shared workspace for everything the AI agent answers. Unassigning the AI agent starts nothing, and doesn't stop a run already going: cancel it with `zwrm agent run cancel <run-id>`.
+
+Only Front's signature is accepted on a Front trigger. Deliveries are deduplicated on their signed `event_id`. If ZWRM can't reach Front in time to learn who asked, it answers `500` and Front delivers the event again.
 
 ## Responses
 
