@@ -53,7 +53,7 @@ zwrm agent skills enable my-project translate          # for the agent: every ch
 zwrm agent skills disable my-project translate
 ```
 
-A skill switched on **for the agent** loads in every chat and run with it. That needs the operator role, and the skill must be shared or built in, since everyone using the agent gets it. A skill switched on **with `--mine`** loads only in your own private chats with the agent and runs in your own workspaces. Your own switch wins over the agent's on the same slug, and the agent's wins over a built-in.
+A skill switched on **for the agent** loads in every chat and run with it. That needs the operator role, and the skill must be shared or built in, since everyone using the agent gets it. A skill switched on **with `--mine`** loads only in your own private chats with the agent and runs in your own workspaces, and in a chat you share if you bring your skills along ([`owner_skills`](/api-reference/runs-sessions#sharing-a-chat), or `zwrm agent chat share --skills`); anyone in that chat can then ask the agent what they say. Your own switch wins over the agent's on the same slug, and the agent's wins over a built-in.
 
 Enable/disable live-syncs running workspaces; suspended or cold workspaces pick up changes at the next session start.
 

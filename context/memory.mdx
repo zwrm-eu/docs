@@ -21,9 +21,9 @@ An agent keeps two kinds of memory:
 | | Loads in | Who changes it |
 |---|---|---|
 | **The agent's memories** | Every chat and run with the agent | Operators and above |
-| **A member's own memories** | Only that member's private chats with the agent, and runs in their own workspaces | That member |
+| **A member's own memories** | That member's private chats with the agent, runs in their own workspaces, and chats they share if they bring them along | That member |
 
-A chat loads the agent's memories plus, in a private chat, its member's own. When both hold the same slug, the member's own wins in their chats. Other members never see your own memories. Org admins can read and delete them, but can't change them.
+A chat loads the agent's memories plus, in a private chat, its member's own. When both hold the same slug, the member's own wins in their chats. Other members never see your own memories, unless you bring them into a chat you share ([below](#agents-curate-their-own-memory)). Org admins can read and delete them, but can't change them.
 
 ### Sharing
 
@@ -58,6 +58,8 @@ Where `save_memory` writes depends on the chat:
 
 - **In your private chat**, or a run in your own workspace, it writes **your own** memories. That needs no special role, since they reach only your chats. From there the agent can't change the agent's memories.
 - **In a shared chat or another run**, it writes **the agent's** memories, which every chat loads. That needs the operator role; the agent counts with its creator's role.
+
+A shared chat loads the agent's memories, and yours too if you bring them along when you share it ([`owner_memories`](/api-reference/runs-sessions#sharing-a-chat), or `zwrm agent chat share --memories`). There they're read-only: `save_memory` still writes the agent's, and anyone in the chat can ask the agent what yours say.
 
 The agent never shares a memory or copies one into the agent's set. People do that, in the dashboard or the API, so a private chat can't plant something in everyone else's chats.
 
