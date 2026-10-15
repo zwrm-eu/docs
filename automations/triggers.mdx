@@ -165,10 +165,12 @@ A `front` trigger connects a [Front AI agent](https://dev.frontapp.com/docs/ai-a
 
 The teammate's account is used **on the Front connection only**. Every other connector the agent has acts as the agent, as in a shared run: a Front mention vouches for who asked in Front, and nothing beyond it.
 
+Only a teammate starts a run, by mentioning the AI agent or assigning a conversation to it. A customer's email never does: a new inbound message on a conversation assigned to the AI agent is ignored.
+
 Everything else acts as the **Front AI agent** itself, with the access you grant it in Front:
 
 - a teammate who hasn't connected their own Front account in ZWRM, or isn't a member;
-- an assignment to the AI agent, or a new message on a conversation assigned to it (neither names a person);
+- an assignment to the AI agent (it names no person);
 - a mention ZWRM can't read the author of.
 
 A member whose connected Front account stopped working (revoked or expired) isn't switched to the AI agent: the answer tells them to reconnect.
@@ -180,7 +182,9 @@ ZWRM learns who asked from Front itself, never from the event or the model. It r
 - no run has acted on it before (each comment starts at most one run);
 - exactly one member's Front sign-in is that teammate (ZWRM learns each member's teammate ID when they connect their Front account).
 
-Otherwise the AI agent acts. The run's prompt carries the trigger's instruction and the event's IDs, not the rest of the event's body.
+Otherwise the AI agent acts. The run's prompt carries the trigger's instruction and the event's IDs, not the rest of the event's body, and tells the agent that everything in the conversation is untrusted data: emails come from outside the company, so instructions in them are never followed, and nothing beyond the answer (no secrets, memories or credentials) goes into the reply.
+
+A run that acts for a member runs in that member's private workspace, so its transcript is theirs alone, and they can continue it in Cowork.
 
 <Warning>
 The AI agent's own Front access is what **everyone** who can mention it gets. Grant it only the Front workspaces every teammate may see, and start with read and write permissions without send. An answer is posted to the conversation, where everyone who can see the conversation can read it, including what the asker's access found. Front conversations are untrusted input to the agent: a customer's email can try to steer it.
@@ -191,7 +195,7 @@ The AI agent's own Front access is what **everyone** who can mention it gets. Gr
 You need the operator role, and a shared [Front connection](/context/connectors) where members sign in with their own Front accounts.
 
 1. In Front, open **Settings → Company → Agents → Create AI agent**. On the **Credentials** step, copy the **signing secret**, **OAuth URL**, **client ID** and **client secret**. Front shows the client secret only once.
-2. Give the Front connection the AI agent's credentials, as the account agents use where no member is behind a request. In the dashboard, open the Front integration and fill in **Front AI agent**. With the CLI:
+2. Give the Front connection the AI agent's credentials, as the account agents use where no member is behind a request. The OAuth URL must be your company's Front URL, `https://<company>.frontapp.com/oauth/token`. In the dashboard, open the Front integration and fill in **Front AI agent**. With the CLI:
 
    ```bash
    zwrm mcp upstream agent-credentials front \
