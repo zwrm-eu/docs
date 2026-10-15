@@ -14,7 +14,7 @@ Every trigger has a **provider** — the kind of event source it ingests. It's f
 |----------|--------|--------------|
 | `webhook` (default) | Any external system that can POST JSON to a URL — including GitHub, GitLab, Stripe, Linear, Shopify, Sentry, and your own systems | CLI, API, dashboard |
 | `msteams` | A Microsoft Teams chat, via a Microsoft Graph change-notification subscription on your connected account | API, dashboard (**not** the CLI) |
-| `front` | A [Front AI agent](#front-ai-agent-triggers): mentions and assignments, answered with the access of the teammate who asked | CLI, API, dashboard |
+| `front` | A [Front AI agent](#front-ai-agent-triggers): teammates' mentions and assignments. A mention by a teammate who connected their own Front account is answered with their Front access; everything else with the AI agent's | CLI, API, dashboard (operators) |
 
 All providers feed the same pipeline once a delivery is normalized to a JSON body: **match gate → route → dedup + rate cap → budget-gated run**.
 
@@ -74,7 +74,7 @@ Verification is accept-if-any: an unmatched header never vetoes one that verifie
 
 ### Front
 
-ZWRM accepts Front's [AI agents](https://dev.frontapp.com/docs/ai-agents) and [application webhooks](https://dev.frontapp.com/docs/application-webhooks) with no Front-specific trigger option; application webhooks need a Front app whose application webhook points at the trigger's hook URL. ZWRM verifies each delivery's signature. When you save an application webhook's URL, Front sends a signed `X-Front-Challenge` request, and ZWRM answers it once the signature verifies. If Front reports that validating the URL failed, the trigger has the wrong secret: it needs Front's **signing secret**, not the client secret. AI-agent deliveries are deduplicated on their `event_id`, since Front can deliver an event more than once. Front's older rule webhooks, signed with HMAC-SHA1, aren't supported.
+For a Front [AI agent](https://dev.frontapp.com/docs/ai-agents), use a [Front AI agent trigger](#front-ai-agent-triggers). A webhook trigger takes Front's [application webhooks](https://dev.frontapp.com/docs/application-webhooks) with no Front-specific option: they need a Front app whose application webhook points at the trigger's hook URL. ZWRM verifies each delivery's signature. When you save an application webhook's URL, Front sends a signed `X-Front-Challenge` request, and ZWRM answers it once the signature verifies. If Front reports that validating the URL failed, the trigger has the wrong secret: it needs Front's **signing secret**, not the client secret. AI-agent deliveries are deduplicated on their `event_id`, since Front can deliver an event more than once. Front's older rule webhooks, signed with HMAC-SHA1, aren't supported.
 
 To connect a Front AI agent, use a [Front AI agent trigger](#front-ai-agent-triggers): it answers each teammate with their own Front access.
 
@@ -97,7 +97,7 @@ A trigger's keyed workspace is kept for at most **6 hours** after its last deliv
 
 ## Private and shared triggers
 
-Every member can create triggers (webhook, Front and Microsoft Teams) on any agent they can use. A trigger belongs to the member who created it, and its runs act as them.
+Every member can create webhook and Microsoft Teams triggers on any agent they can use. A trigger belongs to the member who created it, and its runs act as them. A [Front AI agent trigger](#front-ai-agent-triggers) is the exception: it always belongs to the organization, only a person with the operator role creates or changes it, and each run acts as the teammate who asked, on Front only, or as the AI agent.
 
 A new trigger is **private** to you unless you share it: pass `--share` (`"visibility": "org"` in the API), or share it later. A trigger feeding your [private agent](/agents/overview) is always private.
 
