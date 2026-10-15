@@ -848,10 +848,14 @@ zwrm mcp upstream list
 zwrm mcp upstream tools <name>
 zwrm mcp upstream sync <name>
 zwrm mcp upstream grants <name>
+zwrm mcp upstream agent-credentials <name> --client-id <id> --client-secret <s> --token-url <url> [--scope <scopes>]
+zwrm mcp upstream agent-credentials <name> --clear
 zwrm mcp upstream rm <name> [--force]
 ```
 
 The auth flags are mutually exclusive. [Guide →](/context/credentials)
+
+`agent-credentials` sets the app credentials that are agents' own account on a per-user OAuth upstream (a [Front AI agent](/automations/triggers#front-ai-agent-triggers)'s client ID, secret and OAuth URL); `--clear` removes them. It takes the operator role, or your own private connection. [Guide →](/context/credentials#app-credentials-as-the-agents-account)
 
 ### `zwrm mcp connect` / `disconnect`
 
@@ -889,18 +893,19 @@ zwrm mcp install <server> [--client claude-code|claude-api|cursor|vscode|windsur
 
 ## `zwrm triggers`
 
-Inbound triggers: external events → agent runs. Creates `webhook`-provider triggers (Microsoft Teams triggers are dashboard/API only). [Guide →](/automations/triggers)
+Inbound triggers: external events → agent runs. Creates `webhook` triggers, and with `--front-connection` a [Front AI agent](/automations/triggers#front-ai-agent-triggers) trigger (Microsoft Teams triggers are dashboard/API only). [Guide →](/automations/triggers)
 
 ```bash
 zwrm triggers list
 zwrm triggers create <name> [--default-agent <a>] [--instruction <text>] [--message-template <tpl>] [--session-key-path <path>] [--match <json>] [--routes <json>] [--rate-per-day <n>] [--no-secret | --secret <s>]
+zwrm triggers create <name> --front-connection <connection> --default-agent <a> --secret <front-signing-secret> [--instruction <text>]
 zwrm triggers deliveries <trigger-id> [--limit 50]
 zwrm triggers update <trigger-id> [--name <n>] [--default-agent <a> | --clear-default-agent] [--instruction <text>] [--message-template <tpl>] [--session-key-path <path>] [--match <json>] [--routes <json>] [--rate-per-day <n>]
 zwrm triggers pause|resume <trigger-id>
 zwrm triggers delete <trigger-id>
 ```
 
-`--secret` imports a provider-minted signing secret (Linear, Shopify, Sentry, Front); mutually exclusive with `--no-secret`. `update` changes only the flags you pass and keeps the trigger's hook URL, secret, and delivery log; an empty `--match` or `--routes` removes it.
+`--secret` imports a provider-minted signing secret (Linear, Shopify, Sentry, Front); mutually exclusive with `--no-secret`. `--front-connection` makes a Front AI agent trigger on that connection: it needs Front's signing secret and a shared default agent, belongs to the organization, and takes the operator role. `update` changes only the flags you pass and keeps the trigger's hook URL, secret, and delivery log; an empty `--match` or `--routes` removes it.
 
 ---
 
