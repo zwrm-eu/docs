@@ -163,6 +163,8 @@ ZWRM manages the Graph subscription for you (create on activate, renew before it
 
 A `front` trigger connects a [Front AI agent](https://dev.frontapp.com/docs/ai-agents) to a ZWRM agent. When a teammate @mentions the AI agent in a Front conversation, the run acts in Front **as that teammate**, with their own Front access, if they are a member who connected their own Front account in ZWRM. A question like "which emails mention this customer?" then searches only what they can see. The answer is posted back to the conversation as an internal comment from the AI agent.
 
+The teammate's account is used **on the Front connection only**. Every other connector the agent has acts as the agent, as in a shared run: a Front mention vouches for who asked in Front, and nothing beyond it.
+
 Everything else acts as the **Front AI agent** itself, with the access you grant it in Front:
 
 - a teammate who hasn't connected their own Front account in ZWRM, or isn't a member;
@@ -171,7 +173,14 @@ Everything else acts as the **Front AI agent** itself, with the access you grant
 
 A member whose connected Front account stopped working (revoked or expired) isn't switched to the AI agent: the answer tells them to reconnect.
 
-ZWRM learns who asked from Front itself: it reads the author of the comment that mentions the agent, as the AI agent, and matches it to the member whose Front sign-in is that teammate. It learns each member's teammate ID when they connect their Front account. The model takes no part, so nothing in a message can claim to be someone else.
+ZWRM learns who asked from Front itself, never from the event or the model. It reads the comment the event names from the conversation, as the AI agent, and acts as its author only when all of these hold:
+
+- the comment mentions this AI agent;
+- it was written in the last 15 minutes;
+- no run has acted on it before (each comment starts at most one run);
+- exactly one member's Front sign-in is that teammate (ZWRM learns each member's teammate ID when they connect their Front account).
+
+Otherwise the AI agent acts. The run's prompt carries the trigger's instruction and the event's IDs, not the rest of the event's body.
 
 <Warning>
 The AI agent's own Front access is what **everyone** who can mention it gets. Grant it only the Front workspaces every teammate may see, and start with read and write permissions without send. An answer is posted to the conversation, where everyone who can see the conversation can read it, including what the asker's access found. Front conversations are untrusted input to the agent: a customer's email can try to steer it.
@@ -203,7 +212,7 @@ You need the operator role, and a shared [Front connection](/context/connectors)
 4. Back in Front, paste the trigger's URL as the agent's **Webhook URL**, send a test event, and finish the wizard.
 5. Attach the Front connection to the agent (**Integrations → Front → Give access**), and ask each teammate to connect their own Front account there.
 
-A Front trigger always belongs to the organization, and its agents must be shared: every member who mentions it uses them. Each Front conversation keeps one workspace per member who asks there, and one shared workspace for everything the AI agent answers. Unassigning the AI agent starts nothing, and doesn't stop a run already going: cancel it with `zwrm agent run cancel <run-id>`.
+A Front trigger always belongs to the organization, and its agents must be shared: every member who mentions it uses them. Each Front connection has one Front trigger. Creating one, and changing what it does, takes a person with the operator role: an agent's credential can't, and a trigger an agent last changed acts as the AI agent for everyone. Each Front conversation keeps one workspace per member who asks there, and one shared workspace for everything the AI agent answers. Unassigning the AI agent starts nothing, and doesn't stop a run already going: cancel it with `zwrm agent run cancel <run-id>`.
 
 Only Front's signature is accepted on a Front trigger. Deliveries are deduplicated on their signed `event_id`. If ZWRM can't reach Front in time to learn who asked, it answers `500` and Front delivers the event again.
 
