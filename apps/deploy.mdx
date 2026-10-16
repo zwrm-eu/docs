@@ -74,7 +74,7 @@ After deploying, ZWRM automatically health-checks your app's public URL:
 
 ## Creating an app without deploying
 
-When you run `zwrm deploy` for the first time, the app is created automatically if it doesn't already exist. A new app is [private to you](/apps/sharing) until you share it (`--share`, or later `zwrm share`). An agent's new app is private to the member whose private chat it works in, and shared when it works in a shared chat or a run. If you just want to create the `zwrm.toml` without deploying, use `zwrm init`:
+When you run `zwrm deploy` for the first time, the app is created automatically if it doesn't already exist. A new app is [private to you](/apps/sharing) until you share it (`--share`, or later `zwrm share`), and so is one you launch from the dashboard's **Deploy** page while signed in. An agent's new app is private to the member whose private chat it works in, and shared when it works in a shared chat or a run. If you just want to create the `zwrm.toml` without deploying, use `zwrm init`:
 
 ```bash
 zwrm init --name my-app

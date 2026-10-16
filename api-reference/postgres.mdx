@@ -23,7 +23,7 @@ Reads return a database's settings with the password redacted. Two responses car
 | `POST` | `/v1/postgres/{postgres_id}/scale` | Scale replicas |
 | `POST` | `/v1/postgres/{postgres_id}/studio-session` | Open a Database Studio browser session (requires an interactive dashboard session) |
 
-Databases carry `owner_user_id` and `visibility`. Someone who can't see a database gets `404` on it and everything under it. An org admin on a member's private database manages it only: reads, its links and backups, stopping and destroying it; `/connection`, Studio, starting it, backups and restores are `403`. A restore into a new database inherits the source's owner and visibility.
+Databases carry `owner_user_id` and `visibility`. Someone who can't see a database gets `404` on it and everything under it. An org admin on a member's private database manages it only: reading it, its links, backups and restores, stopping it and destroying it. Everything else is `403` for them: `/connection`, Studio, starting and scaling it, taking and deleting backups, turning WAL archiving on or off, and restoring it. A restore into a new database inherits the source's owner and visibility.
 
 ## Backups & restore
 
