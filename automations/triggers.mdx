@@ -97,7 +97,7 @@ A trigger's keyed workspace is kept for at most **6 hours** after its last deliv
 
 ## Private and shared triggers
 
-Every member can create webhook and Microsoft Teams triggers on any agent they can use. A trigger belongs to the member who created it, and its runs act as them. A [Front AI agent trigger](#front-ai-agent-triggers) is the exception: it always belongs to the organization, only a person with the operator role creates or changes it, and each run acts as the teammate who asked, on Front only, or as the AI agent.
+Every member can create webhook and Microsoft Teams triggers on any agent they can use. A trigger belongs to the member who created it, and its runs act as them. A [Front AI agent trigger](#front-ai-agent-triggers) is the exception: it always belongs to the organization, only a person with the operator role creates or changes it, and each run acts as the teammate who asked, or as the AI agent.
 
 A new trigger is **private** to you unless you share it: pass `--share` (`"visibility": "org"` in the API), or share it later. A trigger feeding your [private agent](/agents/overview) is always private.
 
@@ -163,7 +163,7 @@ ZWRM manages the Graph subscription for you (create on activate, renew before it
 
 A `front` trigger connects a [Front AI agent](https://dev.frontapp.com/docs/ai-agents) to a ZWRM agent. When a teammate @mentions the AI agent in a Front conversation, the run acts in Front **as that teammate**, with their own Front access, if they are a member who connected their own Front account in ZWRM. A question like "which emails mention this customer?" then searches only what they can see. The answer is posted back to the conversation as an internal comment from the AI agent.
 
-The teammate's account is used **on the Front connection only**. Every other connector the agent has acts as the agent, as in a shared run: a Front mention vouches for who asked in Front, and nothing beyond it.
+The run works for that teammate **on every connector**, as in a chat they started: each of the agent's other per-user connections acts as their own account too, unless an operator set that connection to always act as the agent.
 
 Only a teammate starts a run, by mentioning the AI agent or assigning a conversation to it. A customer's email never does: a new inbound message on a conversation assigned to the AI agent is ignored.
 
