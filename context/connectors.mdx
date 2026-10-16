@@ -88,6 +88,6 @@ Agent VMs run model-driven tool calls and arbitrary shell commands, so ZWRM neve
 For upstreams using per-user OAuth, the account depends on who the agent is working for:
 
 - **In a chat**, the agent acts as the **connected account of the member who started the chat**. That member connects their own account once (`zwrm mcp connect <upstream>`, or from the dashboard).
-- **In an unattended run** (a schedule, a trigger, `zwrm agent run`), the agent acts as **its own connected account** — never its owner's. Authorize the agent once (from its dashboard page, or `zwrm mcp connect <upstream> --agent <id>`).
+- **In an unattended run** (a schedule, a trigger, `zwrm agent run`), the agent acts as **its own connected account** — never its owner's. Authorize the agent once (from its dashboard page, or `zwrm mcp connect <upstream> --agent <id>`). A run a [Front mention](/automations/triggers#front-ai-agent-triggers) started for a member who asked acts as that member instead, as in a chat they started.
 
 Other upstreams use the org-shared credential. Which credential a call carries follows purely from the upstream's auth type and the caller; there is nothing to configure per attachment. See [Connector identity](/context/credentials).
