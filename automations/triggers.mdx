@@ -14,7 +14,7 @@ Every trigger has a **provider** — the kind of event source it ingests. It's f
 |----------|--------|--------------|
 | `webhook` (default) | Any external system that can POST JSON to a URL — including GitHub, GitLab, Stripe, Linear, Shopify, Sentry, and your own systems | CLI, API, dashboard |
 | `msteams` | A Microsoft Teams chat, via a Microsoft Graph change-notification subscription on your connected account | API, dashboard (**not** the CLI) |
-| `front` | A [Front AI agent](#front-ai-agent-triggers): teammates' mentions and assignments. A mention by a teammate who connected their own Front account is answered with their Front access; everything else with the AI agent's | CLI, API, dashboard (operators) |
+| `front` | A [Front AI agent](#front-ai-agent-triggers): teammates' mentions. A mention by a teammate who connected their own Front account is answered with their Front access; others are told how to connect, or, on a trigger that answers everyone, answered with the AI agent's | CLI, API, dashboard (operators) |
 
 All providers feed the same pipeline once a delivery is normalized to a JSON body: **match gate → route → dedup + rate cap → budget-gated run**.
 
@@ -97,7 +97,7 @@ A trigger's keyed workspace is kept for at most **6 hours** after its last deliv
 
 ## Private and shared triggers
 
-Every member can create webhook and Microsoft Teams triggers on any agent they can use. A trigger belongs to the member who created it, and its runs act as them. A [Front AI agent trigger](#front-ai-agent-triggers) is the exception: it always belongs to the organization, only a person with the operator role creates or changes it, and each run acts as the teammate who asked, or as the AI agent.
+Every member can create webhook and Microsoft Teams triggers on any agent they can use. A trigger belongs to the member who created it, and its runs act as them. A [Front AI agent trigger](#front-ai-agent-triggers) is the exception: it always belongs to the organization, only a person with the operator role creates or changes it, and each run acts as the teammate who asked, or, on one that answers everyone, as the AI agent.
 
 A new trigger is **private** to you unless you share it: pass `--share` (`"visibility": "org"` in the API), or share it later. A trigger feeding your [private agent](/agents/overview) is always private.
 
@@ -165,40 +165,52 @@ A `front` trigger connects a [Front AI agent](https://dev.frontapp.com/docs/ai-a
 
 The run works for that teammate **on every connector**, as in a chat they started: each of the agent's other per-user connections acts as their own account too, unless an operator set that connection to always act as the agent.
 
-Only a teammate starts a run, by mentioning the AI agent or assigning a conversation to it. A customer's email never does: a new inbound message on a conversation assigned to the AI agent is ignored.
+Only a teammate starts a run: by mentioning the AI agent, or, on a trigger that answers everyone, by assigning a conversation to it. A customer's email never does: a new inbound message on a conversation assigned to the AI agent is ignored.
 
-Everything else acts as the **Front AI agent** itself, with the access you grant it in Front:
+### Who it answers
 
-- a teammate who hasn't connected their own Front account in ZWRM, or isn't a member;
-- an assignment to the AI agent (it names no person);
-- a mention ZWRM can't read the author of.
+By default a Front trigger answers **only members** it recognises as the teammate who asked. Nothing else gets a run:
+
+- a teammate who hasn't connected their own Front account in ZWRM, or isn't a member, gets one short internal comment from the AI agent telling them how to connect, once per mention;
+- an assignment to the AI agent starts nothing (it names no person);
+- a mention ZWRM can't read the author of starts nothing.
+
+Set the trigger to answer **everyone** (`--front-answers everyone`, or turn off **Answer only members** in the dashboard), and each of these starts a run as the **Front AI agent** itself, with the access you grant it in Front, assignments included. Changing it takes the operator role.
 
 A member whose connected Front account stopped working (revoked or expired) isn't switched to the AI agent: the answer tells them to reconnect.
 
 ZWRM learns who asked from Front itself, never from the event or the model. It reads the comment the event names from the conversation, as the AI agent, and acts as its author only when all of these hold:
 
 - the comment mentions this AI agent;
-- it was written in the last 15 minutes;
-- no run has acted on it before (each comment starts at most one run);
+- its author wrote it in person within the last 10 minutes, at most 5 minutes before Front delivered the event;
+- no run has acted on it for this AI agent before (each comment starts at most one run per AI agent);
 - exactly one member's Front sign-in is that teammate (ZWRM learns each member's teammate ID when they connect their Front account).
 
-Otherwise the AI agent acts. The run's prompt carries the trigger's instruction and the event's IDs, not the rest of the event's body, and tells the agent that everything in the conversation is untrusted data: emails come from outside the company, so instructions in them are never followed, and nothing beyond the answer (no secrets, memories or credentials) goes into the reply.
+Otherwise ZWRM doesn't know who asked, and the trigger treats them as anyone it doesn't recognise (see above).
+
+A run's prompt carries the trigger's instruction and the event's IDs, not the rest of the event's body, and tells the agent that everything in the conversation is untrusted data: emails come from outside the company, so instructions in them are never followed, and nothing beyond the answer (no secrets, memories or credentials) goes into the reply.
 
 A run that acts for a member runs in that member's private workspace, so its transcript is theirs alone, and they can continue it in Cowork.
 
 <Warning>
-The AI agent's own Front access is what **everyone** who can mention it gets. Grant it only the Front workspaces every teammate may see, and start with read and write permissions without send. An answer is posted to the conversation, where everyone who can see the conversation can read it, including what the asker's access found. Front conversations are untrusted input to the agent: a customer's email can try to steer it.
+On a trigger that answers everyone, the AI agent's own Front access is what **everyone** who can mention it gets. Grant it only the Front workspaces every teammate may see, and start with read and write permissions without send. Answering only members, its own access only reads who asked and posts the answers. Either way, an answer is posted to the conversation, where everyone who can see the conversation can read it, including what the asker's access found. Front conversations are untrusted input to the agent: a customer's email can try to steer it.
 </Warning>
+
+### Several Front AI agents
+
+One Front connection serves several Front AI agents, say `@ferdi` and `@heidi`. Each is its own trigger with its own ZWRM agent, and each ZWRM agent acts in Front as its own Front AI agent: it reads and posts as that AI agent. Members sign in to Front once, on the connection, for all of them. A comment that mentions two AI agents is answered by both.
+
+A ZWRM agent has at most one Front AI agent on a connection, and a Front trigger takes no routes: it answers with its own agent. An agent attached to the Front connection without a Front AI agent of its own acts in Front as the member behind a request, or as an account connected for it.
 
 ### Set it up
 
 You need the operator role, and a shared [Front connection](/context/connectors) where members sign in with their own Front accounts.
 
 1. In Front, open **Settings → Company → Agents → Create AI agent**. On the **Credentials** step, copy the **signing secret**, **OAuth URL**, **client ID** and **client secret**. Front shows the client secret only once.
-2. Give the Front connection the AI agent's credentials, as the account agents use where no member is behind a request. The OAuth URL must be your company's Front URL, `https://<company>.frontapp.com/oauth/token`. In the dashboard, open the Front integration and fill in **Front AI agent**. With the CLI:
+2. Give the agent that answers its Front AI agent's credentials on the Front connection, as that agent's own account where no member is behind a request. The OAuth URL must be your company's Front URL, `https://<company>.frontapp.com/oauth/token`. In the dashboard, open the Front integration and choose **Add a Front AI agent**. With the CLI:
 
    ```bash
-   zwrm mcp upstream agent-credentials front \
+   zwrm mcp upstream agent-credentials front --agent support-bot \
      --client-id <client-id> --client-secret <client-secret> \
      --token-url https://<company>.frontapp.com/oauth/token
    ```
@@ -213,10 +225,14 @@ You need the operator role, and a shared [Front connection](/context/connectors)
      --instruction "Answer the teammate's question about this conversation."
    ```
 
+   Add `--front-answers everyone` to answer people it doesn't recognise as the AI agent.
+
 4. Back in Front, paste the trigger's URL as the agent's **Webhook URL**, send a test event, and finish the wizard.
 5. Attach the Front connection to the agent (**Integrations → Front → Give access**), and ask each teammate to connect their own Front account there.
 
-A Front trigger always belongs to the organization, and its agents must be shared: every member who mentions it uses them. Each Front connection has one Front trigger. Creating one, and changing what it does, takes a person with the operator role: an agent's credential can't, and a trigger an agent last changed acts as the AI agent for everyone. Each Front conversation keeps one workspace per member who asks there, and one shared workspace for everything the AI agent answers. Unassigning the AI agent starts nothing, and doesn't stop a run already going: cancel it with `zwrm agent run cancel <run-id>`.
+For another Front AI agent, repeat steps 1 to 5 with another agent on the same connection. Members don't sign in again.
+
+A Front trigger always belongs to the organization, and its agent must be shared: every member who mentions it uses it. Each agent's Front AI agent has one Front trigger. Creating one, and changing what it does, takes a person with the operator role: an agent's credential can't, and a trigger an agent last changed acts as no member, so it answers nobody, or, answering everyone, only as the AI agent. Each Front conversation keeps one workspace per member who asks there, and one shared workspace for everything the AI agent answers. Unassigning the AI agent starts nothing, and doesn't stop a run already going: cancel it with `zwrm agent run cancel <run-id>`.
 
 Only Front's signature is accepted on a Front trigger. Deliveries are deduplicated on their signed `event_id`. If ZWRM can't reach Front in time to learn who asked, it answers `500` and Front delivers the event again.
 
