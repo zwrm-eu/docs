@@ -165,7 +165,7 @@ A `front` trigger connects a [Front AI agent](https://dev.frontapp.com/docs/ai-a
 
 The run works for that teammate **on every connector**, as in a chat they started: each of the agent's other per-user connections acts as their own account too, unless an operator set that connection to always act as the agent.
 
-Only a teammate starts a run, by mentioning the AI agent or assigning a conversation to it. A customer's email never does: a new inbound message on a conversation assigned to the AI agent is ignored.
+Only a teammate starts a run: by mentioning the AI agent, or, on a trigger that answers everyone, by assigning a conversation to it. A customer's email never does: a new inbound message on a conversation assigned to the AI agent is ignored.
 
 ### Who it answers
 
@@ -175,7 +175,7 @@ By default a Front trigger answers **only members** it recognises as the teammat
 - an assignment to the AI agent starts nothing (it names no person);
 - a mention ZWRM can't read the author of starts nothing.
 
-Set the trigger to answer **everyone** (`--front-answers everyone`, or turn off **Answer only members** in the dashboard), and all of these are answered by the **Front AI agent** itself, with the access you grant it in Front. Changing it takes the operator role.
+Set the trigger to answer **everyone** (`--front-answers everyone`, or turn off **Answer only members** in the dashboard), and each of these starts a run as the **Front AI agent** itself, with the access you grant it in Front, assignments included. Changing it takes the operator role.
 
 A member whose connected Front account stopped working (revoked or expired) isn't switched to the AI agent: the answer tells them to reconnect.
 
@@ -186,7 +186,9 @@ ZWRM learns who asked from Front itself, never from the event or the model. It r
 - no run has acted on it for this AI agent before (each comment starts at most one run per AI agent);
 - exactly one member's Front sign-in is that teammate (ZWRM learns each member's teammate ID when they connect their Front account).
 
-Otherwise ZWRM doesn't know who asked, and the trigger treats them as anyone else. The run's prompt carries the trigger's instruction and the event's IDs, not the rest of the event's body, and tells the agent that everything in the conversation is untrusted data: emails come from outside the company, so instructions in them are never followed, and nothing beyond the answer (no secrets, memories or credentials) goes into the reply.
+Otherwise ZWRM doesn't know who asked, and the trigger treats them as anyone it doesn't recognise (see above).
+
+A run's prompt carries the trigger's instruction and the event's IDs, not the rest of the event's body, and tells the agent that everything in the conversation is untrusted data: emails come from outside the company, so instructions in them are never followed, and nothing beyond the answer (no secrets, memories or credentials) goes into the reply.
 
 A run that acts for a member runs in that member's private workspace, so its transcript is theirs alone, and they can continue it in Cowork.
 

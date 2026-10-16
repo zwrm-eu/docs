@@ -905,7 +905,7 @@ zwrm triggers pause|resume <trigger-id>
 zwrm triggers delete <trigger-id>
 ```
 
-`--secret` imports a provider-minted signing secret (Linear, Shopify, Sentry, Front); mutually exclusive with `--no-secret`. `--front-connection` makes a Front AI agent trigger on that connection: it needs Front's signing secret and a shared default agent with its own Front AI agent's credentials there, belongs to the organization, and takes the operator role. `--front-answers` (create and update) says whom it answers: `members` (the default) or `everyone`, people it doesn't recognise as the AI agent. `update` changes only the flags you pass and keeps the trigger's hook URL, secret, and delivery log; an empty `--match` or `--routes` removes it.
+`--secret` imports a provider-minted signing secret (Linear, Shopify, Sentry, Front); mutually exclusive with `--no-secret`. `--front-connection` makes a Front AI agent trigger on that connection: it needs Front's signing secret and a shared default agent with its own Front AI agent's credentials there, belongs to the organization, and takes the operator role. `--front-answers` (create and update) says whom it answers: `members` (the default) answers only members it recognises and tells anyone else how to connect; `everyone` also answers everyone else, and assignments, as the AI agent. `update` changes only the flags you pass and keeps the trigger's hook URL, secret, and delivery log; an empty `--match` or `--routes` removes it.
 
 ---
 
