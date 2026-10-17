@@ -6,6 +6,8 @@ icon: "database"
 
 ## Databases
 
+Reads return a database's settings with the password redacted. Two responses carry the password: creating a database (`POST /v1/postgres`, once, to its creator) and `GET /v1/postgres/{postgres_id}/connection`.
+
 | Method | Path | Description |
 |--------|------|-------------|
 | `POST` | `/v1/postgres` | Create a database |
@@ -16,7 +18,7 @@ icon: "database"
 | `DELETE` | `/v1/postgres/{postgres_id}` | Destroy a database |
 | `POST` | `/v1/postgres/{postgres_id}/stop` | Stop |
 | `POST` | `/v1/postgres/{postgres_id}/start` | Start |
-| `GET` | `/v1/postgres/{postgres_id}/connection` | Connection string |
+| `GET` | `/v1/postgres/{postgres_id}/connection` | Connection string with the superuser password. Routes through the pooler when one is enabled; `?direct=true` returns the raw `:5432` connection. `400` when the database isn't running. Agent and scoped credentials need `postgres:connect`, which agents don't have by default. Every call is audited as `database.credentials_released` |
 | `POST` | `/v1/postgres/{postgres_id}/scale` | Scale replicas |
 | `POST` | `/v1/postgres/{postgres_id}/studio-session` | Open a Database Studio browser session (requires an interactive dashboard session) |
 
@@ -35,7 +37,7 @@ icon: "database"
 
 ## App links
 
-Linking records the app–database link and opens firewall rules so the app's VMs can reach the database over the private network. No secret is injected into the app — you manage the connection string yourself. The app must have private networking enabled (`[network] private = true` in `zwrm.toml`), or the link is refused with `400`. See [Linking](/postgres/linking).
+Linking records the app–database link and opens firewall rules so the app's VMs can reach the database over the private network. No secret is injected into the app — you manage the connection string yourself. On failover, the control plane repoints only the host of a linked app's `DATABASE_URL`, and only when that URL targets this database; user, password, database, query, and port stay as they were, and any other value is left alone. The app must have private networking enabled (`[network] private = true` in `zwrm.toml`), or the link is refused with `400`. See [Linking](/postgres/linking).
 
 | Method | Path | Description |
 |--------|------|-------------|
