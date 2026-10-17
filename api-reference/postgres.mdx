@@ -10,17 +10,20 @@ Reads return a database's settings with the password redacted. Two responses car
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `POST` | `/v1/postgres` | Create a database |
+| `POST` | `/v1/postgres` | Create a database. It is [private](/apps/sharing) to its creator unless `visibility` is `"org"`, with the same rules for agents as apps |
 | `GET` | `/v1/postgres` | List databases |
 | `GET` | `/v1/postgres/presets` | List size presets |
 | `GET` | `/v1/postgres/by-name/{name}` | Get by name |
 | `GET` | `/v1/postgres/{postgres_id}` | Get a database |
 | `DELETE` | `/v1/postgres/{postgres_id}` | Destroy a database |
+| `PATCH` | `/v1/postgres/{postgres_id}` | Share it with the organization (`{"visibility": "org"}`) or take it back (`"private"`). Its owner shares; its owner or an org admin takes back; never an agent's credential or a scoped token (`403`). `409` while apps others use link it, when it has no owner, or when its owner left the organization |
 | `POST` | `/v1/postgres/{postgres_id}/stop` | Stop |
 | `POST` | `/v1/postgres/{postgres_id}/start` | Start |
 | `GET` | `/v1/postgres/{postgres_id}/connection` | Connection string with the superuser password. Routes through the pooler when one is enabled; `?direct=true` returns the raw `:5432` connection. `400` when the database isn't running. Agent and scoped credentials need `postgres:connect`, which agents don't have by default. Every call is audited as `database.credentials_released` |
 | `POST` | `/v1/postgres/{postgres_id}/scale` | Scale replicas |
 | `POST` | `/v1/postgres/{postgres_id}/studio-session` | Open a Database Studio browser session (requires an interactive dashboard session) |
+
+Databases carry `owner_user_id` and `visibility`. Someone who can't see a database gets `404` on it and everything under it. An org admin on a member's private database manages it only: reading it, its links, backups and restores, stopping it and destroying it. Everything else is `403` for them: `/connection`, Studio, starting and scaling it, taking and deleting backups, turning WAL archiving on or off, and restoring it. A restore into a new database inherits the source's owner and visibility.
 
 ## Backups & restore
 
@@ -37,7 +40,7 @@ Reads return a database's settings with the password redacted. Two responses car
 
 ## App links
 
-Linking records the app–database link and opens firewall rules so the app's VMs can reach the database over the private network. No secret is injected into the app — you manage the connection string yourself. On failover, the control plane repoints only the host of a linked app's `DATABASE_URL`, and only when that URL targets this database; user, password, database, query, and port stay as they were, and any other value is left alone. The app must have private networking enabled (`[network] private = true` in `zwrm.toml`), or the link is refused with `400`. See [Linking](/postgres/linking).
+Linking records the app–database link and opens firewall rules so the app's VMs can reach the database over the private network. No secret is injected into the app — you manage the connection string yourself. On failover, the control plane repoints only the host of a linked app's `DATABASE_URL`, and only when that URL targets this database; user, password, database, query, and port stay as they were, and any other value is left alone. The app must have private networking enabled (`[network] private = true` in `zwrm.toml`), or the link is refused with `400`. A shared app links only shared databases, and a private app also its owner's private ones; anything else is `409`. See [Linking](/postgres/linking).
 
 | Method | Path | Description |
 |--------|------|-------------|
