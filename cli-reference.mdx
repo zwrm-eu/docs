@@ -848,14 +848,15 @@ zwrm mcp upstream list
 zwrm mcp upstream tools <name>
 zwrm mcp upstream sync <name>
 zwrm mcp upstream grants <name>
-zwrm mcp upstream agent-credentials <name> --agent <a> --client-id <id> --client-secret <s> --token-url <url> [--scope <scopes>]
+zwrm mcp upstream agent-credentials <name> --agent <a> --client-id <id> --client-secret <s> --token-url <url> [--scope <scopes>] [--default]
+zwrm mcp upstream agent-credentials <name> --agent <a> --default
 zwrm mcp upstream agent-credentials <name> --agent <a> --clear
 zwrm mcp upstream rm <name> [--force]
 ```
 
 The auth flags are mutually exclusive. [Guide →](/context/credentials)
 
-`agent-credentials` sets the app credentials that are one agent's own account on a per-user OAuth upstream (its own [Front AI agent](/automations/triggers#front-ai-agent-triggers)'s client ID, secret and OAuth URL); `--clear` removes the agent's. It takes the operator role, or your own private connection. [Guide →](/context/credentials#app-credentials-as-the-agents-account)
+`agent-credentials` sets the app credentials that are one agent's own account on a per-user OAuth upstream (its own [Front AI agent](/automations/triggers#front-ai-agent-triggers)'s client ID, secret and OAuth URL); `--default` makes them the ones every agent without its own acts as (alone, it only does that); `--clear` removes the agent's. It takes the operator role, or your own private connection. [Guide →](/context/credentials#app-credentials-as-the-agents-account)
 
 ### `zwrm mcp connect` / `disconnect`
 
