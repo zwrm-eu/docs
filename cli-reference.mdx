@@ -311,6 +311,8 @@ zwrm postgres create <name> [--size <preset>] [--database <dbname>]
 | `--size` | string | `small` | Preset: `small`, `medium`, `large` |
 | `--database` | string | instance name | Initial database name |
 
+The output includes the new database's password, which `create` shows only this once. To see it again later, use `zwrm postgres connect`.
+
 ### `zwrm postgres list`
 
 ```bash
@@ -323,7 +325,9 @@ zwrm postgres list
 zwrm postgres connect <name> [--direct]
 ```
 
-`--direct` returns the raw Postgres connection (`:5432`), bypassing the pooler (PgBouncer) when one is enabled for the database.
+Prints the connection string and `psql` commands, the superuser password included. The database must be running. `--direct` returns the raw Postgres connection (`:5432`), bypassing the pooler (PgBouncer) when one is enabled for the database.
+
+An agent or a scoped API token needs the `postgres:connect` [capability](/agents/capabilities), plus `postgres:read` to look up the name. Agents don't have `postgres:connect` by default. Every call is recorded in the audit log as `database.credentials_released`.
 
 ### `zwrm postgres destroy`
 
@@ -400,6 +404,8 @@ zwrm postgres scale <name> <count>
 zwrm postgres link <database-name> [--app <name>]
 zwrm postgres unlink <database-name> [--app <name>]
 ```
+
+Linking opens the private network path from the app's VMs to the database. It sets no secret: copy the connection string from `zwrm postgres connect` into `DATABASE_URL` yourself with `zwrm secrets set`. On failover, only the host of a `DATABASE_URL` that targets this database is repointed. [Guide →](/postgres/linking)
 
 ### `zwrm postgres links`
 

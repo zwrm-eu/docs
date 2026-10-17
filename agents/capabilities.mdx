@@ -8,7 +8,7 @@ Every agent VM can call the platform as its agent, so the agent can run `zwrm` c
 
 ## Default
 
-An agent gets every capability except `destroy` and `sessions:shell`. It can build, ship, and manage. Irreversible teardown and programmatic operator shell execution stay explicit per-agent grants.
+An agent gets every capability except `destroy`, `sessions:shell`, and `postgres:connect`. It can build, ship, and manage. Irreversible teardown, programmatic operator shell execution, and database passwords stay explicit per-agent grants.
 
 ```bash
 zwrm agent update my-project --allowed-scopes apps:read,deploy,logs:read
@@ -25,7 +25,7 @@ Scopes are `resource:action` pairs, plus a few atomic verbs:
 |-------|--------|
 | Apps & deploy | `apps:read`, `deploy`, `scale` |
 | Secrets | `secrets:read`, `secrets:write` |
-| Databases | `postgres:read`, `postgres:write` |
+| Databases | `postgres:read` (configuration only: list, inspect, links; passwords redacted), `postgres:write`, `postgres:connect` (the connection string with the superuser password; audited) |
 | Volumes | `volumes:read`, `volumes:write` |
 | Networking | `routes:write` |
 | Observability | `logs:read` |
@@ -40,10 +40,16 @@ Scopes are `resource:action` pairs, plus a few atomic verbs:
 The agent's platform tools inside a session follow the same capabilities: `save_skill`, `update_skill`, and `delete_skill` need `skills:write`, and `save_memory` and `delete_memory` need `memories:write`. Both are in the default set. Narrow them out and the tools refuse with `agent policy does not allow skills:write` (or `memories:write`), just like the matching CLI and API writes.
 
 <Warning>
-Two capabilities are off by default:
+Three capabilities are off by default:
 
 - **`destroy`** permanently deletes apps, machines, databases, and volumes.
 - **`sessions:shell`** runs arbitrary shell commands in a live agent workspace. It also writes the command and output into the model's next-turn context, making it a deliberate operator-to-model injection channel.
+- **`postgres:connect`** releases a database's connection string with its superuser password (`zwrm postgres connect`). The password reads, writes, and drops the database's data, and the capability covers every database in the org, not only the ones the agent works on. Every release is recorded in the [audit log](/api-reference/platform#audit-logs) as `database.credentials_released`. Grant it only to agents that must reach the data themselves. The org assistant doesn't get it either.
+
+`postgres:connect` gates that one API, nothing more:
+
+- `zwrm postgres create` still shows the new database's password once, to whoever created it, an agent included.
+- An agent with `ssh` or `deploy` access to an app can read a `DATABASE_URL` the app already holds.
 
 Three write capabilities that **are** in the default set deserve attention:
 

@@ -6,6 +6,8 @@ icon: "link"
 
 Linking a database to an application enables private network access between them — your app can connect to the database without going over the public internet.
 
+Linking opens the network path only. It sets no secret, `DATABASE_URL` included: you [give the app its connection string](#give-the-app-its-connection-string) yourself.
+
 <Note>
 The app must have private networking enabled before it can be linked — set it in the app's `zwrm.toml`:
 
@@ -32,6 +34,25 @@ zwrm postgres link <database-name>
 ```bash
 zwrm postgres link my-db --app my-app
 ```
+
+## Give the app its connection string
+
+Run [`zwrm postgres connect`](/postgres/overview#connect-to-a-database) and store the internal connection string it prints (the one marked *from linked apps*) as the app's `DATABASE_URL` [secret](/apps/secrets):
+
+```bash
+zwrm postgres connect my-db
+zwrm secrets set DATABASE_URL "postgres://..." --app my-app
+```
+
+That connection string carries the database's superuser password. You can also create your own role or database on the cluster and put that in `DATABASE_URL` instead; failover repoints it the same way.
+
+## Failover
+
+When the database fails over to a replica, the control plane checks each linked app's `DATABASE_URL` secret and restarts the app's running machines.
+
+- **It repoints a `DATABASE_URL` that targets this database.** That is a `postgres://` or `postgresql://` URL whose host is one of the database's addresses (the primary's or a replica's), on its direct or pooled port.
+- **Only the host changes**, to the new primary's address. The URL keeps its own user, password, database, query, and port, so failover never writes a credential.
+- **Any other value is left alone:** another host or port (the external connection string included), the keyword form (`host=... port=...`), or a value that isn't a URL. Update such a value yourself if it should follow the primary.
 
 ## Unlink a database
 
