@@ -21,7 +21,7 @@ zwrm postgres share my-db           # a database
 zwrm postgres unshare my-db
 ```
 
-In the dashboard's developer tools, an app's or database's **Overview** has a **Who can see it** card with the same switch: **Share with the workspace**, or **Make private**. Lists and page headers tag each one **Private** or **Shared**. An app you launch from the dashboard's **Deploy** page while signed in is yours and private too, and one launched without an account becomes private to whoever keeps it: the member who claims it is its owner. To create one shared from the start, pass `--share` to [`zwrm deploy`](/apps/deploy) (when it creates the app) or [`zwrm postgres create`](/postgres/overview#create-a-database). Through the API, send `"visibility": "org"` when you create it, and `PATCH` it later; see [Apps](/api-reference/apps#apps) and [PostgreSQL](/api-reference/postgres#databases).
+In the dashboard's developer tools, **Apps** and **Databases** are every member's pages: each member finds their own and the shared ones there, and org admins also members' private ones. An app's or database's **Overview** has a **Who can see it** card with the same switch: **Share with the workspace**, or **Make private**. Lists and page headers tag each one **Private** or **Shared**. An app you launch from the dashboard's **Deploy** page while signed in is yours and private too, and one launched without an account becomes private to whoever keeps it: the member who claims it is its owner. To create one shared from the start, pass `--share` to [`zwrm deploy`](/apps/deploy) (when it creates the app) or [`zwrm postgres create`](/postgres/overview#create-a-database). Through the API, send `"visibility": "org"` when you create it, and `PATCH` it later; see [Apps](/api-reference/apps#apps) and [PostgreSQL](/api-reference/postgres#databases).
 
 | | Private | Shared |
 |---|---|---|
@@ -46,7 +46,7 @@ What an agent sees depends on the kind of chat it works in, never on who is typi
 - **In a member's private chat**, their private workspace, or their own run, the agent works for that member. It sees their private apps and databases as well as the shared ones, and what it creates is **private to that member**.
 - **In a shared chat**, a run nobody owns, or a shared workspace, the agent works for no one in particular. It sees shared apps and databases only, and what it creates is **shared**, so everyone in the chat can keep using it.
 
-Agents never change who sees an app or database: sharing and taking back are for people, from the dashboard, the CLI or the API with their own login. A scoped API token can't either. An agent that gets a `404` for an app you named may be in a shared chat, or the app may be another member's private one: ask its owner to share it.
+Agents never change who sees an app or database: sharing and taking back are for people, from the dashboard, the CLI or the API with their own login. A scoped API token can't either. An agent that gets a `404` for an app you named may be in a shared chat, or the app may be another member's private one: ask its owner to share it. The same goes for `zwrm deploy` saying an app of that name exists but this login can't see it: app names are unique across zwrm, and deploy never picks another one by itself.
 
 An agent's own app (`agent-…`) follows its agent: share or take back the [agent](/agents/overview#private-and-shared-agents) instead.
 

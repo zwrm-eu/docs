@@ -18,7 +18,7 @@ zwrm postgres create <name>
 | `--database` | string | instance name | Initial database name — defaults to the instance name, sanitized to a valid Postgres identifier (e.g. `my-db` → `my_db`) |
 | `--share` | bool | `false` | Share it with the organization at once |
 
-A new database is [private to you](/apps/sharing) until you share it: other members don't see it, and org admins see it but can't connect to it. Share it with `zwrm postgres share <name>`, and take it back with `zwrm postgres unshare <name>`. An agent's new database is private to the member whose private chat it works in, and shared when it works in a shared chat or a run.
+A new database is [private to you](/apps/sharing) until you share it: other members don't see it, and org admins see it but can't connect to it. Share it with `zwrm postgres share <name>`, and take it back with `zwrm postgres unshare <name>`. An agent's new database is private to the member it works for (in their private chat, or their own run), and shared when it works for no one in particular (a shared chat, or a run nobody owns). Only people share: an agent working for a member that passes `--share` is refused.
 
 After creation, you'll see the host addresses, the credentials, and a connection string. This is the only time `zwrm postgres create` shows the password. To see it again later, use [`zwrm postgres connect`](#connect-to-a-database).
 
