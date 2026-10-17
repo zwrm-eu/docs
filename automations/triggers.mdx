@@ -200,7 +200,7 @@ On a trigger that answers everyone, the AI agent's own Front access is what **ev
 
 One Front connection serves several Front AI agents, say `@ferdi` and `@heidi`. Each is its own trigger with its own ZWRM agent, and each ZWRM agent acts in Front as its own Front AI agent: it reads and posts as that AI agent. Members sign in to Front once, on the connection, for all of them. A comment that mentions two AI agents is answered by both.
 
-A ZWRM agent has at most one Front AI agent on a connection, and a Front trigger takes no routes: it answers with its own agent. An agent attached to the Front connection without a Front AI agent of its own acts in Front as the member behind a request, or as an account connected for it.
+A ZWRM agent has at most one Front AI agent on a connection, and a Front trigger takes no routes: it answers with its own agent. An agent attached to the Front connection without a Front AI agent of its own still uses Front: as the member behind a request, and otherwise, in a shared chat or a run, as the connection's **default** Front AI agent. That is the first one set up, or the one you choose (**Make default** on the Front integration, or `agent-credentials --default`). Only a trigger needs its own: who may start a run from Front is the trigger's to decide, not who may use the connection.
 
 ### Set it up
 
