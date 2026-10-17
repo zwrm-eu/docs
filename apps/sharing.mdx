@@ -21,7 +21,7 @@ zwrm postgres share my-db           # a database
 zwrm postgres unshare my-db
 ```
 
-In the dashboard's developer tools, an app's or database's **Overview** has a **Who can see it** card with the same switch: **Share with the workspace**, or **Make private**. Lists and page headers tag each one **Private** or **Shared**. An app you launch from the dashboard's **Deploy** page while signed in is yours and private too. To create one shared from the start, pass `--share` to [`zwrm deploy`](/apps/deploy) (when it creates the app) or [`zwrm postgres create`](/postgres/overview#create-a-database). Through the API, send `"visibility": "org"` when you create it, and `PATCH` it later; see [Apps](/api-reference/apps#apps) and [PostgreSQL](/api-reference/postgres#databases).
+In the dashboard's developer tools, an app's or database's **Overview** has a **Who can see it** card with the same switch: **Share with the workspace**, or **Make private**. Lists and page headers tag each one **Private** or **Shared**. An app you launch from the dashboard's **Deploy** page while signed in is yours and private too, and one launched without an account becomes private to whoever keeps it: the member who claims it is its owner. To create one shared from the start, pass `--share` to [`zwrm deploy`](/apps/deploy) (when it creates the app) or [`zwrm postgres create`](/postgres/overview#create-a-database). Through the API, send `"visibility": "org"` when you create it, and `PATCH` it later; see [Apps](/api-reference/apps#apps) and [PostgreSQL](/api-reference/postgres#databases).
 
 | | Private | Shared |
 |---|---|---|
