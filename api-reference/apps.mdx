@@ -8,17 +8,20 @@ icon: "cloud-arrow-up"
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `POST` | `/v1/apps` | Create an app |
+| `POST` | `/v1/apps` | Create an app. It is [private](/apps/sharing) to its creator unless `visibility` is `"org"`; an agent working for no one in particular creates shared apps (`"private"` is a `403` there), and one working for a member never shares (`"org"` is a `403`) |
 | `GET` | `/v1/apps` | List apps (`?include_system=true` includes platform-managed apps — honored only for host-admin callers; the parameter is ignored for everyone else) |
 | `GET` | `/v1/apps/by-name/{app_name}` | Get an app by name |
 | `GET` | `/v1/apps/{app_id}` | Get an app |
 | `DELETE` | `/v1/apps/{app_id}` | Delete an app (`?force=true` skips safety checks) |
+| `PATCH` | `/v1/apps/{app_id}` | Share it with the organization (`{"visibility": "org"}`) or take it back (`"private"`). Its owner shares; its owner or an org admin takes back; never an agent's credential or a scoped token (`403`). `409` when it links a database that isn't shared, has no owner, or its owner left the organization, and for an agent's own app (share the agent instead) |
 | `POST` | `/v1/apps/{app_id}/transfer` | Transfer the app to another organization |
 | `PUT` | `/v1/apps/{app_id}/config` | Update app configuration |
 | `POST` | `/v1/apps/{app_id}/scale` | Scale to a target machine count |
 | `GET` | `/v1/apps/{app_id}/health` | App health summary |
 | `GET` | `/v1/apps/{app_id}/metrics` | Aggregated app metrics |
 | `GET` | `/v1/vm-presets` | List available VM size presets |
+
+Apps carry `owner_user_id` and `visibility` (`private` or `org`). Someone who can't see an app (another member's private one, or one in another organization) gets `404` on it and everything under it, exactly as for one that doesn't exist. An org admin on a member's private app manages it only: reads, stopping machines, scaling down and deleting work, and the rest is `403`. See [Private and shared apps](/apps/sharing).
 
 ## Deployments
 

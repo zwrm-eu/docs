@@ -39,7 +39,7 @@ zwrm init [--name <name>] [--dockerfile <path>] [--no-prompt] [--no-workflow]
 Build and deploy the application. [Guide →](/apps/deploy)
 
 ```bash
-zwrm deploy [--app <name>] [--context <dir>] [--force-build] [--replicas <n>] [--repo <repo>] [--ref <ref>]
+zwrm deploy [--app <name>] [--context <dir>] [--force-build] [--replicas <n>] [--repo <repo>] [--ref <ref>] [--share]
 ```
 
 | Flag | Type | Default | Description |
@@ -50,16 +50,30 @@ zwrm deploy [--app <name>] [--context <dir>] [--force-build] [--replicas <n>] [-
 | `--replicas` | int | `1` | Number of VM instances |
 | `--repo` | string | — | Deploy from a GitHub repo (`github.com/owner/repo[@ref]`); server-side clone, requires `--app` |
 | `--ref` | string | default branch | Branch, tag, or commit for `--repo` (alternative to an `@ref` suffix; don't use both) |
+| `--share` | bool | `false` | Share the app with the organization when deploy creates it (it is private to you otherwise) |
 
 ---
 
 ## `zwrm status`
 
-Show application and machine status. [Guide →](/apps/status)
+Show application and machine status, and who may use the app. [Guide →](/apps/status)
 
 ```bash
 zwrm status [--app <name>] [--app-id <uuid>]
 ```
+
+---
+
+## `zwrm share` / `zwrm unshare`
+
+Share an app with the organization, or take it back private. [Guide →](/apps/sharing)
+
+```bash
+zwrm share [--app <name>] [--app-id <uuid>]
+zwrm unshare [--app <name>] [--app-id <uuid>]
+```
+
+Only its owner shares an app; its owner or an org admin takes it back, with their own login (an agent's or a scoped token can't). Sharing an app that links a database that isn't shared is refused with `409`, naming it.
 
 ---
 
@@ -303,13 +317,14 @@ Manage PostgreSQL databases. [Guide →](/postgres/overview)
 ### `zwrm postgres create`
 
 ```bash
-zwrm postgres create <name> [--size <preset>] [--database <dbname>]
+zwrm postgres create <name> [--size <preset>] [--database <dbname>] [--share]
 ```
 
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
 | `--size` | string | `small` | Preset: `small`, `medium`, `large` |
 | `--database` | string | instance name | Initial database name |
+| `--share` | bool | `false` | Share it with the organization at once (it is [private to you](/apps/sharing) otherwise) |
 
 The output includes the new database's password, which `create` shows only this once. To see it again later, use `zwrm postgres connect`.
 
@@ -318,6 +333,17 @@ The output includes the new database's password, which `create` shows only this 
 ```bash
 zwrm postgres list
 ```
+
+Lists the databases you can see, with whether each is shared and who owns it.
+
+### `zwrm postgres share` / `unshare`
+
+```bash
+zwrm postgres share <name>
+zwrm postgres unshare <name>
+```
+
+Share a database with the organization, or take it back private. [Guide →](/apps/sharing) Only its owner shares it; its owner or an org admin takes it back. Taking it back is refused with `409` while a shared app, or another member's private app, links it.
 
 ### `zwrm postgres connect`
 

@@ -30,6 +30,7 @@ The `deploy` command builds your Docker image, converts it to a Firecracker micr
 | `--replicas` | int | `1` | Number of VM instances to deploy |
 | `--repo` | string | — | Deploy from a GitHub repo (`github.com/owner/repo[@ref]`) instead of a local context; the clone happens server-side. Requires `--app` |
 | `--ref` | string | default branch | Branch, tag, or commit for `--repo` (alternative to an `@ref` suffix; don't use both) |
+| `--share` | bool | `false` | Share the app with the organization when deploy creates it |
 
 ## Examples
 
@@ -73,7 +74,9 @@ After deploying, ZWRM automatically health-checks your app's public URL:
 
 ## Creating an app without deploying
 
-When you run `zwrm deploy` for the first time, the app is created automatically if it doesn't already exist. If you just want to create the `zwrm.toml` without deploying, use `zwrm init`:
+When you run `zwrm deploy` for the first time, the app is created automatically if it doesn't already exist. A new app is [private to you](/apps/sharing) until you share it (`--share`, or later `zwrm share`), and so is one you launch from the dashboard's **Deploy** page while signed in. One launched there without an account becomes the app of whoever keeps it, private to them. An agent's new app is private to the member it works for (in their private chat, or their own run), and shared when it works for no one in particular (a shared chat, or a run nobody owns). Only people share: an agent working for a member that passes `--share` is refused.
+
+App names are unique across zwrm. When yours is taken by an app you can't see (another member's private app, or one in another organization), `zwrm deploy` stops and says so: ask its owner to share it, or choose another name yourself. It never picks one for you. If you just want to create the `zwrm.toml` without deploying, use `zwrm init`:
 
 ```bash
 zwrm init --name my-app
