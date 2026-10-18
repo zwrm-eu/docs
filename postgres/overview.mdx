@@ -16,6 +16,9 @@ zwrm postgres create <name>
 |------|------|---------|-------------|
 | `--size` | string | `small` | Size preset: `small`, `medium`, or `large` |
 | `--database` | string | instance name | Initial database name — defaults to the instance name, sanitized to a valid Postgres identifier (e.g. `my-db` → `my_db`) |
+| `--share` | bool | `false` | Share it with the organization at once |
+
+A new database is [private to you](/apps/sharing) until you share it: other members don't see it, and org admins see it but can't connect to it. Share it with `zwrm postgres share <name>`, and take it back with `zwrm postgres unshare <name>`. An agent's new database is private to the member it works for (in their private chat, or their own run), and shared when it works for no one in particular (a shared chat, or a run nobody owns). Only people share: an agent working for a member that passes `--share` is refused.
 
 After creation, you'll see the host addresses, the credentials, and a connection string. This is the only time `zwrm postgres create` shows the password. To see it again later, use [`zwrm postgres connect`](#connect-to-a-database).
 
@@ -43,7 +46,7 @@ When a connection pooler (PgBouncer) is enabled for the database, the connection
 
 ### Who can fetch the connection details
 
-- **Members** of the database's organization can.
+- **Its owner**, and on a [shared](/apps/sharing) database every member of its organization. On a member's private database an org admin can't.
 - **Agents and scoped API tokens** need the `postgres:connect` [capability](/agents/capabilities), plus `postgres:read` for `zwrm postgres connect` to look the database up by name. Agents don't have `postgres:connect` by default, so an agent gets `403` until you grant it.
 
 Every fetch is recorded in the organization's [audit log](/api-reference/platform#audit-logs) as `database.credentials_released`, with who fetched it, which credential they used, and whether it was the direct or the pooled connection string.

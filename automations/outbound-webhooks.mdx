@@ -36,6 +36,8 @@ POST   /v1/org/webhooks/deliveries/{delivery_id}/retry
 
 The agent events are the machine-readable way to follow runs: `agent_run.completed` and `agent_run.failed` fire at terminal states, and `agent_run.needs_attention` fires when a run pauses on an [escalation](/agents/messaging#escalations). (There is no message event — the platform has no built-in messaging; agents reach out through [connectors](/context/connectors).)
 
+Private [apps and databases](/apps/sharing#webhooks) send nothing: a private app, a private agent's app or a private database delivers no deploy, machine, scaling, secret, backup or PostgreSQL event. Taking a shared one back stops its events at once.
+
 A private run (one on a [private agent](/agents/overview#private-and-shared-agents), or in a member's private chat) sends only its ids, its status and `"private": true`. Its summary, error, pull request link and tool name stay out of the payload, since a webhook leaves the organization.
 
 ## Verifying deliveries

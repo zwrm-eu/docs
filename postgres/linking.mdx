@@ -19,6 +19,10 @@ private = true
 Linking an app without private networking is refused.
 </Note>
 
+<Note>
+A link opens the network path to the database for the app's machines, and the app connects with whatever its `DATABASE_URL` holds, so linking follows who may use each side ([private and shared apps](/apps/sharing#linking-databases)): a shared app links only shared databases, and a private app links its owner's private databases and shared ones. Anything else is refused with `409`. While linked, sharing the app or taking the database back is refused too, naming the other side.
+</Note>
+
 ## Link a database
 
 ```bash

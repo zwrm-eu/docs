@@ -1,0 +1,83 @@
+---
+title: "Private and shared apps"
+description: "Apps and databases are private to the member who creates them until they share them with the organization."
+icon: "lock"
+---
+
+A new app or [managed database](/postgres/overview) is **private** to the member who created it, its owner, until they share it with the organization. A private one:
+
+- Other members don't see it at all: it isn't in their lists, and its address is a `404` for them, exactly like one that doesn't exist.
+- Its owner uses it as before: deploys, secrets, logs, SSH, connection strings, backups.
+- Org admins see it, and can stop it or delete it, but they can't use it.
+
+Private is about who sees and manages it, not who can reach it: a private app's public address still serves everyone, and its machines still reach the databases it links.
+
+The owner can **share** it with the organization, and take it back:
+
+```bash
+zwrm share --app my-app             # an app (or run it next to zwrm.toml)
+zwrm unshare --app my-app
+zwrm postgres share my-db           # a database
+zwrm postgres unshare my-db
+```
+
+In the dashboard's developer tools, **Apps** and **Databases** are every member's pages: each member finds their own and the shared ones there, and org admins also members' private ones. An app's or database's **Overview** has a **Who can see it** card with the same switch: **Share with the workspace**, or **Make private**. Lists and page headers tag each one **Private** or **Shared**. An app you launch from the dashboard's **Deploy** page while signed in is yours and private too, and one launched without an account becomes private to whoever keeps it: the member who claims it is its owner. To create one shared from the start, pass `--share` to [`zwrm deploy`](/apps/deploy) (when it creates the app) or [`zwrm postgres create`](/postgres/overview#create-a-database). Through the API, send `"visibility": "org"` when you create it, and `PATCH` it later; see [Apps](/api-reference/apps#apps) and [PostgreSQL](/api-reference/postgres#databases).
+
+| | Private | Shared |
+|---|---|---|
+| Its owner | Uses it, shares it, deletes it | The same, and takes it back |
+| Other members | Don't see it | Use it as members always have: deploy, secrets, scale, link, delete |
+| Org admins | See it, stop it, delete it, and scale an app down | Use it, and take it back private |
+| Agents in the owner's private chats | Use it | Use it |
+| Agents in shared chats and runs | Don't see it | Use it |
+
+Sharing keeps the owner. On a shared app or database every member keeps the rights members always had: there is no extra role to deploy or link.
+
+## What org admins see
+
+On a member's private app or database an org admin gets its **metadata only**: its name and settings, its machines and their metrics, its deployments (without build logs), volumes, links and backups. They can stop it and delete it, and scale an app down. They can't deploy it, start it, change its configuration, or read its secrets, logs or shells. On a database they can't scale it, fetch its connection string, open its tables, take or delete backups, turn continuous backup on or off, or restore it. An app's configuration shows them the names of its environment variables and build arguments, not their values.
+
+To work on a member's private app or database, ask its owner to share it.
+
+## Agents
+
+What an agent sees depends on the kind of chat it works in, never on who is typing:
+
+- **In a member's private chat**, their private workspace, or their own run, the agent works for that member. It sees their private apps and databases as well as the shared ones, and what it creates is **private to that member**.
+- **In a shared chat**, a run nobody owns, or a shared workspace, the agent works for no one in particular. It sees shared apps and databases only, and what it creates is **shared**, so everyone in the chat can keep using it.
+
+Agents never change who sees an app or database: sharing and taking back are for people, from the dashboard, the CLI or the API with their own login. A scoped API token can't either. An agent that gets a `404` for an app you named may be in a shared chat, or the app may be another member's private one: ask its owner to share it. The same goes for `zwrm deploy` saying an app of that name exists but this login can't see it: app names are unique across zwrm, and deploy never picks another one by itself.
+
+An agent's own app (`agent-…`) follows its agent: share or take back the [agent](/agents/overview#private-and-shared-agents) instead.
+
+## Linking databases
+
+A [link](/postgres/linking) opens the network path from the app's machines to the database. It sets no secret: the app connects with whatever it holds in `DATABASE_URL`, which is often the database's password. So:
+
+- A **shared app** links only **shared databases**, since every member deploys it and can read its secrets.
+- A **private app** links its owner's private databases and shared ones.
+
+Linking anything else is refused with `409`. The same rule holds when visibility changes:
+
+- Sharing an app that links a database that isn't shared is refused, naming the database. Share the database, or unlink it, first.
+- Taking back a database that a shared app, or another member's private app, links is refused, naming the apps. Unlink it from them first.
+
+## Taking one back
+
+The owner, or an org admin, takes a shared app or database back. Other members lose it at once. These are refused with `409`:
+
+- One that has **no owner** is the organization's, and stays shared.
+- One whose **owner left the organization** is reassigned to a member first, so it never becomes nobody's.
+- A **database** that a shared app, or another member's private app, links: unlink it from them first (see [Linking databases](#linking-databases)).
+
+## Webhooks
+
+The organization's [outbound webhooks](/automations/outbound-webhooks) get no events for a private app, a private agent's app, or a private database: deploys, machines, scaling, secrets, backups and health all stay out, since a webhook leaves the organization. Taking a shared one back stops its events at once; sharing it starts them.
+
+## Members who leave
+
+When a member leaves the organization, their apps and databases keep running. What they shared stays shared. Their private apps and databases pass to the organization's owner and stay private, so nobody else gains access. An admin can then [hand them to another member](/api-reference/platform#members-who-leave) or delete them. Unlike a departed member's other private items, they are never deleted automatically.
+
+## Apps and databases from before
+
+Apps and databases that existed before private apps and databases arrived stay **shared**, so nothing changes for anyone. Each one's owner is the member who created it, where the organization's audit log still says so, and the organization's owner otherwise. Owners can take back what should be private.
