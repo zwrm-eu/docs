@@ -219,7 +219,8 @@ Each agent's row under **Agents using it** says what it still lacks, and opens t
 With the CLI, in the same order:
 
 ```bash
-# 2. The trigger, with Front's signing secret. Paste the URL it prints into Front.
+# 2. The trigger, with Front's signing secret. Paste the URL it prints into
+#    Front's Webhook URL field, then send Front's test event.
 zwrm triggers create "Front" \
   --front-connection front \
   --default-agent support-bot \
@@ -235,6 +236,8 @@ zwrm mcp upstream agent-credentials front --agent support-bot \
 zwrm agent tools set support-bot front \
   --tools read_conversation,read_message,search_conversations,list_inboxes,add_comment
 ```
+
+Then finish Front's wizard, and ask each teammate to connect their own Front account under **Integrations → Front**. The agent's row under **Agents using it** shows the test event once it has arrived (the API's `front.verified_at` on the trigger).
 
 Add `--front-answers everyone` to the trigger to answer people it doesn't recognise, as the AI agent. Until its agent has its Front AI agent's credentials on the connection, a Front trigger answers Front's test event and nothing else.
 
