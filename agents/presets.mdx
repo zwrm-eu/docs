@@ -1,10 +1,10 @@
 ---
 title: "Presets"
-description: "Start an agent from one of the characters on zwrm.eu: instructions, tools that ask first, routines and limits in one step."
+description: "Start an agent from one of the characters on zwrm.eu: instructions, tools, routines and limits in one step."
 icon: "user-plus"
 ---
 
-A preset is a ready-made agent: a job description with instructions, the tools it needs from your connected integrations (with the ones that send things outside asking first), routines it runs on a schedule, a runtime and daily limits, in English and German.
+A preset is a ready-made agent: a job description with instructions, the tools it needs from your connected integrations, routines it runs on a schedule, a runtime and daily limits, in English and German.
 
 ```bash
 zwrm agent presets                       # list them; tools marked * aren't connected yet
@@ -30,7 +30,7 @@ zwrm agent create books --preset finance --locale de \
 One request makes the agent, its tools and its routines. If any part fails, nothing is kept.
 
 - **The agent** gets the preset's instructions, runtime, effort and daily limits, its name (`Hedi`) and bird. The handle defaults to the preset's id; pass one to choose your own, and `--name` to rename it.
-- **Tools.** For each integration your organization has connected, the agent gets the preset's tools from it. The ones that send things outside, such as sending mail, [ask first](/context/connectors#escalations). Afterwards they are ordinary [agent tools](/context/connectors#choose-an-agents-tools): read and change them with `zwrm agent tools`.
+- **Tools.** For each integration your organization has connected, the agent gets the preset's tools from it, and nothing [asks first](/context/connectors#escalations). Afterwards they are ordinary [agent tools](/context/connectors#choose-an-agents-tools): read and change them with `zwrm agent tools`, for example to make sending mail wait for a person's approval.
   - A catalog integration counts as connected by its server's address, so a connection you renamed, or a second one, works. A custom server that merely has the same name does not.
   - Integrations you haven't connected, or whose tool list hasn't synced yet, are skipped and listed in the response.
 - **Who can use it.** In the dashboard you choose: everyone in the organization (the default) or only you. Through the API it is private unless you pass `visibility: org`. A shared agent's routines are shared too, and if one of its tools acts as one account for everyone, you're asked to confirm first.
