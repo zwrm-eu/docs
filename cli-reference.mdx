@@ -887,7 +887,7 @@ zwrm mcp upstream rm <name> [--force]
 
 The auth flags are mutually exclusive. [Guide →](/context/credentials)
 
-`agent-credentials` sets the app credentials that are one agent's own account on a per-user OAuth upstream (its own [Front AI agent](/automations/triggers#front-ai-agent-triggers)'s client ID, secret and OAuth URL); on Front every agent has its own, and gets the connection's tools only with it. `--clear` removes the agent's; take its Front tools away too. It takes the operator role, or your own private connection. [Guide →](/context/credentials#app-credentials-as-the-agents-account)
+`agent-credentials` sets the app credentials that are one agent's own account on a per-user OAuth upstream (its own [Front AI agent](/automations/triggers#front-ai-agent-triggers)'s client ID, secret and OAuth URL); on Front every agent has its own, and gets the connection's tools only with it. On Front they are checked with Front before they're saved, and the command prints whom Front knows the AI agent as. `--clear` removes the agent's and, on Front, deletes its Front trigger there; take its Front tools away too. It takes the operator role, or your own private connection. [Guide →](/context/credentials#app-credentials-as-the-agents-account)
 
 ### `zwrm mcp connect` / `disconnect`
 
@@ -937,7 +937,7 @@ zwrm triggers pause|resume <trigger-id>
 zwrm triggers delete <trigger-id>
 ```
 
-`--secret` imports a provider-minted signing secret (Linear, Shopify, Sentry, Front); mutually exclusive with `--no-secret`. `--front-connection` makes a Front AI agent trigger on that connection: it needs Front's signing secret and a shared default agent with its own Front AI agent's credentials there, belongs to the organization, and takes the operator role. `--front-answers` (create and update) says whom it answers: `members` (the default) answers only members it recognises and tells anyone else how to connect; `everyone` also answers everyone else, and assignments, as the AI agent. `update` changes only the flags you pass and keeps the trigger's hook URL, secret, and delivery log; an empty `--match` or `--routes` removes it.
+`--secret` imports a provider-minted signing secret (Linear, Shopify, Sentry, Front); mutually exclusive with `--no-secret`. `--front-connection` makes a Front AI agent trigger on that connection: it needs Front's signing secret and a shared default agent, belongs to the organization, and takes the operator role. Until that agent has its own Front AI agent's credentials on the connection, the trigger answers Front's test event and nothing else. `--front-answers` (create and update) says whom it answers: `members` (the default) answers only members it recognises and tells anyone else how to connect; `everyone` also answers everyone else, and assignments, as the AI agent. `update` changes only the flags you pass and keeps the trigger's hook URL, secret, and delivery log; an empty `--match` or `--routes` removes it.
 
 ---
 
