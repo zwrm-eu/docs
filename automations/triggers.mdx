@@ -247,6 +247,23 @@ A Front trigger always belongs to the organization, and its agent must be shared
 
 Only Front's signature is accepted on a Front trigger. Deliveries are deduplicated on their signed `event_id`. If ZWRM can't reach Front in time to learn who asked, it answers `500` and Front delivers the event again.
 
+## Notion mentions
+
+The Notion app lets an agent work in Notion like a teammate. Each agent is a person in your Notion workspace: mention that person in a comment or in a page's text, and the agent reads the page and answers there, as that person.
+
+### Set it up
+
+An admin connects the workspace, and adding agents takes the operator role. Each agent needs its own Notion member account, such as `mako@yourcompany.com`, so it can be mentioned and reply as itself.
+
+1. **Connect Notion.** Under **Integrations → Notion**, an admin chooses **Connect Notion** and picks the workspace and the pages to share with ZWRM. Mentions arrive only from pages shared with ZWRM, and the **Notion workspace** card shows how many it sees. To share more, choose **Choose pages**, or in Notion open a page's **••• → Connections** and add ZWRM.
+2. **Add an agent.** Under **Agents using it**, choose **Add an agent** and pick a shared agent, and the workspace if you have several.
+3. **Sign in as the agent.** Sign in to Notion as the agent's own account. If your browser is signed in to Notion as yourself, use a private window, or choose **Copy link** in the dialog and send the sign-in link to whoever has the agent's login. ZWRM asks Notion who signed in and links that person, together with the agent's Notion trigger and its Notion tools. It links nothing when the account is a member's own, a bot, not in the workspace, or already linked to another agent there. When ZWRM can't tell who signed in, choose the person by hand.
+4. **Tools.** The agent starts with read and write on Notion; narrow it any time.
+
+Each agent's row under **Agents using it** says what it still lacks, such as its sign-in, a sign-in as someone else, or its tools, and opens the dialog at that step. **Remove from Notion** unlinks the agent in every workspace, which removes its trigger, and takes away its Notion tools and its Notion sign-in.
+
+An agent reads a page as its own Notion account, so that account needs access to every page where it's mentioned; mentions only arrive from pages shared with ZWRM. A linked agent's own comments never start a run, and an agent takes part in a thread only by commenting as its linked person.
+
 ## Responses
 
 | Status | Meaning |
