@@ -16,7 +16,7 @@ For ZWRM cloud this is your platform URL.
 
 ## Authentication
 
-All endpoints require authentication with an API token, with a few exceptions: `GET /v1/health`, trigger ingest, `GET /v1/mcp/oauth/callback` (the MCP upstream OAuth return leg), and — when one-click launches are enabled — the launch create/status routes under `/v1/launches`.
+All endpoints require authentication with an API token, with a few exceptions: `GET /v1/health`, trigger ingest, and `GET /v1/mcp/oauth/callback` (the MCP upstream OAuth return leg).
 
 ```bash
 curl -H "Authorization: Bearer <token>" https://<platform>/v1/apps
