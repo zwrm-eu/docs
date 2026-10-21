@@ -39,7 +39,7 @@ zwrm init [--name <name>] [--dockerfile <path>] [--no-prompt] [--no-workflow]
 Build and deploy the application. [Guide →](/apps/deploy)
 
 ```bash
-zwrm deploy [--app <name>] [--context <dir>] [--force-build] [--replicas <n>] [--repo <repo>] [--ref <ref>] [--share]
+zwrm deploy [--app <name>] [--context <dir>] [--force-build] [--replicas <n>] [--share]
 ```
 
 | Flag | Type | Default | Description |
@@ -48,8 +48,6 @@ zwrm deploy [--app <name>] [--context <dir>] [--force-build] [--replicas <n>] [-
 | `--context` | string | `.` | Build context directory |
 | `--force-build` | bool | `false` | Bypass build cache |
 | `--replicas` | int | `1` | Number of VM instances |
-| `--repo` | string | — | Deploy from a GitHub repo (`github.com/owner/repo[@ref]`); server-side clone, requires `--app` |
-| `--ref` | string | default branch | Branch, tag, or commit for `--repo` (alternative to an `@ref` suffix; don't use both) |
 | `--share` | bool | `false` | Share the app with the organization when deploy creates it (it is private to you otherwise) |
 
 ---
