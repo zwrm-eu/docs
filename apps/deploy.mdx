@@ -28,8 +28,6 @@ The `deploy` command builds your Docker image, converts it to a Firecracker micr
 | `--context` | string | `.` | Build context directory |
 | `--force-build` | bool | `false` | Force rebuild, bypass cache |
 | `--replicas` | int | `1` | Number of VM instances to deploy |
-| `--repo` | string | — | Deploy from a GitHub repo (`github.com/owner/repo[@ref]`) instead of a local context; the clone happens server-side. Requires `--app` |
-| `--ref` | string | default branch | Branch, tag, or commit for `--repo` (alternative to an `@ref` suffix; don't use both) |
 | `--share` | bool | `false` | Share the app with the organization when deploy creates it |
 
 ## Examples
