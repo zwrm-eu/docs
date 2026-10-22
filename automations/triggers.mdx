@@ -119,7 +119,7 @@ zwrm triggers unshare <trigger-id>    # private to you again
 - **A private trigger runs only on what its owner wrote.** If someone else changed what a shared trigger does (its instruction, template, key path, conditions or routing), it pauses when it becomes private, and resuming it takes saving its instruction again. A delivery to such a trigger pauses it too (`rejected_review`).
 - **An admin's take-back pauses it**, for its owner to look at before resuming it.
 - **Agents** count with their creator's role: creating, changing or deleting triggers takes a builder behind them, and an agent never changes who sees one. An agent working in a shared chat makes the organization's triggers.
-- **The GitHub and Notion apps' triggers** stay the organization's, set up from their integration pages.
+- **The GitHub and Notion apps' triggers** stay the organization's, set up from their integration pages. GitHub events are paused and deleted under **Automations** like any trigger.
 
 ## Matching and routing
 
@@ -263,6 +263,53 @@ An admin connects the workspace, and adding agents takes the operator role. Each
 Each agent's row under **Agents using it** says what it still lacks, such as its sign-in, a sign-in as someone else, or its tools, and opens the dialog at that step. **Remove from Notion** unlinks the agent in every workspace, which removes its trigger, and takes away its Notion tools and its Notion sign-in.
 
 An agent reads a page as its own Notion account, so that account needs access to every page where it's mentioned; mentions only arrive from pages shared with ZWRM. A linked agent's own comments never start a run, and an agent takes part in a thread only by commenting as its linked person.
+
+## GitHub
+
+The GitHub App lets agents work in your repositories like a teammate. Mention the App (`@zwrm-agent`, or write `/zwrm`) in an issue, a pull request or a review, or add the `zwrm` label. The agent answering in that repository then takes it on: it clones the repository, makes and checks the change, opens a pull request, and answers on the thread. Agents act on GitHub as the App, with short-lived tokens ZWRM mints for the installation.
+
+### Set it up
+
+An admin connects GitHub, and adding agents takes the operator role.
+
+1. **Connect GitHub.** Under **Integrations → GitHub**, an admin chooses **Connect GitHub** and signs in to GitHub. ZWRM finds the installations of the App that the admin owns. A single one connects at once, several are offered to pick from, and with none the admin goes on to install the App. An installation connects only for someone who owns it on GitHub: the account itself, or an owner of the organization. On an organization, a member who isn't an owner can only request the install, and an owner approves it. Choose the App's repositories on GitHub; the card shows how many it reaches.
+2. **Add an agent.** Under **Agents using it**, choose **Add an agent** and pick a shared agent.
+3. **Where it answers.** It can answer:
+   - **everywhere else**: in every repository no other agent answers in;
+   - **in chosen repositories**: each repository has one answering agent;
+   - **nowhere**: it uses GitHub's tools only when asked in ZWRM.
+4. **Tools.** The agent starts with read and write on GitHub; narrow it any time.
+
+Each agent's row under **Agents using it** says what it still lacks and opens the dialog at that step. **Remove from GitHub** takes away the agent's answering, its trigger, its GitHub events, its GitHub tools and its git access.
+
+### Who may ask
+
+Only people with write access to the repository start a run, and bots never do. Anyone else who mentions the App gets one short comment saying so, once per thread. So does someone asking in a repository where no agent answers. Each answering agent has its own trigger: pause it, or change its daily limit, under **Automations**.
+
+### What the agent does on GitHub
+
+- **👀** marks what it took on.
+- **Its answer is posted on the thread** when the run ends, with a link to the run. In a private repository, the files it saved are linked under the answer.
+- **When no run starts**, because the trigger is paused, over its daily limit or out of budget, the App says why on the thread.
+- **A review is answered once**, with all its inline comments.
+- **On its own open pull requests** the agent also hears comments and reviews that ask for changes, without a mention. That is up to 10 a day per pull request, and never from bots. It stays quiet when nothing is asked of it.
+- **The `zwrm` label** hands an issue or pull request to the agent, since GitHub doesn't let an App be assigned. ZWRM creates the label in the repositories where agents answer.
+
+Everything written on GitHub is untrusted input to the agent. In a public repository, anyone can read its answers.
+
+### GitHub events
+
+Under **GitHub events** on the GitHub page, an agent does something when something happens on GitHub:
+
+- an **issue is closed** as completed;
+- a **pull request is merged**;
+- a **release is published**.
+
+Issues and pull requests can be narrowed to a label, and every event to chosen repositories. An event starts a run when someone with write access does it, or when a bot such as a merge queue merges or publishes. An issue closed by a bot, and anything the App itself does, start nothing. The run works in a workspace of its own, and nothing goes back to GitHub unless the task says so. Each event is a trigger: pause or delete it under **Automations**, where **Edit** opens it on the GitHub page. The routines "Tell customers about a fix" and "Release notes" open the form filled in.
+
+### Members' own GitHub
+
+Members can sign in with their own GitHub account under **Accounts** on the GitHub page. In their private chats, an agent then uses GitHub as them, within the App's repositories and their own rights. Shared chats, runs and answers on GitHub act as the App. A private agent has no GitHub account of its own: it works only with its owner's sign-in. Admins choose how agents act in private chats under **Who may use it**: as the person, as the person else the App, or always as the App, which leaves private agents without GitHub.
 
 ## Responses
 
