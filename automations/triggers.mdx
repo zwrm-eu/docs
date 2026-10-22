@@ -266,7 +266,7 @@ An agent reads a page as its own Notion account, so that account needs access to
 
 ## GitHub
 
-The GitHub App lets agents work in your repositories like a teammate. Mention the App (`@zwrm-agent`, or write `/zwrm`) in an issue, a pull request or a review, or add the `zwrm` label. The agent answering in that repository then takes it on: it clones the repository, makes and checks the change, opens a pull request, and answers on the thread. Agents act on GitHub as the App, with short-lived tokens ZWRM mints for the installation.
+The GitHub App lets agents work in your repositories like a teammate. Mention the App (`@zwrm-agent`, or write `/zwrm`) in an issue, a pull request or a review, or add the `zwrm` label. The agent answering in that repository then takes it on: it clones the repository, makes and checks the change, opens a pull request, and answers on the thread. To ask a particular agent, write its name with a slash, such as `/ferdinand`. Agents act on GitHub as the App, with short-lived tokens ZWRM mints for the installation.
 
 ### Set it up
 
@@ -274,13 +274,21 @@ An admin connects GitHub, and adding agents takes the operator role.
 
 1. **Connect GitHub.** Under **Integrations → GitHub**, an admin chooses **Connect GitHub** and signs in to GitHub. ZWRM finds the installations of the App that the admin owns. A single one connects at once, several are offered to pick from, and with none the admin goes on to install the App. An installation connects only for someone who owns it on GitHub: the account itself, or an owner of the organization. On an organization, a member who isn't an owner can only request the install, and an owner approves it. Choose the App's repositories on GitHub; the card shows how many it reaches.
 2. **Add an agent.** Under **Agents using it**, choose **Add an agent** and pick a shared agent.
-3. **Where it answers.** It can answer:
+3. **Where it answers.** Where a mention of the App reaches it:
    - **everywhere else**: in every repository no other agent answers in;
    - **in chosen repositories**: each repository has one answering agent;
-   - **nowhere**: it uses GitHub's tools only when asked in ZWRM.
+   - **only by name**: no mention of the App reaches it, only its own name.
 4. **Tools.** The agent starts with read and write on GitHub; narrow it any time.
 
 Each agent's row under **Agents using it** says what it still lacks and opens the dialog at that step. **Remove from GitHub** takes away the agent's answering, its trigger, its GitHub events, its GitHub tools and its git access.
+
+### Asking an agent by name
+
+Every agent under **Agents using it** also answers to its own name, its handle with a slash: `/ferdinand`. It works in any repository the App reaches, even where another agent answers. Naming several agents, such as `/ferdinand /carla`, starts a run for each. Each row under **Agents using it** shows the agent's name.
+
+`@ferdinand` doesn't work: on GitHub, `@name` is a person's account, and GitHub would notify whoever owns that name.
+
+Once an agent takes a thread on, the thread stays with it. A later `@zwrm-agent` there reaches the same agent, until someone names another one. A pull request an agent opens while no other agent is at work in the repository stays with it too, so comments on it reach the agent that wrote it. Each answer is signed with the agent's name and `/name`. Naming an agent that isn't on GitHub starts nothing, and the App says so once.
 
 ### Who may ask
 
