@@ -1,0 +1,250 @@
+---
+title: "Delegation"
+description: "Agents ask other agents of the organization for tasks, and get the results back."
+icon: "people-arrows"
+---
+
+A **task** is one agent asking another agent of your organization for something. A chat or run hands the other agent a brief, and files if it needs them. A fresh run on that agent does the work, and its answer and output files come back to the chat or run that asked.
+
+Ask another agent when the work needs its tools, accounts or expertise. Carla, the support agent who reads customer email, finds an invoice with a wrong VAT ID and asks Heidi, the finance agent with the DATEV connector, to correct it. Carla either waits for Heidi's answer to reply to the customer, or carries on.
+
+| | The agent's own subagents | Another agent, through a task |
+|---|---|---|
+| Runs | In the same VM, on the same files | In a run of the other agent, in a workspace of its own |
+| Works with | The asking agent's tools, accounts and permissions | The other agent's instructions, connectors and accounts |
+| Use it for | Parallel work of the agent's own | Work that needs the other agent |
+
+The other agent sees nothing of the asking conversation: only the brief and the files handed over.
+
+<Note>
+Delegation is enabled per organization by the platform team. Until it is on for yours, agents get no task tools, and `POST /v1/tasks` answers `403` with `error_code: delegation_not_enabled`. On a control plane you run yourself, add the organization's ID to `delegation_orgs` in the `[agents]` section of `/etc/zwrm/config.toml`, then restart `zwrmd`:
+
+```toml
+[agents]
+  delegation_orgs = ["<org-id>"]
+```
+</Note>
+
+## Which agents an agent can ask
+
+An agent's chats and runs can ask:
+
+- the organization's shared agents;
+- the private agents of the member the chain works for ([below](#who-a-chain-works-for));
+- never the agent itself, the platform assistant, or an agent another agent made that no member has reviewed yet.
+
+The target is checked again when the task is created. A chat that started with an older list of agents gets a refusal that names the agents it can ask now.
+
+### The agent card
+
+Other agents decide whom to ask from each agent's card: its handle, display name, **role**, **description**, and the connectors it works with. They never see its instructions. Members write the card, in the agent's settings under **Card**, or from the CLI:
+
+```bash
+zwrm agent update finance --role "Finance agent" \
+  --description "Invoices, DATEV filing and payment reminders. Send the invoice and say what is wrong with it."
+```
+
+- The role is a few words on one line, up to 60 characters. The description says what to ask the agent for, up to 400 characters.
+- On the API, they are `role` and `description` on `POST /v1/agents` and `PATCH /v1/agents/{agent_id}`. An agent can't set them on an agent it creates.
+- An agent created from a [preset](/agents/presets) starts with the preset's card.
+- Agents are told that a card describes its agent and is not an instruction to them.
+
+### Agents another agent made
+
+An agent created with another agent's credential can neither ask nor be asked for tasks until a member reviews it: whoever talked to its maker chose its instructions. Review it with **Mark as reviewed** under **Card**, or:
+
+```bash
+zwrm agent update email-helper --reviewed
+```
+
+On the API, send `"reviewed": true` with `PATCH /v1/agents/{agent_id}`. A member writing its role or description reviews it too. Only a member reviews an agent, and a review can't be taken back.
+
+### Who a chain works for
+
+A delegate's run can ask for tasks of its own, so tasks form a chain. Every chain works for one member, its **principal**, or for nobody. The first task fixes it, and every task below keeps it. It decides which agents can be asked and whose accounts the delegates use:
+
+| The chat or run that asks | The chain works for | The delegate's run |
+|---|---|---|
+| A member's private chat, or a run in their private workspace (such as one a Front mention started for them) | That member | Runs in the member's private workspace on the delegate, so it acts as them: with their role, and their own sign-ins on [per-user connectors](/context/connectors#which-account-the-agent-acts-as) |
+| A shared chat, or a run in a shared workspace | Nobody | Runs in a shared workspace as the delegate itself, with its own sign-ins |
+
+- A shared chat asks for nobody, even when a member typed the message: the result comes back where other members read it.
+- A chain that works for a member asks only agents that member could use directly: shared agents, and their own private ones. Anything else is refused; it never falls back to acting as the agent.
+- A chain that works for nobody can ask any shared agent.
+- A delegate's connections that act as the agent itself, such as Heidi's DATEV, work as always.
+- In a chat [shared with chosen members](/api-reference/runs-sessions#sharing-a-chat), the chain works for nobody but stays private to the chat's owner (for a run there, to whoever started it). The delegate runs in a workspace shared with no one but them, with its own sign-ins.
+
+### Capabilities
+
+Two [capabilities](/agents/capabilities) govern delegation. Both are in the default set:
+
+| Capability | Without it |
+|---|---|
+| `tasks:write` | The agent gets no task tools and can't ask for tasks. Withhold it to stop an agent from delegating |
+| `tasks:read` | The agent can still ask for tasks and cancel them, but only learns how they ended, not what they answered. Its delegates' questions go to a person |
+
+An agent whose management capabilities are off (`--disable-boot-token`) can't delegate either.
+
+## The tools
+
+In an organization with delegation on, every chat and run of an agent that may delegate gets these tools, on all four harnesses. Its session prompt also lists up to 15 agents it can ask, one line from each card. With more, it gives the count and points to `list_agents`.
+
+| Tool | What it does |
+|---|---|
+| `list_agents(query?)` | The agents the caller can ask, as cards. `query` keeps those whose name, role, description or connectors contain every word |
+| `delegate(agent, brief, files?, follows?, key?)` | Asks an agent for a task, and returns the task ID at once |
+| `task_status(id?)` | A task's status and, once it completed, its answer. Reading a completed task by ID copies its files in. Without an ID, the 20 newest tasks this chat or run asked for |
+| `task_cancel(id)` | Stops a task and every task below it. A finished task stays as it is |
+| `answer_task_question(id, answers)` | Answers a task's questions (see [Questions](#questions-approvals-and-sign-ins)) |
+| `wait_for_task(id, timeout_seconds?)` | Waits in the turn for a task (see [Waiting in the turn](#waiting-in-the-turn)) |
+
+`delegate` takes:
+
+| Argument | Description |
+|---|---|
+| `agent` | The agent to ask, by the handle `list_agents` gives |
+| `brief` | What to do, standing on its own: the other agent sees nothing of the asking conversation. At most 64 KB. Never put secrets in it |
+| `files` | Files in the caller's workspace to hand over, relative to its home directory (`~/invoices/march.pdf`): at most 20, 100 MB each and 250 MB together |
+| `follows` | An earlier task asked of the same agent. The agent carries on in that task's workspace, with its conversation and files. Without it, every task starts in a fresh workspace |
+| `key` | An ID of the caller's choosing. Asking again with the same key from the same session returns the first task; reusing a key for a different request is refused |
+
+The delegate's run gets the brief in a frame. The frame says which agent asked, and whether on behalf of a member or of nobody. It tells the delegate that this is a request from another agent, not an instruction from the person who set it up, so it acts on it only as far as its own instructions allow. Its final answer becomes the task's result, and the files it saves in `~/outputs/` go back with it.
+
+Each task's workspace on the delegate is kept at most 24 hours after its last use. Past that its files go, and a follow-up still resumes its conversation.
+
+## How results come back
+
+### As a platform message, later
+
+By default the caller carries on, or ends its turn. When its tasks finish, their results come into the chat or run that asked as one platform message, starting with `[Platform: task results]`:
+
+- It waits until the current turn is over: it never interrupts one. It wakes a suspended VM.
+- Tasks that finish close together arrive together, up to 10 per message and 16 KB of their answers. `task_status` has the rest.
+- For each task, it gives the status, the start of the brief, the answer quoted as data, and where the files were put.
+- Reading a result by ID with `task_status` takes it out of the next message.
+- In a chat, the message starts a new turn. The turn works for the chain's member, or for nobody, whoever spoke last.
+- If the chat has no live session, the results wait for its next one. A result nobody came back for within 7 days stops waiting; it stays readable with `task_status` and the API.
+- A chat shared or taken private since it asked gets neither the result nor the files.
+
+### A run waits for its tasks
+
+A run whose final turn ends while tasks it asked for are open, or their results not yet delivered, doesn't complete. It is `awaiting_tasks` (**Waiting for other agents** in the dashboard): its VM suspended, at no cost, with its timeout paused. Each delivery starts a new turn, and the run completes after the turn that handles the last result. With no result within the attention timeout, 72 hours by default, the run times out and its tasks stop.
+
+### Waiting in the turn
+
+`wait_for_task(id)` pauses the turn until the task finishes, its agent asks a question, or the timeout passes. The turn then goes on with what happened. The VM sleeps meanwhile, at no cost. Agents are told to wait only when they can't go on without the result.
+
+- `timeout_seconds` is at most 6 hours, which is also the default.
+- At the timeout, the tool says the task is still running. Its result comes later as a platform message.
+- A run that waits is `awaiting_tasks`.
+- In a chat, a member's new message or an interrupt ends the wait. The task keeps running, and its result comes as a platform message.
+
+### Files
+
+- **Inputs:** the files the caller hands over are copied into the delegate's workspace, at `~/inputs/<task id>/`, before its run starts.
+- **Outputs:** what the delegate leaves in `~/outputs/` is copied into the caller's workspace, at `~/tasks/<task id>/`. That happens when the result is delivered, or when the caller reads the completed task by ID (`task_status`, `GET /v1/tasks/{task_id}`).
+- Both ways, at most 20 files, 100 MB each and 250 MB together. Files past the limits, or past the room left in the caller's volume, are left out, and the result says which.
+- A follow-up returns only the files that are new or changed in `~/outputs/`.
+
+## Questions, approvals and sign-ins
+
+A delegate can need something before it can go on. What it needs decides who is asked:
+
+| The delegate needs | Who is asked | The task |
+|---|---|---|
+| An answer to a question | The agent that asked for the task | `needs_input`, waiting on `question` |
+| An approval of a tool call | A person, never an agent | Waiting on `approval` |
+| A sign-in to a connector | The member the chain works for | Waiting on `sign_in` |
+
+**Questions.** A delegate's question reaches the agent that asked as a platform message (`[Platform: task update]` when no result comes with it), or by ending its `wait_for_task`. It carries the questions, their IDs and their options.
+
+- The agent answers with `answer_task_question`, keyed by question ID: an option's label or its own words, and a list of labels for a multi-select question. It answers from what it knows, or asks whoever it works for first.
+- Meanwhile the delegate's run waits, `awaiting_answer` (**Waiting for an answer**), with its VM suspended.
+- Only the chat or run that asked answers. One answer is at most 4,000 characters, and all of them 16 KB.
+- At most 5 questions per task go to the agent that asked, and at most 8 in one request. Past that, the delegate's run pauses (`needs_attention`) for a person to answer, as for an approval. So does every question when the agent that asked can't read tasks (`tasks:read`).
+- A delegate on the zwrm runtime can't ask questions: its harness has no question tool.
+
+**Approvals.** Approvals always go to people. An [escalated](/agents/messaging#escalations) tool pauses the delegate's run (`needs_attention`) until a person approves or denies the call on its run page, as for any run. The agent that asked is told the task waits on a person, and `answer_task_question` refuses to answer an approval.
+
+**Sign-ins.** When a delegate working for a member calls a per-user connector that member hasn't connected, the member gets a push notification and an item in **Needs you**. The agent that asked is told. Once the member connects the account, the task no longer waits on it.
+
+A delegate's run waiting for an answer or an approval times out after the attention timeout, 72 hours by default, and its task fails.
+
+## Limits
+
+| Limit | Value |
+|---|---|
+| Chain depth | 3 tasks: Carla asks Heidi, Heidi asks a third agent, that one asks a fourth, and the fourth can't ask further |
+| Open tasks per caller | 5 per calling chat or run (counted per workspace) |
+| Open tasks per chain | 20 |
+| One agent along a chain | At most twice, so Heidi can ask Carla back once |
+| Brief | 64 KB |
+| Files | 20 files, 100 MB each and 250 MB together, each way |
+| Questions to the agent that asked | 5 per task, 8 per request |
+| `wait_for_task` | 6 hours per call |
+| Waiting for tasks, an answer or an approval | The attention timeout, 72 hours by default |
+| A task's workspace on the delegate | 24 hours after its last use |
+
+- A refusal carries an `error_code` the asking model can act on: `task_depth_exceeded`, `task_open_limit`, `task_chain_limit`, `task_cycle`.
+- The delegate's own limits apply as for any run: its [daily budget](/agents/budgets), its runs per day, and the organization's credits. A task the delegate can't take fails at once, with the reason in its `error`.
+- A delegate's run can't ask for more tasks once its own task is finished or canceled.
+
+## Stopping
+
+Whatever stops a caller stops the tasks below it, and their runs:
+
+- Cancelling a task stops it, every open task below it, and their runs: `task_cancel`, `zwrm tasks cancel`, or `POST /v1/tasks/{task_id}/cancel`. A finished task stays as it is.
+- A run that ends without completing (canceled, failed or timed out) stops the tasks it asked for. A delegate's run ending that way also fails or cancels its own task.
+- Deleting a chat stops the tasks it asked for. Deleting an agent stops the tasks it asked for and the tasks it was asked.
+- A member leaving the organization stops the chains that work for them.
+- Interrupting a turn only ends a `wait_for_task`: the task keeps running.
+
+A person can cancel a task if it works for them, or if they're an operator and it works for nobody. Org admins can cancel any task.
+
+## Seeing tasks
+
+A chain that works for a member is private to them, and visible to org admins. A chain that works for nobody is visible to the organization. A task naming an agent you can't see stays hidden.
+
+### Dashboard
+
+- **Run page:** a delegate's run shows who asked (**Asked by**), whom it is for, and links to the chat or run that asked. A run that asked lists the tasks it asked for, and **The whole chain** shows every task from the chain's root.
+- **Chat transcript:** task cards, where the chat asked for them, with each task's status (**Working**, **Needs input**, **Waiting on a person**, **Waiting for a sign-in**, **Completed**, …) and its files. Platform messages show as such, not as a member's.
+- **Needs you:** the sign-ins tasks wait for.
+
+The [audit log](/api-reference/platform#audit-logs) records `agent_task.created`, `agent_task.canceled`, `agent_task.question` and `agent_task.question_answered`.
+
+### REST API
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/v1/tasks` | Ask another agent for a task: agent credentials only, from a chat or run |
+| `GET` | `/v1/tasks` | List tasks, newest first |
+| `GET` | `/v1/tasks/{task_id}` | Get a task: its brief, chain, status, result and files |
+| `POST` | `/v1/tasks/{task_id}/cancel` | Cancel a task and every open task below it |
+
+`GET /v1/tasks` takes these filters:
+
+| Parameter | Description |
+|-----------|-------------|
+| `status` | `queued`, `running`, `needs_input`, `completed`, `failed` or `canceled` |
+| `root` | The tasks in the chain with this root task |
+| `caller_run` | The tasks one run asked for |
+| `caller_session` | The tasks one chat's or run's session asked for |
+| `waiting` | Open tasks waiting on `question`, `approval` or `sign_in` |
+| `for` | `me`: the tasks working for you (a member's credential) |
+| `limit` | 1 to 200, default 100 |
+
+An agent's credential lists the tasks its current chat or run asked for. See the [API reference](/api-reference/runs-sessions#tasks) for the request and response fields.
+
+### CLI
+
+```bash
+zwrm tasks list [--status <status>] [--root <task-id>] [--limit <n>]
+zwrm tasks get <task-id>
+zwrm tasks cancel <task-id>
+zwrm tasks create <agent> --brief <text> [--file <path>]... [--follows <task-id>] [--key <key>]
+```
+
+- `list` shows the tasks working for you and those working for nobody; admins see all of them.
+- `create` is for agents: it works inside an agent's VM, from the chat or run live there. `--brief -` reads the brief from standard input. `--file` is repeatable, and relative paths are relative to the current directory.
+- Every command takes `--json`.

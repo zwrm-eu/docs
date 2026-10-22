@@ -1,6 +1,6 @@
 ---
 title: "Runs & sessions"
-description: "Autonomous runs, live sessions, and the event timeline."
+description: "Autonomous runs, tasks between agents, live sessions, and the event timeline."
 icon: "play"
 ---
 
@@ -20,6 +20,54 @@ One autonomous task on a workspace. See the [Runs guide](/agents/runs).
 A run prompt whose first word is `/clear`, `/new`, `/reset` or `/compact` is refused with `400` (on dispatch, on `continue`, and when saving a schedule): a run has no textbox, and a keyed run would otherwise hand the command to the harness against the workspace's conversation. See [reserved slash commands](#messages-permissions-mode-model) under sessions.
 
 `?open=true` returns exactly the non-terminal runs, uncapped. It already selects every non-terminal status, so combining it with `?status=` is a `400`.
+
+## Tasks
+
+One agent asking another agent of the organization for something. See the [Delegation guide](/agents/delegation).
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/v1/tasks` | Ask another agent for a task. Agent credentials only, from a live chat or run (`403` for anyone else) |
+| `GET` | `/v1/tasks` | List tasks, newest first (`?status=`, `?root=`, `?caller_run=`, `?caller_session=`, `?waiting=`, `?for=me`, `?limit=`) |
+| `GET` | `/v1/tasks/{task_id}` | Get a task |
+| `POST` | `/v1/tasks/{task_id}/cancel` | Cancel a task, every open task below it, and their runs. A finished task is returned as it is |
+
+`POST /v1/tasks` takes:
+
+| Field | Description |
+|-------|-------------|
+| `agent` | The agent to ask, by handle or ID (required) |
+| `brief` | What to do, standing on its own (required, at most 64 KB) |
+| `files` | Paths in the caller's workspace, relative to its home directory: at most 20, 100 MB each and 250 MB together. The delegate finds them in `~/inputs/<task id>/` |
+| `follows` | An earlier task asked of the same agent, whose workspace the delegate carries on in |
+| `key` | Idempotency key: the same key from the same session returns the first task (`200`), and a different request under it is a `409` |
+| `mode` | `async` (the default) or `wait`: whether the caller means to wait for the result. The task runs the same either way |
+
+A new task answers `201`. A task the delegate can't take (its budget, its runs per day, the organization's credits) is created and answered already `failed`, with the reason in `error`.
+
+- **Listing:** an agent's credential lists the tasks its current chat or run asked for. A person lists the tasks they may see: those working for them, those working for nobody, and every task for org admins. `?waiting=` takes `question`, `approval` or `sign_in` and keeps the open tasks waiting on it; `?for=me` keeps the tasks working for you, and needs a member's credential. `?limit=` is 1 to 200, default 100.
+- **Getting:** for the agent that asked, getting a completed task copies its output files into `~/tasks/<task id>/` and lists them in `delivered_files`, with `delivery_note` saying what wasn't copied.
+- **Cancelling:** the agent that asked, the member the task works for, an operator for a task working for nobody, or an org admin.
+- **Without `tasks:read`:** an agent's create and cancel responses leave out `result_summary`, `error`, `output_files` and `waiting`.
+
+A task carries `id`, `status` (`queued`, `running`, `needs_input`, `completed`, `failed`, `canceled`), `mode`, `caller` and `target` (each `{id, instance, name}`), `principal_user_id` (empty for a chain working for nobody), `visibility`, `brief`, `result_summary`, `error`, `root_task_id`, `parent_task_id`, `depth`, `caller_session_id`, `caller_run_id`, `follows_task_id`, `delegate_run_id`, `input_files` and `output_files` (each `{name, size}`), `waiting_on` with `waiting` (the questions, tool or connector), and `created_at`, `updated_at`, `finished_at`.
+
+Refusals carry an `error_code`:
+
+| `error_code` | Status | Meaning |
+|--------------|--------|---------|
+| `delegation_not_enabled` | `403` | Delegation isn't enabled for the organization |
+| `task_needs_session` | `403`, `409` | Not asked from a live chat or run of the agent, or the chat's sharing changed just now |
+| `task_agent_unreviewed` | `403` | Another agent made the asking agent, and no member has reviewed it |
+| `task_agent_not_found` | `404` | No agent of that name the chain may ask |
+| `task_self` | `409` | An agent can't ask itself |
+| `task_follows_not_found` | `404` | `follows` names no earlier task of this caller on that agent |
+| `task_principal_mismatch` | `403` | The asking run answers a task for someone else |
+| `task_parent_missing`, `task_parent_finished` | `409` | The task the asking run answers is gone, or already finished |
+| `task_key_reused` | `409` | The key was used for a different request |
+| `task_depth_exceeded`, `task_open_limit`, `task_chain_limit`, `task_cycle` | `409` | A [limit](/agents/delegation#limits) refused it |
+| `task_file_invalid`, `task_file_not_found`, `task_files_too_large` | `400` | A file can't be handed over: outside the home directory, missing, not a regular file, a name taken twice, or past the limits |
+| `task_files_unavailable` | `400`, `409` | Files can't be handed over here, or the caller's workspace isn't running |
 
 ## Sessions
 
