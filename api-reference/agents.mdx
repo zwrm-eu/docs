@@ -44,6 +44,7 @@ An agent is [pure configuration](/agents/overview); these endpoints manage the d
 | `allowed_scopes` | Not on connect — the agent's [capability](/agents/capabilities) set. Each value must be a configurable scope (an unknown one is a `400` listing the valid set); absent or empty = the platform default set |
 | `boot_token_disabled` | Not on connect — `true` creates the agent with no management capabilities: every management call from its VMs is refused and its skill and memory write tools are off, while model access and connectors keep working. Distinct from empty `allowed_scopes`, which means the platform default set |
 | `visibility` | Not on connect — `private` (default) or `org` to create it [shared](/agents/overview#private-and-shared-agents). Agent credentials can't create a shared agent (`403`) |
+| `role`, `description` | Not on connect — the agent's card, which other agents read before asking it for a [task](/agents/delegation#the-agent-card): a role of up to 60 characters on one line, and a description of up to 400. Agent credentials can't set them (`403`) |
 | `cmd` | Connect only — override the login command for this boot (e.g. `aider`) |
 
 Any member creates agents with either call, and a new agent is **private** to its creator unless created with `"visibility": "org"` ([Private and shared agents](/agents/overview#private-and-shared-agents)). Connect finds the caller's own agent of that name, else the shared one, and creates a private agent when there is neither. A name the caller already uses is a `409`. Agent responses carry `owner_user_id` and `visibility` (`private` or `org`). Every `/v1/agents/{agent_id}` route, and every list, finds only the agents the caller can see: another member's private agent is a `404`, and so are its runs, chats, schedules and triggers. An org admin sees private agents but gets a `403` for using or changing one.
@@ -57,6 +58,8 @@ Any member creates agents with either call, and a new agent is **private** to it
 Changing a shared agent needs its owner or the operator role; changing a private one, its owner. Deleting needs its owner or an org admin.
 
 `PATCH /v1/agents/{agent_id}` accepts `name` and `avatar` (`""` clears either). A Cowork rename, written to the client metadata as `cowork.title` and `cowork.icon`, carries into them unless the same request sets them. It also accepts `allowed_scopes`: omitted leaves the set unchanged, an empty array (`[]`) resets it to the platform default, and each value must be a configurable scope. It likewise accepts `boot_token_disabled`: `true` turns the agent's management capabilities off (the stored scope set is preserved), `false` restores them. Both apply to the agent's next request, running sessions included, and both fields surface on the agent response.
+
+`PATCH /v1/agents/{agent_id}` also accepts `role` and `description` (`""` clears either), and `"reviewed": true`, with which a member reviews an agent another agent made so it can ask and be asked for [tasks](/agents/delegation#agents-another-agent-made). Only a member reviews, and only `true` is accepted: a review isn't taken back. A member writing such an agent's role or description reviews it too.
 
 ## Presets
 
