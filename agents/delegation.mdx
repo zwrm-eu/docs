@@ -105,7 +105,9 @@ Every chat and run of an agent that may delegate gets these tools, on all four h
 
 The delegate's run gets the brief in a frame. The frame says which agent asked, and whether on behalf of a member or of nobody. It tells the delegate that this is a request from another agent, not an instruction from the person who set it up, so it acts on it only as far as its own instructions allow. Its final answer becomes the task's result, and the files it saves in `~/outputs/` go back with it.
 
-Each task's workspace on the delegate is kept at most 24 hours after its last use. Past that its files go, and a follow-up still resumes its conversation.
+Each task's workspace on the delegate keeps its files at most 24 hours after its last use. An organization also keeps at most 50 idle task workspaces: past that, the least recently used lose their files first. The cap never clears a workspace whose task is still open, or whose files the caller hasn't received yet.
+
+Once a workspace's files are gone, a follow-up still resumes its conversation for 30 days. After that, a follow-up starts fresh.
 
 ## How results come back
 
@@ -180,7 +182,7 @@ A delegate's run waiting for an answer or an approval times out after the attent
 | Questions to the agent that asked | 5 per task, 8 per request |
 | `wait_for_task` | 6 hours per call |
 | Waiting for tasks, an answer or an approval | The attention timeout, 72 hours by default |
-| A task's workspace on the delegate | 24 hours after its last use |
+| A task's workspace on the delegate | Its files: 24 hours after its last use, and at most 50 idle per organization. Its conversation, for a follow-up: 30 days |
 
 - A refusal carries an `error_code` the asking model can act on: `task_depth_exceeded`, `task_open_limit`, `task_chain_limit`, `task_cycle`.
 - The delegate's own limits apply as for any run: its [daily budget](/agents/budgets), its runs per day, and the organization's credits. A task the delegate can't take fails at once, with the reason in its `error`.
