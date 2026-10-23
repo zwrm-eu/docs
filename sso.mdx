@@ -1,0 +1,88 @@
+---
+title: "Single sign-on"
+description: "Sign your organization's people in through your company's identity provider."
+icon: "key"
+---
+
+With single sign-on (SSO), people at your company sign in to zwrm through your identity provider: Microsoft Entra ID, Google Workspace, Okta, or any other OpenID Connect (OIDC) provider. The first time someone signs in, zwrm creates their account and adds them to your organization as a member.
+
+<Note>
+Owners and admins set up SSO. zwrm connects to identity providers over OIDC; SAML isn't supported.
+</Note>
+
+## How it works
+
+- A **connection** links your organization to one app at your identity provider and one email domain, such as `acme.com`. It covers addresses at that domain and its subdomains.
+- You prove that the domain is yours with a DNS record. Until then, nobody signs in through the connection.
+- People click **Continue with SSO** on the sign-in page and enter their work email. zwrm finds the connection for the email's domain and sends them to your identity provider.
+- The first sign-in through a connection creates the account, with the email address counted as confirmed, and adds the person to your organization as a **member**. They land in your organization. Admins change roles under **Members** as usual.
+- People who join through SSO don't get a personal organization or a trial.
+- Someone an admin removes from the organization stays removed: signing in through SSO again doesn't add them back. To let them back in, invite them.
+
+## Set up SSO
+
+<Steps>
+  <Step title="Start a connection">
+    In the dashboard, go to **Workspace** → **Security** and click **Connect** on the **Single sign-on** card. Copy the **Redirect URI** it shows. It looks like `https://auth.zwrm.eu/api/auth/sso/callback/sso-…`.
+  </Step>
+  <Step title="Register an app at your identity provider">
+    Create a web app for OpenID Connect with that redirect URI. It needs the `openid`, `email` and `profile` scopes, and its ID token must carry the person's `email`. Note its client ID, client secret and issuer URL.
+  </Step>
+  <Step title="Enter the details">
+    Back in zwrm, enter your email domain, the issuer URL, the client ID and the client secret, and click **Connect**. zwrm reads your provider's settings from `<issuer>/.well-known/openid-configuration`.
+  </Step>
+  <Step title="Prove the domain">
+    Add the TXT record zwrm shows at your DNS provider: the name is `_zwrm-sso.<your-domain>`, the value starts with `zwrm-sso=`. Then click **Check DNS**. Once it matches, the connection shows **On** and people can sign in.
+  </Step>
+</Steps>
+
+Closing the dialog keeps the redirect URI, so you can set up the app at your provider and come back. A connection's redirect URI stays under **Details** in its **…** menu.
+
+### Issuer URLs
+
+| Provider | Issuer URL |
+|---|---|
+| Microsoft Entra ID | `https://login.microsoftonline.com/<tenant-id>/v2.0` |
+| Google Workspace | `https://accounts.google.com` |
+| Okta | `https://<your-org>.okta.com`, or your custom authorization server's issuer |
+| Others | The `issuer` in your provider's `/.well-known/openid-configuration` |
+
+<Tip>
+In Microsoft Entra ID, register the app under **App registrations** with the platform **Web** and the redirect URI, and create a client secret under **Certificates & secrets**. If the ID token lacks the email, add it under **Token configuration** → **Add optional claim** → **ID** → `email`.
+</Tip>
+
+People start signing in from zwrm. To put zwrm in your provider's app launcher, use `https://dashboard.zwrm.eu/login?sso=1` as its sign-in URL.
+
+## Sign in with SSO
+
+On the sign-in page, click **Continue with SSO** and enter your work email.
+
+- **CLI:** `zwrm auth login` opens the same sign-in page in your browser. If SSO created your account, your organization is your only one, so commands use it without `--org`. If you belong to several, pass `--org` or set `ZWRM_ORG_ID`.
+- **iOS app:** sign in once on the web first. The app signs in to existing accounts only.
+
+## Existing accounts
+
+- **An account with the work email already exists** (password, Google or GitHub): the first SSO sign-in links SSO to it. The person keeps their other sign-ins and joins your organization.
+- **An account with that address exists, but its email was never confirmed:** whoever created it may not own the address. SSO takes the account over and removes its password. If that unconfirmed account was already used, SSO refuses to take it over; contact support.
+- **An address outside the connection's domain:** your provider can't create an account or sign anyone in to one.
+
+## Change or remove a connection
+
+- **Change client secret**, in the connection's **…** menu, for when the secret at your provider was renewed. You can set a new client ID there too.
+- To change anything else, such as the domain or the issuer, remove the connection and connect again. The new connection has a new redirect URI and DNS record.
+- **Remove** stops all sign-ins through the connection. People who joined through it stay members. To sign in another way, they set a password with **Forgot your password?** on the sign-in page.
+
+## Limits
+
+- An organization has up to 5 connections, with one domain each. A domain can be proven for only one connection at a time.
+- SSO doesn't block other ways of signing in: people at your domain can still use a password, Google or GitHub.
+- Blocking someone at your identity provider stops their new sign-ins through SSO. A session they already have runs out on its own; remove them from the organization in zwrm to cut their access right away.
+
+## Troubleshooting
+
+| What you see | What to do |
+|---|---|
+| "Single sign-on isn't set up for …" | The email's domain has no connection, or its domain isn't proven yet. |
+| "…signed you in with an address outside your organization's domain…" | Your provider sent an email outside the connection's domain. Check which email claim the app sends. |
+| "Single sign-on didn't work (invalid_provider) …" | Usually the configuration: a wrong client secret, an issuer that doesn't match, or no email in the ID token (`missing_user_info`). The text after the code comes from your provider. |
+| **Check DNS** doesn't find the record | DNS changes can take a few minutes to show. Check the record's name: some DNS providers add your domain to it themselves, so enter only `_zwrm-sso` there. |

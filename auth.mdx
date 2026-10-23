@@ -10,7 +10,7 @@ icon: "lock"
 zwrm auth login
 ```
 
-Opens your browser to complete the authentication flow. Your token is saved to `~/.zwrm/credentials.json`.
+Opens your browser to complete the authentication flow. Your token is saved to `~/.zwrm/credentials.json`. If your organization uses [single sign-on](/sso), click **Continue with SSO** there.
 
 For headless environments (SSH sessions, CI pipelines), create a long-lived token with [`zwrm auth tokens create`](#api-tokens) and pass it directly:
 
