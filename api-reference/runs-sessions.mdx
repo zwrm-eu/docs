@@ -60,6 +60,7 @@ Refusals carry an `error_code`:
 | `task_agent_unreviewed` | `403` | Another agent made the asking agent, and no member has reviewed it |
 | `task_agent_not_found` | `404` | No agent of that name the chain may ask |
 | `task_self` | `409` | An agent can't ask itself |
+| `task_caller_cannot_delegate` | `403` | The asking agent may not delegate: the organization's assistant, or an agent without `tasks:write` |
 | `task_follows_not_found` | `404` | `follows` names no earlier task of this caller on that agent |
 | `task_principal_mismatch` | `403` | The asking run answers a task for someone else |
 | `task_parent_missing`, `task_parent_finished` | `409` | The task the asking run answers is gone, or already finished |
