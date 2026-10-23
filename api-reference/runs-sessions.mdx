@@ -66,7 +66,9 @@ Refusals carry an `error_code`:
 | `task_parent_missing`, `task_parent_finished` | `409` | The task the asking run answers is gone, or already finished |
 | `task_key_reused` | `409` | The key was used for a different request |
 | `task_depth_exceeded`, `task_open_limit`, `task_chain_limit`, `task_cycle` | `409` | A [limit](/agents/delegation#limits) refused it |
-| `task_file_invalid`, `task_file_not_found`, `task_files_too_large` | `400` | A file can't be handed over: outside the home directory, missing, not a regular file, a name taken twice, or past the limits |
+| `task_file_invalid` | `400` | A file can't be handed over: outside the home directory, not a regular file, a name that can't be used or is taken twice, or more than 20 files |
+| `task_file_not_found` | `400` | A file named isn't in the caller's workspace |
+| `task_files_too_large` | `400` | A file is over 100 MB, or the files are over 250 MB together |
 | `task_files_unavailable` | `400`, `409` | Files can't be handed over here, or the caller's workspace isn't running |
 
 ## Sessions
@@ -192,7 +194,7 @@ Answer with `behavior: "allow"` and `updated_input` set to the original `input` 
 
 `behavior: "deny"` declines: the agent is told the question was dismissed and continues without answers. An approval whose `answers` resolve to nothing (missing, empty, or keyed by anything but the question ids) is refused with `400` before any decision is recorded, so the agent never receives empty answers. A question left out of `answers` is reported to the agent as unanswered.
 
-Questions are only offered on interactive sessions. Runs (`POST /v1/agents/{agent_id}/runs`) have nobody to answer, so the question tools are withheld from the model there.
+Questions are offered on interactive sessions. Runs (`POST /v1/agents/{agent_id}/runs`) have nobody to answer, so the question tools are withheld from the model there, except in a delegate's run: its questions go to the agent that asked for its task ([delegation](/agents/delegation#questions-approvals-and-sign-ins)). One that can't go there is answered here, as above.
 
 The session-create `permission_mode` and `mode` take the same values: `default`, `acceptEdits`, `plan`, `bypassPermissions`. `pi`, `codex`, and `opencode` agents map only `default` and `bypassPermissions` — the other two return `400` rather than being silently downgraded.
 
