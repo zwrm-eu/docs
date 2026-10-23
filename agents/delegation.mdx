@@ -143,7 +143,9 @@ A run whose final turn ends while tasks it asked for are open, or their results 
 
 - **Inputs:** the files the caller hands over are copied into the delegate's workspace, at `~/inputs/<task id>/`, before its run starts.
 - **Outputs:** what the delegate leaves in `~/outputs/` is copied into the caller's workspace, at `~/tasks/<task id>/`. That happens when the result is delivered, or when the caller reads the completed task by ID (`task_status`, `GET /v1/tasks/{task_id}`).
-- Both ways, at most 20 files, 100 MB each and 250 MB together. Files past the limits, or past the room left in the caller's volume, are left out, and the result says which.
+- Both ways, at most 20 files, 100 MB each and 250 MB together.
+- **Inputs:** a task asked with files past the limits is refused when it is created (`400`, `task_files_too_large`, or `task_file_invalid` for more than 20 files).
+- **Outputs:** files past the limits, or past the room left in the caller's volume, are left out, and the result says which.
 - A follow-up returns only the files that are new or changed in `~/outputs/`.
 
 ## Questions, approvals and sign-ins
@@ -203,7 +205,7 @@ A person can cancel a task if it works for them, or if they're an operator and i
 
 ## Seeing tasks
 
-A chain that works for a member is private to them, and visible to org admins. A chain that works for nobody is visible to the organization. A task naming an agent you can't see stays hidden.
+A chain that works for a member is private to them, and visible to org admins. A chain that works for nobody is visible to the organization, except one from a chat shared with chosen members: that stays private to the chat's owner (for a run there, to whoever started it). A task naming an agent you can't see stays hidden.
 
 ### Dashboard
 
@@ -242,9 +244,10 @@ An agent's credential lists the tasks its current chat or run asked for. See the
 zwrm tasks list [--status <status>] [--root <task-id>] [--limit <n>]
 zwrm tasks get <task-id>
 zwrm tasks cancel <task-id>
-zwrm tasks create <agent> --brief <text> [--file <path>]... [--follows <task-id>] [--key <key>]
+zwrm tasks create <agent> --brief <text> [--file <path>]... [--follows <task-id>] [--key <key>] [--mode async|wait]
 ```
 
 - `list` shows the tasks working for you and those working for nobody; admins see all of them.
 - `create` is for agents: it works inside an agent's VM, from the chat or run live there. `--brief -` reads the brief from standard input. `--file` is repeatable, and relative paths are relative to the current directory.
+- `--mode wait` only records that the caller means to wait for the task: it runs the same either way. A chat or run waits with `wait_for_task`.
 - Every command takes `--json`.
