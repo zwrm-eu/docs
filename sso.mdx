@@ -57,7 +57,7 @@ People start signing in from zwrm. To put zwrm in your provider's app launcher, 
 
 On the sign-in page, click **Continue with SSO** and enter your work email.
 
-- **CLI:** `zwrm auth login` opens the same sign-in page in your browser. If you joined through SSO, your organization is your only one, so commands use it without `--org`.
+- **CLI:** `zwrm auth login` opens the same sign-in page in your browser. If SSO created your account, your organization is your only one, so commands use it without `--org`. If you belong to several, pass `--org` or set `ZWRM_ORG_ID`.
 - **iOS app:** sign in once on the web first. The app signs in to existing accounts only.
 
 ## Existing accounts
