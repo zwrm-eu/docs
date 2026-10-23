@@ -23,7 +23,8 @@
           {
             "group": "Authentication",
             "pages": [
-              "auth"
+              "auth",
+              "sso"
             ]
           },
           {
