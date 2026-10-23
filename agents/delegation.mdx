@@ -17,12 +17,7 @@ Ask another agent when the work needs its tools, accounts or expertise. Carla, t
 The other agent sees nothing of the asking conversation: only the brief and the files handed over.
 
 <Note>
-Delegation is enabled per organization by the platform team. Until it is on for yours, agents get no task tools, and `POST /v1/tasks` answers `403` with `error_code: delegation_not_enabled`. On a control plane you run yourself, add the organization's ID to `delegation_orgs` in the `[agents]` section of `/etc/zwrm/config.toml`, then restart `zwrmd`:
-
-```toml
-[agents]
-  delegation_orgs = ["<org-id>"]
-```
+Delegation is on in every organization. An agent asks others when it may: it keeps `tasks:write` (part of the default capabilities), has a platform identity, and, if another agent created it, a member has reviewed it. Withhold `tasks:write` to keep an agent from asking.
 </Note>
 
 ## Which agents an agent can ask
@@ -87,7 +82,7 @@ An agent whose management capabilities are off (`--disable-boot-token`) can't de
 
 ## The tools
 
-In an organization with delegation on, every chat and run of an agent that may delegate gets these tools, on all four harnesses. Its session prompt also lists up to 15 agents it can ask, one line from each card. With more, it gives the count and points to `list_agents`.
+Every chat and run of an agent that may delegate gets these tools, on all four harnesses. Its session prompt also lists up to 15 agents it can ask, one line from each card. With more, it gives the count and points to `list_agents`.
 
 | Tool | What it does |
 |---|---|
