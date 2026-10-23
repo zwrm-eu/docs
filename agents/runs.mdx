@@ -46,6 +46,8 @@ You can also watch or steer a live run from its session timeline in the dashboar
 | `queued`, `booting`, `cloning`, `running`, `pushing` | In progress |
 | `sleeping` | Parked by the agent via `sleep` — VM snapshotted, zero compute |
 | `needs_attention` | Paused on an [escalation](/agents/messaging#escalations) waiting for your decision |
+| `awaiting_tasks` | Waiting for tasks it asked [other agents](/agents/delegation) for: VM suspended, zero compute |
+| `awaiting_answer` | A delegate's run waiting for the agent that asked to answer its question: VM suspended, zero compute |
 | `canceling` | Cancel requested |
 | `completed`, `failed`, `timed_out`, `canceled` | Terminal |
 

@@ -31,6 +31,7 @@ Scopes are `resource:action` pairs, plus a few atomic verbs:
 | Observability | `logs:read` |
 | Agent library | `agents:read`, `agents:write`, `skills:read`, `skills:write`, `memories:read`, `memories:write` |
 | Automation | `schedules:read`, `schedules:write`, `triggers:read`, `triggers:write` |
+| Delegation | `tasks:read` (read the tasks the agent asked for: `task_status`, their answers and their questions; without it the agent is only told how each task ended, and can't answer a delegate's question), `tasks:write` (ask another agent for a task, and cancel one; withhold it to stop the agent from [delegating](/agents/delegation)) |
 | Agent sessions | `sessions:shell` |
 | MCP gateway | `mcp:read`, `mcp:write` |
 | Connectors | `connectors:read`, `connectors:write` |
