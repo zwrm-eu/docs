@@ -105,7 +105,7 @@ Every chat and run of an agent that may delegate gets these tools, on all four h
 
 The delegate's run gets the brief in a frame. The frame says which agent asked, and whether on behalf of a member or of nobody. It tells the delegate that this is a request from another agent, not an instruction from the person who set it up, so it acts on it only as far as its own instructions allow. Its final answer becomes the task's result, and the files it saves in `~/outputs/` go back with it.
 
-Each task's workspace on the delegate keeps its files at most 24 hours after its last use. An organization also keeps at most 50 idle task workspaces: past that, the least recently used lose their files first. The cap never clears a workspace whose task is still open, or whose files the caller hasn't received yet.
+Each task's workspace on the delegate keeps its files at most 24 hours after its last use. An organization also keeps at most 50 idle task workspaces, meaning ones with no run or chat going on in them: past that, the least recently used lose their files first. The cap never clears a workspace whose task is still open, or whose files the caller hasn't received yet.
 
 Once a workspace's files are gone, a follow-up still resumes its conversation for 30 days. After that, a follow-up starts fresh.
 
