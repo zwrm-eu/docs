@@ -30,8 +30,6 @@ Plain assistant text from earlier turns stays in the session timeline; the **res
 
 There is no platform primitive for notifications, replies, or alerts. To reach someone outside the dashboard, attach a [connector](/context/connectors) with the right tool — email, Microsoft Teams, Slack, and so on — and the agent calls it like any other tool. The run preamble tells the agent this directly: if no such connector is available, it must say so in its result and must never claim it notified, messaged, or alerted anyone unless a connector call actually succeeded.
 
-For a run started by a [Microsoft Teams trigger](/automations/triggers#microsoft-teams-triggers), the reply path is the Microsoft 365 connector: the agent posts back to the originating chat with a connector tool, and the run prompt carries the destination chat ID.
-
 To watch runs and lifecycle events programmatically, subscribe to [outbound webhooks](/automations/outbound-webhooks) — `agent_run.completed`, `agent_run.failed`, and `agent_run.needs_attention` are delivered to your endpoint.
 
 ## Escalations

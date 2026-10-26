@@ -4,7 +4,7 @@ description: "Turn external events into agent runs."
 icon: "bolt"
 ---
 
-**Triggers** turn external events into agent runs: Stripe fires on a new order, GitHub on a new issue, a Teams message arrives — and an agent picks it up with the event payload as context. Each trigger is a slug-gated ingestion endpoint with routing, a match gate, a shared secret, and a daily rate cap. In the dashboard they live under **Automations → Triggers** (distinct from **Schedules**, which are time-driven).
+**Triggers** turn external events into agent runs: Stripe fires on a new order, GitHub on a new issue — and an agent picks it up with the event payload as context. Each trigger is a slug-gated ingestion endpoint with routing, a match gate, a shared secret, and a daily rate cap. In the dashboard they live under **Automations → Triggers** (distinct from **Schedules**, which are time-driven).
 
 ## Providers
 
@@ -13,7 +13,6 @@ Every trigger has a **provider** — the kind of event source it ingests. It's f
 | Provider | Source | Created from |
 |----------|--------|--------------|
 | `webhook` (default) | Any external system that can POST JSON to a URL — including GitHub, GitLab, Stripe, Linear, Shopify, Sentry, and your own systems | CLI, API, dashboard |
-| `msteams` | A Microsoft Teams chat, via a Microsoft Graph change-notification subscription on your connected account | API, dashboard (**not** the CLI) |
 | `front` | A [Front AI agent](#front-ai-agent-triggers): teammates' mentions. A mention by a teammate who connected their own Front account is answered with their Front access; others are told how to connect, or, on a trigger that answers everyone, answered with the AI agent's | CLI, API, dashboard (operators) |
 
 All providers feed the same pipeline once a delivery is normalized to a JSON body: **match gate → route → dedup + rate cap → budget-gated run**.
@@ -70,7 +69,7 @@ Most providers can't send custom headers — they sign with their own fixed head
 
 For GitHub, paste the secret into the webhook's *Secret* field and set the content type to `application/json`. Linear, Shopify, Sentry, and Front mint their **own** signing secret — copy it from the provider and pass it to `--secret` so ZWRM verifies against the same value.
 
-Verification is accept-if-any: an unmatched header never vetoes one that verifies. Apart from Front, providers whose signatures cover a timestamped string (Stripe, Slack, Svix-based) or that require a validation handshake (Microsoft Graph, Event Grid, Zoom) are not supported by header aliasing — send those with an explicit `X-Webhook-Secret`/`X-Webhook-Signature` header, or use the `msteams` provider for Teams.
+Verification is accept-if-any: an unmatched header never vetoes one that verifies. Apart from Front, providers whose signatures cover a timestamped string (Stripe, Slack, Svix-based) or that require a validation handshake (Event Grid, Zoom) are not supported by header aliasing — send those with an explicit `X-Webhook-Secret`/`X-Webhook-Signature` header.
 
 ### Front
 
@@ -97,7 +96,7 @@ A trigger's keyed workspace is kept for at most **6 hours** after its last deliv
 
 ## Private and shared triggers
 
-Every member can create webhook and Microsoft Teams triggers on any agent they can use. A trigger belongs to the member who created it, and its runs act as them. A [Front AI agent trigger](#front-ai-agent-triggers) is the exception: it always belongs to the organization, only a person with the operator role creates or changes it, and each run acts as the teammate who asked, or, on one that answers everyone, as the AI agent.
+Every member can create webhook triggers on any agent they can use. A trigger belongs to the member who created it, and its runs act as them. A [Front AI agent trigger](#front-ai-agent-triggers) is the exception: it always belongs to the organization, only a person with the operator role creates or changes it, and each run acts as the teammate who asked, or, on one that answers everyone, as the AI agent.
 
 A new trigger is **private** to you unless you share it: pass `--share` (`"visibility": "org"` in the API), or share it later. A trigger feeding your [private agent](/agents/overview) is always private.
 
@@ -140,24 +139,6 @@ Operators: `exists`, `not_exists`, `equals` (default), `not_equals`, `in`, plus 
 ```
 
 The dashboard has a visual editor for conditions and routes.
-
-## Microsoft Teams triggers
-
-An `msteams` trigger wakes an agent on messages in a Teams chat — and, uniquely, gives the agent a way to reply. Because it rides a Microsoft Graph subscription on your connected account, it's created from the **dashboard or API only**, not the CLI.
-
-**Prerequisites:** the org has a [Microsoft 365 connector](/context/shared-connectors) (a per-user OAuth MCP upstream), and the user creating the trigger has connected their Microsoft account to it. The trigger uses that delegated grant (Chat.Read; presence needs Presence.ReadWrite).
-
-**Configuration:**
-
-| Field | Description |
-|-------|-------------|
-| `upstream` | The Microsoft 365 connector name (immutable — changing it means a new trigger) |
-| `include_own_messages` | `false` (default) fires only on received messages; `true` also fires on your own outgoing messages |
-| `presence` | Publish "Available" presence for the connected account while the trigger is active |
-
-Each delivery defaults to one persistent session per chat (`session_key_path` = `chat_id`), so the agent keeps context across a conversation. The run prompt carries a **reply preamble**: it tells the agent this came from a Teams message and that the only way to reply is a Microsoft 365 connector tool posting back to the originating `chat_id`. The agent replies **through the connector** — there is no built-in messaging (see [Waiting & outputs](/agents/messaging)).
-
-ZWRM manages the Graph subscription for you (create on activate, renew before its ~70h expiry, drop on delete). Subscription health surfaces read-only as `subscription_active`, `subscription_expires_at`, and any `last_error` / `presence_error`.
 
 ## Front AI agent triggers
 
@@ -334,7 +315,7 @@ Members can sign in with their own GitHub account under **Accounts** on the GitH
 | `429` | Daily rate cap or [agent budget](/agents/budgets) exceeded — retry later |
 | `503` | Transient dispatch failure — safe to retry |
 
-ZWRM does not retry inbound deliveries itself — the status codes are chosen so the *sender's* retry logic does the right thing. (Teams deliveries that hit the rate cap or budget are acknowledged `2xx` so Graph doesn't redeliver the whole batch.)
+ZWRM does not retry inbound deliveries itself — the status codes are chosen so the *sender's* retry logic does the right thing.
 
 ## Inspect and manage
 
@@ -361,4 +342,4 @@ zwrm triggers update <trigger-id> --clear-default-agent
 zwrm triggers update <trigger-id> --rate-per-day 0      # unlimited
 ```
 
-`--match` and `--routes` replace the whole list, and an empty value removes it; invalid JSON is rejected before anything is sent. The hook URL and secret can't be changed, and the CLI doesn't change Microsoft Teams options (use the API or the dashboard). Use `update` rather than deleting and recreating a trigger: deleting it retires its hook URL, so the sender's deliveries to it fail until you reconfigure the sender with the new trigger's URL and secret, and the delivery log starts empty. Agents are told the same.
+`--match` and `--routes` replace the whole list, and an empty value removes it; invalid JSON is rejected before anything is sent. The hook URL and secret can't be changed. Use `update` rather than deleting and recreating a trigger: deleting it retires its hook URL, so the sender's deliveries to it fail until you reconfigure the sender with the new trigger's URL and secret, and the delivery log starts empty. Agents are told the same.

@@ -10,15 +10,15 @@ External events → agent runs. See the [Triggers guide](/automations/triggers) 
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `POST` | `/v1/triggers/hook/{slug}` | **Public ingest endpoint** — no bearer auth; secured by the trigger secret (`X-Webhook-Secret` or HMAC `X-Webhook-Signature`; MS Teams uses the Graph `clientState`). Generic webhooks and MS Teams Graph notifications both land here |
-| `POST` | `/v1/triggers` | Create a trigger. Body carries `provider` (`webhook` default, or `msteams` with an `msteams` config block); a `webhook` trigger returns the secret exactly once |
+| `POST` | `/v1/triggers/hook/{slug}` | **Public ingest endpoint** — no bearer auth; secured by the trigger secret (`X-Webhook-Secret` or HMAC `X-Webhook-Signature`) |
+| `POST` | `/v1/triggers` | Create a trigger. Body carries `provider` (`webhook` default, or `front` with a `front` config block; `front` needs the operator role and a shared agent); a generated secret is returned exactly once |
 | `GET` | `/v1/triggers` | List triggers (`?agent_id=`) |
-| `GET` | `/v1/triggers/{trigger_id}` | Get a trigger (an `msteams` trigger echoes its config + `msteams_status`) |
-| `PATCH` | `/v1/triggers/{trigger_id}` | Update (pause/resume, conditions, routes; MS Teams toggles mutable, `upstream` immutable) |
-| `DELETE` | `/v1/triggers/{trigger_id}` | Delete (with its delivery log; drops the Graph subscription first) |
+| `GET` | `/v1/triggers/{trigger_id}` | Get a trigger |
+| `PATCH` | `/v1/triggers/{trigger_id}` | Update (pause/resume, conditions, routes) |
+| `DELETE` | `/v1/triggers/{trigger_id}` | Delete (with its delivery log) |
 | `GET` | `/v1/triggers/{trigger_id}/deliveries` | Delivery log (`?limit=`, max 500) |
 
-A trigger's `provider` is one of `webhook` (default; any system POSTing JSON, with provider-header recognition for GitHub/GitLab/Linear/Shopify/Sentry/Front and more) or `msteams` (a Microsoft Graph chat-message subscription — API/dashboard only, no CLI).
+A trigger's `provider` is `webhook` (default; any system POSTing JSON, with provider-header recognition for GitHub/GitLab/Linear/Shopify/Sentry/Front and more) or `front` (a [Front AI agent](/automations/triggers#front-ai-agent-triggers)). Integrations make their own triggers.
 
 Create and `PATCH` bodies share these fields (on `PATCH`, omitted fields are unchanged):
 
