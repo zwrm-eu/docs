@@ -11,7 +11,7 @@ External events → agent runs. See the [Triggers guide](/automations/triggers) 
 | Method | Path | Description |
 |--------|------|-------------|
 | `POST` | `/v1/triggers/hook/{slug}` | **Public ingest endpoint** — no bearer auth; secured by the trigger secret (`X-Webhook-Secret` or HMAC `X-Webhook-Signature`) |
-| `POST` | `/v1/triggers` | Create a trigger. Body carries `provider` (`webhook` default, or `front` with a `front` config block); a `webhook` trigger returns the secret exactly once |
+| `POST` | `/v1/triggers` | Create a trigger. Body carries `provider` (`webhook` default, or `front` with a `front` config block; `front` needs the operator role and a shared agent); a generated secret is returned exactly once |
 | `GET` | `/v1/triggers` | List triggers (`?agent_id=`) |
 | `GET` | `/v1/triggers/{trigger_id}` | Get a trigger |
 | `PATCH` | `/v1/triggers/{trigger_id}` | Update (pause/resume, conditions, routes) |
