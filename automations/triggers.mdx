@@ -69,7 +69,7 @@ Most providers can't send custom headers — they sign with their own fixed head
 
 For GitHub, paste the secret into the webhook's *Secret* field and set the content type to `application/json`. Linear, Shopify, Sentry, and Front mint their **own** signing secret — copy it from the provider and pass it to `--secret` so ZWRM verifies against the same value.
 
-Verification is accept-if-any: an unmatched header never vetoes one that verifies. Apart from Front, providers whose signatures cover a timestamped string (Stripe, Slack, Svix-based) or that require a validation handshake (Microsoft Graph, Event Grid, Zoom) are not supported by header aliasing — send those with an explicit `X-Webhook-Secret`/`X-Webhook-Signature` header.
+Verification is accept-if-any: an unmatched header never vetoes one that verifies. Apart from Front, providers whose signatures cover a timestamped string (Stripe, Slack, Svix-based) or that require a validation handshake (Event Grid, Zoom) are not supported by header aliasing — send those with an explicit `X-Webhook-Secret`/`X-Webhook-Signature` header.
 
 ### Front
 
