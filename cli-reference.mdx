@@ -746,8 +746,10 @@ zwrm agent delete [instance] [-f]    # delete VM, volume, and record
 Update agent configuration (only passed flags change).
 
 ```bash
-zwrm agent update <instance> [--name <n>] [--avatar <bird>] [--size <preset>] [--model <m>] [--effort <e>] [--instructions <text>] [--workspace-ttl <dur>] [--daily-budget <usd>] [--max-runs-per-day <n>] [--allowed-scopes <list>] [--disable-boot-token[=false]] [--role <text>] [--description <text>] [--reviewed]
+zwrm agent update <instance> [--name <n>] [--avatar <bird>] [--runtime <zwrm|claude|codex> [--yes]] [--size <preset>] [--model <m>] [--effort <e>] [--instructions <text>] [--workspace-ttl <dur>] [--daily-budget <usd>] [--max-runs-per-day <n>] [--allowed-scopes <list>] [--disable-boot-token[=false]] [--role <text>] [--description <text>] [--reviewed]
 ```
+
+`--runtime` switches the agent to another runtime in place. It keeps its instructions, memories, skills, tools, secrets, schedules and triggers, and its default model and effort go back to the new runtime's unless `--model` and `--effort` come with it. Switching ends every chat session and terminal on the agent, stops its running workspaces and cancels its runs in progress, so the CLI shows what it would end and asks first. Without a terminal it stops there; `--yes` switches without asking. [Guide →](/agents/overview#switching-the-runtime)
 
 `--role` (up to 60 characters) and `--description` (up to 400) are the card other agents read before asking this one for a task; `""` clears either. `--reviewed` marks an agent another agent made as reviewed, so it can ask and be asked for tasks. [Delegation →](/agents/delegation)
 
