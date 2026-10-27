@@ -15,6 +15,7 @@ icon: "building"
 | `GET` | `/v1/auth/sessions` | List CLI sessions |
 | `DELETE` | `/v1/auth/sessions` | Revoke all CLI sessions |
 | `DELETE` | `/v1/auth/sessions/{session_id}` | Revoke one CLI session |
+| `POST` | `/v1/auth/token-exchange` | A trusted app exchanges a member's identity provider token for a zwrm token of theirs (public; the app authenticates itself). See [Trusted apps](/sso-trusted-apps#exchange-it) |
 
 ### Scoped tokens
 
@@ -25,6 +26,18 @@ icon: "building"
 ```
 
 An unknown scope returns `400`; an org you aren't a member of returns `403`. The key is shown once. Requests made with a scoped token outside its capabilities return `403 token is not authorized for this endpoint`.
+
+### Trusted apps
+
+Apps an SSO connection lets exchange its members' tokens. See [Trusted apps](/sso-trusted-apps). Org owners and admins only; `{provider_id}` is the connection's id, the `sso-…` its redirect URI ends with.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/v1/org/sso/{provider_id}/apps` | List the connection's trusted apps |
+| `POST` | `/v1/org/sso/{provider_id}/apps` | Trust an app: `{"name", "idp_client_id", "return_origins"}`. The answer carries its `id` (the app ID) and `client_secret`, shown once. `409` while the connection's domain isn't proven, for a second app with the same client ID, or past 10 apps |
+| `PATCH` | `/v1/org/sso/{provider_id}/apps/{app_id}` | Replace its `return_origins` (https origins; `[]` clears them) |
+| `POST` | `/v1/org/sso/{provider_id}/apps/{app_id}/rotate` | New secret; the old one stops working at once |
+| `DELETE` | `/v1/org/sso/{provider_id}/apps/{app_id}` | Revoke it: its tokens end and schedules it wrote pause |
 
 ## Organizations
 
