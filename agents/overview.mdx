@@ -43,7 +43,7 @@ There is no built-in repo concept: a repo is whatever the prompt (or a skill) cl
 
 ## Agent types
 
-The runtime is set once, at creation (`zwrm agent create <name> --runtime <zwrm|claude|codex|opencode>`), and picks the harness the agent runs on:
+The runtime is set at creation (`zwrm agent create <name> --runtime <zwrm|claude|codex|opencode>`) and picks the harness the agent runs on. You can [switch it later](#switching-the-runtime).
 
 | Type | Harness | Billing |
 |------|---------|---------|
@@ -53,6 +53,18 @@ The runtime is set once, at creation (`zwrm agent create <name> --runtime <zwrm|
 | `opencode` | **OpenCode** — *beta*, enabled per organization by the platform team (same EU-first catalog as the zwrm runtime) | Prepaid [credits](/billing/credits) |
 
 Each harness exposes its own model catalog and reasoning-effort ladder — see [Models](/agents/models). claude and codex run on credentials you bring; the zwrm runtime and OpenCode are metered against prepaid credits with no key to manage for catalog models (their [external-provider](/agents/external-providers) models run on your credential and are billed by your vendor).
+
+### Switching the runtime
+
+An agent can move to another runtime in place, from its **Settings** tab in the dashboard or with `zwrm agent update <agent> --runtime <zwrm|claude|codex>`. It stays the same agent: its instructions, memories, skills, tools, secrets, schedules and triggers, integrations, network policy, limits and sharing all stay. Its default model and effort go back to the new runtime's defaults, unless you pass `--model` and `--effort` for the new runtime with the switch.
+
+What runs on the old runtime can't carry over, so switching:
+
+- ends every chat session and terminal on the agent,
+- stops its running workspaces (their files stay on the volume),
+- cancels its runs in progress. Queued runs start on the new runtime.
+
+Chats stay as history, and continuing one starts a new conversation. Claude Code's built-in document skills (`docx`, `pdf`, `pptx`, `xlsx`) are licensed to Claude Code alone, so they stop loading when an agent moves off claude. Before anything happens, the dashboard and the CLI show what the switch would end right now and the credential the new runtime still needs (claude and codex need your [credential](/agents/secrets)). `--yes` skips the CLI's question. Only people switch a runtime, never an agent's own credential, and the switch needs the same rights as changing the agent. The organization's assistant keeps its runtime.
 
 An agent's **handle** (`my-project`) is its permanent reference in the CLI, links and its mailbox. Its **display name** (`--name`, up to 40 characters, e.g. `Hedi`) and **avatar** (`--avatar`, one of the birds `zwrm`, `woodpecker`, `eagle`, `owl`, `toucan`, `cardinal`, `hummingbird`, `duck`, `parrot`, `heron`) are what people see, and can change any time; without a name, the handle shows. Names refuse line breaks and invisible characters.
 
@@ -96,6 +108,7 @@ zwrm agent update my-project --model opus --effort high --size performance-2x
 |------|-------------|
 | `--name` | Display name (up to 40 characters; `""` clears it and the handle shows) |
 | `--avatar` | Bird avatar (`""` lets the client pick) |
+| `--runtime` | Switch the runtime (`zwrm`, `claude`, `codex`); asks first, see [Switching the runtime](#switching-the-runtime) |
 | `--size` | Default VM size preset (e.g. `performance-2x`) |
 | `--model` | Default model — harness-specific (`opus`/`sonnet`/`fable` for claude, catalog aliases for codex, the zwrm runtime and OpenCode). See [Models](/agents/models) |
 | `--effort` | Default reasoning effort: `low`, `medium`, `high`, `xhigh`, `max` |
