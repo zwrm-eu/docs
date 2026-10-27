@@ -43,6 +43,22 @@ The auth flags are mutually exclusive — see [Connector identity](/context/cred
 
 In the dashboard, the gateway page has a **Quick connect** grid of branded cards that pre-fills the registration form so you only supply credentials. Some presets — including [Microsoft 365](/context/shared-connectors) — are platform-hosted servers you point at with your own OAuth app. The cards come from the connector catalog, `GET /v1/mcp/connectors`.
 
+### Connected through zwrm's own app
+
+**HubSpot** and **Google Analytics** connect through an OAuth app zwrm registered with the provider, so there is nothing to register on your side:
+
+1. An operator opens **Integrations** → **HubSpot** (or **Google Analytics**) and clicks **Connect**. This makes the organization's shared `hubspot` (or `google-analytics`) connection.
+2. Each member signs in with their own account on the integration's page, or with `zwrm mcp connect hubspot`. In HubSpot, they pick the HubSpot account to connect.
+3. Agents act as whoever asks, and see what that person's account can see. Someone who hasn't signed in yet gets a sign-in link to pass on.
+
+The connection belongs to its integration: you can change whose account it acts as, but not its address or credentials, and you remove it with **Disconnect** on the integration's page (`DELETE /v1/integrations/hubspot`). The server can't also be added by its address (`409` with `error_code: app_connector`).
+
+If your organization already had a shared `hubspot` connection made with its own HubSpot app, **Connect** takes it over after asking: every sign-in on it ends, and each member signs in again through zwrm's app.
+
+<Note>
+If a HubSpot account has HubSpot's **Sensitive Data** setting on, HubSpot's MCP server doesn't return activities (calls, emails, meetings, notes, tasks) or conversations. Some HubSpot write tools ask for confirmation before they write.
+</Note>
+
 ### Who may add servers
 
 Any member adds connections and virtual servers of their own. A member's are private to them until they share them; a member adds connections from the catalog only. Operators may connect any server, from the catalog or not. An organization admin can limit operators to the catalog with the **custom tools** setting (`builders_may_add_custom_tools`, on by default; `PUT /v1/org/settings`). With it off:
