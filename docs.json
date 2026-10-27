@@ -24,7 +24,8 @@
             "group": "Authentication",
             "pages": [
               "auth",
-              "sso"
+              "sso",
+              "sso-trusted-apps"
             ]
           },
           {

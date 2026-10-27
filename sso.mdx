@@ -53,6 +53,8 @@ In Microsoft Entra ID, register the app under **App registrations** with the pla
 
 People start signing in from zwrm. To put zwrm in your provider's app launcher, use `https://dashboard.zwrm.eu/login?sso=1` as its sign-in URL.
 
+An app your people already sign in to through Microsoft Entra ID can also act as each of them in zwrm, without them signing in here: see [Trusted apps](/sso-trusted-apps).
+
 ## Sign in with SSO
 
 On the sign-in page, click **Continue with SSO** and enter your work email.
@@ -70,7 +72,7 @@ On the sign-in page, click **Continue with SSO** and enter your work email.
 
 - **Change client secret**, in the connection's **…** menu, for when the secret at your provider was renewed. You can set a new client ID there too.
 - To change anything else, such as the domain or the issuer, remove the connection and connect again. The new connection has a new redirect URI and DNS record.
-- **Remove** stops all sign-ins through the connection. People who joined through it stay members. To sign in another way, they set a password with **Forgot your password?** on the sign-in page.
+- **Remove** stops all sign-ins through the connection and removes its [trusted apps](/sso-trusted-apps). People who joined through it stay members. To sign in another way, they set a password with **Forgot your password?** on the sign-in page.
 
 ## Limits
 
