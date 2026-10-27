@@ -4,7 +4,7 @@ description: "Let an app your people already sign in to act as each of them, wit
 icon: "handshake"
 ---
 
-A trusted app is an app your people already sign in to through your identity provider, such as your company's own assistant. It exchanges a member's access token from your identity provider for a short-lived zwrm token of theirs ([RFC 8693](https://datatracker.ietf.org/doc/html/rfc8693) token exchange), then acts as that member: their chats, agents and connector sign-ins, nothing else. Members never sign in to zwrm themselves.
+A trusted app is an app your people already sign in to through your identity provider, such as your company's own assistant. It exchanges a member's access token from your identity provider for a short-lived zwrm token of theirs ([RFC 8693](https://datatracker.ietf.org/doc/html/rfc8693) token exchange), then acts as that member within what Cowork, zwrm's own app, does: their chats, agents, schedules and connector sign-ins (see [what the token reaches](#what-the-token-reaches)). Members needn't sign in to zwrm themselves.
 
 <Note>
 Trusted apps work on [single sign-on](/sso) connections to Microsoft Entra ID whose domain is proven. Owners and admins register them.
@@ -12,28 +12,43 @@ Trusted apps work on [single sign-on](/sso) connections to Microsoft Entra ID wh
 
 ## How it works
 
-1. A member signs in to your app. Your app's backend asks Entra for an access token for the SSO connection's app, on the member's behalf.
-2. Your app sends that token to zwrm with its own app ID and secret. zwrm checks the token and answers with a zwrm token for the member, good for an hour at most.
+1. A member signs in to your app. Your app's backend gets an access token from Entra for the SSO connection's app, on the member's behalf.
+2. Your app sends that token to zwrm with the app's zwrm App ID and client secret. zwrm checks the token and answers with a zwrm token for the member, good for an hour at most.
 3. Your app calls the zwrm API with that token, as the member, for what [the token reaches](#what-the-token-reaches).
 
 The first exchange for someone who has no account yet creates it, links it to the connection and adds them to your organization as a member, as their first SSO sign-in would. See [Members an app creates](#members-an-app-creates).
+
+Two sets of credentials are involved: your app's **Entra** client ID and secret, which it uses with Entra, and its **zwrm** App ID and client secret, which it uses with zwrm.
 
 ## Set up (admins)
 
 ### In Microsoft Entra ID
 
+You need the Cloud Application Administrator role or higher. These steps change only the tokens Entra issues for the connection's app as an API; how people sign in to zwrm stays as it is.
+
 <Steps>
   <Step title="Expose an API on the connection's app">
-    Under **App registrations**, open the app your SSO connection signs people in with. Go to **Expose an API**, add an **Application ID URI** (the default `api://<client-id>` is fine), then **Add a scope**, such as `access_as_user`, that admins and users can consent to.
+    Under **App registrations**, open the app your SSO connection signs people in with. Go to **Expose an API**, add an **Application ID URI** (the default `api://<client-id>` is fine), then **Add a scope**, such as `access_as_user`. You grant admin consent below, so **Admins only** is enough for who can consent.
   </Step>
   <Step title="Make its access tokens version 2">
-    In the same app's **Manifest**, set `requestedAccessTokenVersion` to `2` (in the `api` section; older manifests call it `accessTokenAcceptedVersion`). zwrm refuses version 1 tokens: their issuer isn't the one your connection knows.
+    In the same app's **Manifest**, set `api.requestedAccessTokenVersion` to `2` and save. (In the older AAD Graph manifest, it's the top-level `accessTokenAcceptedVersion`.) The default, `null`, means version 1, which zwrm refuses: a version 1 token's issuer isn't the one your connection knows.
   </Step>
   <Step title="Put the address in its access tokens">
-    Under **Token configuration** → **Add optional claim** → **Access**, add `email` and `xms_edov`. zwrm creates members only from tokens that carry an email address that Entra says its domain's owner verified (`xms_edov`).
+    Under **Token configuration** → **Add optional claim** → **Access**, add `email` and `xms_edov`, and turn on the Microsoft Graph email permission if asked. zwrm creates members only from tokens that carry an email address that Entra says its domain's owner verified (`xms_edov`).
+
+    If `xms_edov` isn't in the list, add both claims in the **Manifest** under `optionalClaims`, keeping what's already there (such as the `idToken` claims from your SSO setup). Entra may call `xms_edov` unrecognized; save anyway.
+
+    ```json
+    "accessToken": [
+      { "name": "email", "essential": false },
+      { "name": "xms_edov", "essential": false }
+    ]
+    ```
   </Step>
   <Step title="Let your app ask for it">
-    Open your app's own registration, the one your people sign in to. Under **API permissions** → **Add a permission** → **My APIs**, pick the connection's app, choose **Delegated permissions** and the scope from the first step, then **Grant admin consent**. Your app must authenticate to Entra with a client secret or a certificate: zwrm refuses tokens a public client asked for.
+    Open the registration your app's backend uses to ask Entra for tokens: the one whose client ID and secret it sends. If your app has separate registrations for its front end and its back end, that's the back end's. Under **API permissions** → **Add a permission** → **My APIs**, pick the connection's app; if it isn't listed, find it under **APIs my organization uses** by its name or client ID. Choose **Delegated permissions** and the scope from the first step, click **Add permissions**, then **Grant admin consent for** your tenant.
+
+    That registration must authenticate to Entra with a client secret or a certificate: zwrm refuses tokens a public client asked for, such as a single-page app with no secret.
   </Step>
 </Steps>
 
@@ -44,16 +59,16 @@ The first exchange for someone who has no account yet creates it, links it to th
     In the dashboard, go to **Workspace** → **Security**. On the **Single sign-on** card, open the connection's **…** menu and choose **Trusted apps**.
   </Step>
   <Step title="Add the app">
-    Enter a name and the app's client ID at your identity provider: the **Application (client) ID** of the app your people sign in to, not the connection's own. Under **Return addresses**, enter where your app's pages live if members will connect their accounts from it (see [Connector sign-ins](#connector-sign-ins)). Click **Add app**.
+    Enter a name and the app's client ID at your identity provider: the **Application (client) ID** of the registration from the last step, not the connection's own. If members will connect their accounts from your app (see [Connector sign-ins](#connector-sign-ins)), enter its https origin under **Return addresses**, like `https://kaizen.example.com`, with no path. Click **Add app**.
   </Step>
   <Step title="Keep the secret">
-    Copy the **App ID** and **Client secret** and hand them to your app's backend. The secret starts with `zwtas_` and isn't shown again.
+    Copy the **App ID** and **Client secret**: the app's zwrm credentials. Hand them to your app's backend. The secret starts with `zwtas_` and isn't shown again.
   </Step>
 </Steps>
 
 ### Manage trusted apps
 
-- **New secret** replaces the app's secret. The current one stops working at once, so the app can't exchange until it has the new one.
+- **New secret** replaces the app's secret. The current one stops working at once, so the app can't exchange until it has the new one. Tokens the app already holds keep working until they expire, an hour at most; to end them at once, revoke the app.
 - **Revoke** stops the app for good: it can't exchange anymore, the tokens it holds stop working, and [schedules it wrote](#schedules) pause.
 - **Return addresses** changes where the app's connector sign-ins may return to.
 - Removing the SSO connection removes its trusted apps and ends their tokens.
@@ -64,8 +79,8 @@ The first exchange for someone who has no account yet creates it, links it to th
 
 - **No account yet:** the first exchange creates one, with the address counted as confirmed, links it to the connection and adds the person to your organization as a **member**.
 - **An account with that address exists:** the exchange links it to the connection and adds the person to your organization, as an SSO sign-in does. An account whose address was never confirmed is taken over only if it was never used, as on an SSO sign-in.
-- **Refused:** a token without `email`, or without `xms_edov` set to true; an address outside the connection's domain; someone an admin removed from the organization (invite them to let them back in); a suspended account; an organization at its member limit.
-- zwrm sends these members nothing: a password reset for someone who never signed in to zwrm sends no email while their connection exists.
+- **Refused:** a token without `email`, or without `xms_edov` set to true; an address outside the connection's domain; someone who left the organization or was removed from it, until they're a member again; a suspended account; an address or identity zwrm blocks; an organization at its member limit.
+- **No email:** a member an app created, with no other way to sign in, who never signed in to zwrm, gets no password reset email while their connection exists.
 
 Admins see and manage them under **Members** like anyone else.
 
@@ -73,37 +88,48 @@ Admins see and manage them under **Members** like anyone else.
 
 ### Get the member's token from Entra
 
-Your backend asks Entra for an access token for the SSO connection's app, on behalf of the signed-in member ([on-behalf-of flow](https://learn.microsoft.com/entra/identity-platform/v2-oauth2-on-behalf-of-flow)):
+Your backend needs an access token for the SSO connection's app, for the signed-in member, issued to the registration your admin trusted. Use the tenant in your connection's issuer, and the scope your admin exposed: `api://<the connection's client ID>/access_as_user` if they kept the defaults. How you get the token depends on how your app is built:
 
-```bash
-curl -X POST https://login.microsoftonline.com/<tenant-id>/oauth2/v2.0/token \
-  -d grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer \
-  -d client_id=<your app's client ID> \
-  -d client_secret=<your app's client secret at Entra> \
-  -d assertion=<the member's access token for your app> \
-  -d scope=api://<the connection's client ID>/access_as_user \
-  -d requested_token_use=on_behalf_of
-```
+- **A web app that signs people in on its server:** ask for the connection's scope, and `offline_access`, when the member signs in, in the authorization code flow your server completes with its Entra client secret or certificate. A token covers one resource, so if your app also needs a token for Microsoft Graph or its own API, get the connection's separately with the refresh token (in MSAL, `acquireTokenSilent` with that scope).
+- **A front end with its own API:** the front end gets a token for your API, and your API trades it for one for the connection's app ([on-behalf-of flow](https://learn.microsoft.com/entra/identity-platform/v2-oauth2-on-behalf-of-flow); in MSAL, its on-behalf-of method):
 
-You can also ask for that scope when the member signs in to your app, in the authorization code flow your backend completes. Either way, zwrm accepts the token only if it:
+  ```bash
+  curl -X POST https://login.microsoftonline.com/<tenant-id>/oauth2/v2.0/token \
+    -d grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer \
+    -d client_id=<your API's Entra client ID> \
+    --data-urlencode client_secret=<your API's Entra client secret> \
+    -d assertion=<the token the front end got for your API> \
+    -d scope=api://<the connection's client ID>/access_as_user \
+    -d requested_token_use=on_behalf_of
+  ```
+
+  The `assertion` must be an access token for your API (its `aud` is your API's client ID), not an ID token or a Microsoft Graph token.
+
+A token redeemed in the browser, with no secret, is a public client's, and zwrm refuses it. Entra's tokens last about an hour and the zwrm token never outlives the one you exchanged, so get a fresh Entra token before each exchange.
+
+zwrm accepts the token only if it:
 
 - is a version 2 token (`ver` `2.0`) from your connection's issuer, for the connection's app (`aud` is its client ID);
-- was asked for by your app (`azp` is the client ID you registered) as a confidential client (`azpacr` `1` or `2`);
+- was issued to the registration your admin trusted (`azp` is its Entra client ID), as a confidential client (`azpacr` `1` or `2`);
 - is a person's delegated token, with scopes (`scp`), not an app-only one;
 - is signed with a key from your connection's key set (RS256) and hasn't expired.
+
+<Tip>
+If Entra answers with `interaction_required`, a Conditional Access policy on the connection's app wants the member to do something: send them through your app's sign-in again. If the connection's enterprise app requires assignment, members not assigned to it get no token (`AADSTS50105`).
+</Tip>
 
 ### Exchange it
 
 ```bash
 curl -X POST https://<platform>/v1/auth/token-exchange \
-  -u "<app ID>:<client secret>" \
+  -u "<zwrm App ID>:<zwrm client secret>" \
   -d grant_type=urn:ietf:params:oauth:grant-type:token-exchange \
   -d subject_token=<the member's token from Entra> \
   -d subject_token_type=urn:ietf:params:oauth:token-type:access_token
 ```
 
 - Send the request as `application/x-www-form-urlencoded`, each parameter once.
-- Authenticate with the app ID and secret in HTTP Basic, or as `client_id` and `client_secret` in the form, not both.
+- Authenticate with the zwrm App ID and client secret in HTTP Basic, or as `client_id` and `client_secret` in the form, not both.
 - `requested_token_type` is optional. If you send it, it must be `urn:ietf:params:oauth:token-type:access_token`.
 
 The response:
@@ -113,7 +139,7 @@ The response:
   "access_token": "…",
   "issued_token_type": "urn:ietf:params:oauth:token-type:access_token",
   "token_type": "Bearer",
-  "expires_in": 3599
+  "expires_in": 3600
 }
 ```
 
@@ -125,31 +151,34 @@ Errors follow [RFC 6749](https://datatracker.ietf.org/doc/html/rfc6749#section-5
 |---|---|---|
 | `400` | `invalid_request` | Not form-encoded, a parameter sent twice, no `subject_token` or another `subject_token_type`, or another `requested_token_type` |
 | `400` | `unsupported_grant_type` | `grant_type` isn't the token exchange grant |
-| `401` | `invalid_client` | No app ID or secret, a wrong one, a revoked app, or an app whose connection is gone |
+| `401` | `invalid_client` | No App ID or secret, a wrong one, credentials in both HTTP Basic and the form, a revoked app, or an app whose connection is gone |
 | `400` | `invalid_grant` | zwrm refused the token or its member. See below |
-| `429` | `temporarily_unavailable` | Too many exchanges. Wait for `Retry-After` |
-| `503` | `temporarily_unavailable` | zwrm couldn't fetch your identity provider's keys or reach its own database. Try again |
+| `429` | `temporarily_unavailable` | Too many exchanges by the app. Wait for `Retry-After` |
+| `503` | `temporarily_unavailable` | zwrm couldn't fetch your identity provider's keys, read the connection, or look up or create the member. Try again |
 | `500` | `server_error` | Try again |
 
-`invalid_grant` doesn't say why, so that a token can't be probed. The usual causes are a version 1 token, a token for another audience or asked for by another app, a public client, an app-only token, a token that expires within a minute, and a member who can't be let in (see [Members an app creates](#members-an-app-creates)).
+Too many exchanges from one IP address (10 a second, in bursts of 100) are also a `429`, answered as the rest of the API answers it, with `"error": "rate limit exceeded"` and no `error_description`. Handle any `429` by its `Retry-After`.
+
+`invalid_grant` doesn't say why, so that a token can't be probed. The usual causes are a version 1 token, a token from another tenant or for another audience, a token issued to another registration or to a public client, an app-only token, a token that expires within a minute, a connection whose domain isn't proven, and a member who can't be let in (see [Members an app creates](#members-an-app-creates)).
 
 ### Use the token
 
 - Send it as `Authorization: Bearer <token>`. It's pinned to the connection's organization, so requests need no `X-Org-ID`.
 - Keep one token per member and reuse it until shortly before it expires, then exchange a fresh Entra token. Exchanges are limited per app (5 a second, in bursts of up to 100) and per IP address.
-- A `401` from the API means the token ended: exchange again. If that's refused, the member no longer has access.
+- A `401` from the API means the token ended (it expired, or the app was revoked or its connection removed): exchange again. If that's refused, the member no longer has access.
+- A member removed from the organization keeps a token that still authenticates until it expires, but reaches nothing in the organization: calls answer `403` or `404`.
 
 ### What the token reaches
 
 The token gets what Cowork, zwrm's own app, uses, as the member:
 
 - **Who and where:** `GET /v1/auth/whoami`, `GET /v1/orgs`, `GET /v1/org/members`, and `GET /v1/org/settings` for your organization's name and logo.
-- **Agents and chats:** list and read agents, change an agent's `metadata`, and everything about [sessions](/api-reference/runs-sessions#sessions): start one, send messages, answer permission requests and [questions](/api-reference/runs-sessions#questions), change mode, interrupt, compact, end, and read events, todos and tasks. Read and share workspaces, and read and write their files.
+- **Agents and chats:** list and read agents, and change an agent's `metadata`. [Sessions](/api-reference/runs-sessions#sessions): start one, send messages, answer permission requests and [questions](/api-reference/runs-sessions#questions), change mode, interrupt, compact, end, and read events, todos and tasks. Read and share workspaces, and read and write (not delete) their files.
 - **Runs and schedules:** read runs, and list, create, change and delete [schedules](/automations/schedules).
 - **Connectors:** list them, and connect, check and disconnect the member's own account (see [Connector sign-ins](#connector-sign-ins)).
 - **Notifications:** register and remove the member's push devices.
 
-Anything else is `403` "a token from a token exchange is not authorized for this endpoint". Among what it can't do: manage API tokens or sessions, change an agent beyond its `metadata`, read a workspace's harness logins, or connect an agent's account.
+Anything else is `403` "a token from a token exchange is not authorized for this endpoint". Among what it can't do: manage API tokens or sessions, change an agent beyond its `metadata`, read a workspace's harness logins, connect an agent's account, switch a session's model, run session commands, use the operator shell or the live desktop, or warm a workspace.
 
 ### Private chats
 
@@ -157,7 +186,7 @@ Start a session with `"visibility": "private"` and it's the member's own private
 
 ### Schedules
 
-A schedule your app creates, or whose prompt it changes, records your app. Revoking the app pauses it. Once someone sends its prompt with their own sign-in, it no longer depends on your app.
+A schedule your app creates, or whose prompt, cron or chat it changes (or whose prompt it sends again), records your app. Revoking the app pauses it. To resume it, a person sends its prompt again with their own sign-in, then resumes it; from then on it no longer depends on your app.
 
 ### Connector sign-ins
 
@@ -170,7 +199,7 @@ Members connect their own accounts to the organization's connectors from your ap
    {"return_to": "https://kaizen.example.com/connected?nonce=4f1c…"}
    ```
 
-   After the sign-in, the browser comes back to `return_to` with `status=connected&connection=<name>` or `status=failed` added to its query. Your own query parameters stay.
+   After the sign-in, the browser comes back to `return_to` with `status=connected&connection=<name>` or `status=failed` added to its query. Your own query parameters stay; don't name one of them `status` or `connection`.
 3. **Disconnect:** `DELETE /v1/org/mcp/upstreams/{name}/grants/me`.
 
 `return_to` must be an `https` address at one of the app's [return addresses](#in-zwrm), at most 2,048 characters. An international domain goes in its `xn--` form. Without `return_to`, the sign-in ends on a zwrm page that tells the member to close the tab.
@@ -179,4 +208,4 @@ Members connect their own accounts to the organization's connectors from your ap
 Treat `status` as a hint, not proof: anyone can link a member to your return address. Confirm with `GET .../grants/me`, or check a nonce of your own that you put in `return_to`.
 </Warning>
 
-The sign-in passes through zwrm's address on its way to the connector's provider. Connectors that register themselves at sign-in show your organization's brand name (`brand_name` in [`PUT /v1/org/settings`](/api-reference/platform#organizations)) on their consent screen. Connectors that use zwrm's own app at their provider show that app's name.
+The browser goes straight to the connector's provider, and comes back through zwrm's callback address before it reaches `return_to`; the provider's page may show that address. Connectors that register themselves at sign-in show your organization's brand name (`brand_name` in [`PUT /v1/org/settings`](/api-reference/platform#organizations)) on their consent screen. The name is sent when the connector first registers, so set it before anyone connects. Connectors that use an app registered at their provider, zwrm's or your admins', show that app's name.
