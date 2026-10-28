@@ -25,9 +25,10 @@ Bring your org's Anthropic credentials as an [agent secret](/agents/secrets) —
 |-------|-------|
 | `opus` (default) | Claude Opus 5.5 |
 | `sonnet` | Claude Sonnet 5.5 |
+| `haiku` | Claude Haiku 5.5 |
 | `fable` | Claude Fable 5.1 |
 
-Each alias tracks the newest release of its family. To pin a specific release, pass the full model ID instead — `claude-opus-5-5`, `claude-opus-5`, `claude-sonnet-5-5`, `claude-sonnet-5`, `claude-fable-5`, `claude-fable-5-1`. The previous releases stay selectable: `opus` resolves to Opus 5.5, while `claude-opus-5` keeps an agent on Opus 5; `sonnet` resolves to Sonnet 5.5, while `claude-sonnet-5` keeps an agent on Sonnet 5; `fable` resolves to Fable 5.1, while `claude-fable-5` keeps an agent on Fable 5.
+You can also pass the full model ID: `claude-opus-5-5`, `claude-sonnet-5-5`, `claude-haiku-5-5`, `claude-fable-5-1`. Opus 5, Sonnet 5 and Fable 5 are retired: agents that were set to one of them now use the 5.5 or 5.1 release of the same family, and a request that still names one gets that release.
 
 Claude supports all four permission modes and the full effort ladder. When neither the run nor the agent sets a model, claude runs the platform default, Claude Opus 5.5; when neither sets an effort, it runs at `high` (Opus 5.5's own default is `medium`, so the platform pins it). The Anthropic-licensed document built-ins (docx/pdf/pptx/xlsx skills) are available **only** on claude agents.
 
