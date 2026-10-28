@@ -45,18 +45,24 @@ In the dashboard, the gateway page has a **Quick connect** grid of branded cards
 
 ### Connected through zwrm's own app
 
-**HubSpot** and **Google Analytics** connect through an OAuth app zwrm registered with the provider, so there is nothing to register on your side:
+**HubSpot**, **Google Analytics** and **Mailchimp** connect through an OAuth app zwrm registered with the provider, so there is nothing to register on your side:
 
-1. An operator opens **Integrations** → **HubSpot** (or **Google Analytics**) and clicks **Connect**. This makes the organization's shared `hubspot` (or `google-analytics`) connection.
+1. An operator opens **Integrations** → **HubSpot** (or **Google Analytics**, **Mailchimp**) and clicks **Connect**. This makes the organization's shared `hubspot` (or `google-analytics`, `mailchimp`) connection.
 2. Each member signs in with their own account on the integration's page, or with `zwrm mcp connect hubspot`. In HubSpot, they pick the HubSpot account to connect.
 3. Agents act as whoever asks, and see what that person's account can see. Someone who hasn't signed in yet gets a sign-in link to pass on.
 
-The connection belongs to its integration: you can change whose account it acts as, but not its address or credentials, and you remove it with **Disconnect** on the integration's page (`DELETE /v1/integrations/hubspot`). The server can't also be added by its address (`409` with `error_code: app_connector`).
+The connection belongs to its integration: you can change whose account it acts as, but not its address or credentials, and you remove it with **Disconnect** on the integration's page (`DELETE /v1/integrations/hubspot`, and likewise for `google-analytics` and `mailchimp`). The server can't also be added by its address (`409` with `error_code: app_connector`).
 
-If your organization already had a shared `hubspot` connection made with its own HubSpot app, **Connect** takes it over after asking: every sign-in on it ends, and each member signs in again through zwrm's app.
+If your organization already had a shared connection by that name to the same server, made with its own app (a `hubspot` connection with its own HubSpot app, say), **Connect** takes it over after asking: every sign-in on it ends, and each member signs in again through zwrm's app.
 
 <Note>
 If a HubSpot account has HubSpot's **Sensitive Data** setting on, HubSpot's MCP server doesn't return activities (calls, emails, meetings, notes, tasks) or conversations. Some HubSpot write tools ask for confirmation before they write.
+</Note>
+
+**Mailchimp** runs on zwrm's own Mailchimp server, since Mailchimp offers none that zwrm can use. Its tools draft campaigns and set their content, send tests, and schedule or send campaigns. They add and update contacts with their tags and groups, archive contacts, and read audiences, segments, templates and campaign reports. The member's Mailchimp role (owner, admin, manager, author or viewer) limits what they can do. A campaign can be deleted only while it is a draft. Transactional email, customer journeys and deleting a contact for good aren't covered: archive or unsubscribe a contact instead.
+
+<Note>
+Mailchimp sign-ins don't expire. One lasts until the member removes zwrm's app from their Mailchimp account or leaves that account, and zwrm then asks them to sign in again. **Disconnect** removes the connection in zwrm, but not zwrm's app in Mailchimp.
 </Note>
 
 ### Who may add servers
