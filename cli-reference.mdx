@@ -753,7 +753,7 @@ zwrm agent update <instance> [--name <n>] [--avatar <bird>] [--runtime <zwrm|cla
 
 `--role` (up to 60 characters) and `--description` (up to 400) are the card other agents read before asking this one for a task; `""` clears either. `--reviewed` marks an agent another agent made as reviewed, so it can ask and be asked for tasks. [Delegation →](/agents/delegation)
 
-`--model` is harness-specific (`opus`/`sonnet`/`fable` for claude, catalog aliases for codex, the zwrm runtime and OpenCode — see [Models](/agents/models)). `--allowed-scopes` takes a comma-separated `resource:action` list; an empty value resets to the platform default. `--disable-boot-token` turns the agent's management capabilities off, so every management call from its VM, the `zwrm` CLI included, is refused (`--disable-boot-token=false` restores them) — distinct from an empty `--allowed-scopes`, which means the default set. Both apply to the agent's next request. [Guide →](/agents/capabilities)
+`--model` is harness-specific (`opus`/`sonnet`/`haiku`/`fable` for claude, catalog aliases for codex, the zwrm runtime and OpenCode — see [Models](/agents/models)). `--allowed-scopes` takes a comma-separated `resource:action` list; an empty value resets to the platform default. `--disable-boot-token` turns the agent's management capabilities off, so every management call from its VM, the `zwrm` CLI included, is refused (`--disable-boot-token=false` restores them) — distinct from an empty `--allowed-scopes`, which means the default set. Both apply to the agent's next request. [Guide →](/agents/capabilities)
 
 ### `zwrm agent memory`
 
